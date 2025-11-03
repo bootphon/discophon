@@ -4,14 +4,10 @@ from pathlib import Path
 import soundfile as sf
 from tqdm import tqdm
 
-from .utils import MyPathLike
+MyPathLike = Path | str
 
 
-def write_manifest(
-        dataset: MyPathLike,
-        output: MyPathLike,
-        file_extension: str = ".wav"
-) -> None:
+def write_manifest(dataset: MyPathLike, output: MyPathLike, file_extension: str = ".wav") -> None:
     lines = [Path(dataset).resolve().as_posix()]
     paths = list(Path(dataset).rglob(f"*{file_extension}"))
     for name in tqdm(paths):

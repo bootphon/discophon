@@ -1,0 +1,29 @@
+[build-system]
+requires = ["flit_core>=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "prepare"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "bootphon",
+    "jaxtyping>=0.3.3",
+    "numpy>=2.3.4",
+    "panphon>=0.22.2",
+    "praat-textgrids>=1.4.0",
+    "soundfile>=0.13.1",
+    "torch>=2.9.0",
+    "torchaudio>=2.9.0",
+    "tqdm>=4.67.1",
+]
+
+[tool.uv.sources]
+bootphon = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.1.0",
+]

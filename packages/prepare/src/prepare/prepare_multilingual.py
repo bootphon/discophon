@@ -13,8 +13,7 @@ import soundfile as sf
 import textgrids
 from tqdm import tqdm
 
-from .data import ALIGNMENT_FREQ, FeatureTokenizer, MontrealForcedAligner, \
-    PhoneticFeatureDataset, SAMPLE_RATE
+from .data import ALIGNMENT_FREQ, FeatureTokenizer, MontrealForcedAligner, PhoneticFeatureDataset, SAMPLE_RATE
 from .decoder import FeatureDecoder, SILENCE
 
 _DIACRITICS_TO_FIX = {
@@ -37,17 +36,14 @@ def concatenate_wavs(input_wavs: list[Path], output_wav: Path) -> None:
             wav.writeframes(data[i][1])
 
 
-def _fix_phone_tier(
-        phones: textgrids.Tier, diacritic: str, reverse: bool = False
-) -> tuple[list[str], list[float]]:
+def _fix_phone_tier(phones: textgrids.Tier, diacritic: str, reverse: bool = False) -> tuple[list[str], list[float]]:
     segments, durations = [], []
     for k, phn in enumerate(phones):
         if phn.text == "spn":
             return [], []
         elif phn.text == diacritic:
             prev_seg = segments[-1]
-            segments[-1] = prev_seg[:-1] + phn.text + prev_seg[-1] if reverse \
-                else prev_seg + phn.text
+            segments[-1] = prev_seg[:-1] + phn.text + prev_seg[-1] if reverse else prev_seg + phn.text
             durations[-1] += phn.xmax - phn.xmin
         else:
             segments.append(SILENCE if phn.text == "" else phn.text)
@@ -56,10 +52,7 @@ def _fix_phone_tier(
 
 
 def convert_alignment(
-        ft: panphon.FeatureTable,
-        path: Path,
-        diacritic: Optional[str] = None,
-        reverse: bool = False
+    ft: panphon.FeatureTable, path: Path, diacritic: Optional[str] = None, reverse: bool = False
 ) -> str:
     if not path.exists():
         return ""
@@ -106,10 +99,7 @@ def convert_alignment(
 
 
 def write_manifest_and_alignment(
-        output: Path,
-        language: str,
-        manifest_lines: list[str],
-        textgrid_lines: list[str]
+    output: Path, language: str, manifest_lines: list[str], textgrid_lines: list[str]
 ) -> tuple[Path, Path]:
     manifests_dir = output / "manifests"
     manifests_dir.mkdir(parents=True, exist_ok=True)
@@ -126,16 +116,16 @@ def write_manifest_and_alignment(
 
 
 def clean_manifest_and_alignment(
-        ft: panphon.FeatureTable,
-        root: Path,
-        textgrid_dir: Path,
-        output: Path,
-        split: Literal["train", "dev", "test"],
-        language: str,
-        target_size: int,
-        min_length: float,
-        max_length: float,
-        suffix: str = ".TextGrid"
+    ft: panphon.FeatureTable,
+    root: Path,
+    textgrid_dir: Path,
+    output: Path,
+    split: Literal["train", "dev", "test"],
+    language: str,
+    target_size: int,
+    min_length: float,
+    max_length: float,
+    suffix: str = ".TextGrid",
 ) -> tuple[Path, Path]:
     print(f"Language: {language}")
     lang_dir = root / language
@@ -154,9 +144,7 @@ def clean_manifest_and_alignment(
             if length < min_length or length > max_length:
                 continue
             align_line = convert_alignment(
-                ft,
-                (textgrid_dir / audio_name.name).with_suffix(suffix),
-                **(_DIACRITICS_TO_FIX.get(language, {}))
+                ft, (textgrid_dir / audio_name.name).with_suffix(suffix), **(_DIACRITICS_TO_FIX.get(language, {}))
             )
             if align_line:
                 paths.append(man_name)
@@ -178,29 +166,25 @@ def clean_manifest_and_alignment(
         max_idx = min(cutoff_idx + 1, len(indices))
         print(f"\tSize retrieved: {cum_lengths[max_idx - 1]:.2f} min.")
         for idx in indices[:max_idx]:
-            manifest_lines.append(
-                f"{paths[idx].relative_to(root).as_posix()}\t{lengths[idx]}"
-            )
+            manifest_lines.append(f"{paths[idx].relative_to(root).as_posix()}\t{lengths[idx]}")
         textgrid_lines = [textgrid_lines[idx] for idx in indices[:max_idx]]
     else:
         for name, length in zip(paths, lengths):
             manifest_lines.append(f"{name.relative_to(root).as_posix()}\t{length}")
 
-    return write_manifest_and_alignment(
-        output, language, manifest_lines, textgrid_lines
-    )
+    return write_manifest_and_alignment(output, language, manifest_lines, textgrid_lines)
 
 
 def create_split(
-        root: Path,
-        textgrid: Path,
-        output: Path,
-        split: Literal["train", "dev", "test"],
-        language_file: Path,
-        target_size: int,
-        min_length: float,
-        max_length: float,
-        align_suffix: str = ".TextGrid"
+    root: Path,
+    textgrid: Path,
+    output: Path,
+    split: Literal["train", "dev", "test"],
+    language_file: Path,
+    target_size: int,
+    min_length: float,
+    max_length: float,
+    align_suffix: str = ".TextGrid",
 ) -> None:
     min_length *= SAMPLE_RATE
     if max_length < 0:
@@ -217,47 +201,34 @@ def create_split(
     manifest_files, alignment_files = [], []
     for lang in tqdm(languages, desc="Generating manifest and alignment files"):
         man_file, align_file = clean_manifest_and_alignment(
-            ft,
-            root,
-            textgrid / lang,
-            output / split,
-            split,
-            lang,
-            target_size,
-            min_length,
-            max_length,
-            align_suffix
+            ft, root, textgrid / lang, output / split, split, lang, target_size, min_length, max_length, align_suffix
         )
         manifest_files.append(man_file)
         alignment_files.append(align_file)
 
     with open(output / f"multilingual-{split}.tsv", "w") as wfp:
         wfp.write(f"{root.as_posix()}\n")
-        for man_file in tqdm(
-                manifest_files, desc="Dumping the multilingual manifest"
-        ):
+        for man_file in tqdm(manifest_files, desc="Dumping the multilingual manifest"):
             with open(man_file, "r") as rfp:
                 list(itertools.islice(rfp, 1))
                 shutil.copyfileobj(rfp, wfp)
 
     with open(output / f"multilingual-{split}.align", "w") as wfp:
-        for align_file in tqdm(
-                alignment_files, desc="Dumping the multilingual alignment"
-        ):
+        for align_file in tqdm(alignment_files, desc="Dumping the multilingual alignment"):
             with open(align_file, "r") as rfp:
                 shutil.copyfileobj(rfp, wfp)
 
 
 def clean_manifest_and_alignment_lr(
-        ft: panphon.FeatureTable,
-        root: Path,
-        new_root: Path,
-        textgrid_dir: Path,
-        output: Path,
-        split: Literal["train", "dev", "test"],
-        language: str,
-        length_threshold: float,
-        suffix: str = ".TextGrid"
+    ft: panphon.FeatureTable,
+    root: Path,
+    new_root: Path,
+    textgrid_dir: Path,
+    output: Path,
+    split: Literal["train", "dev", "test"],
+    language: str,
+    length_threshold: float,
+    suffix: str = ".TextGrid",
 ) -> None:
     print(f"Language: {language}")
     (new_root / language).mkdir(parents=True, exist_ok=True)
@@ -274,9 +245,7 @@ def clean_manifest_and_alignment_lr(
             length = sf.info(man_name).frames
             if length >= length_threshold:
                 continue
-            align_line = convert_alignment(
-                ft, (textgrid_dir / audio_name.name).with_suffix(suffix)
-            )
+            align_line = convert_alignment(ft, (textgrid_dir / audio_name.name).with_suffix(suffix))
             if align_line:
                 path_length_textgrid_lines.append((man_name, length, align_line))
 
@@ -306,19 +275,17 @@ def clean_manifest_and_alignment_lr(
             size = path_length_textgrid_lines[end][1]
             alignments = [path_length_textgrid_lines[end][2]]
 
-    write_manifest_and_alignment(
-        output, language, manifest_lines, textgrid_lines
-    )
+    write_manifest_and_alignment(output, language, manifest_lines, textgrid_lines)
 
 
 def enrich_low_resource(
-        root: Path,
-        textgrid: Path,
-        output: Path,
-        split: Literal["train", "dev", "test"],
-        language_file: Path,
-        length_threshold: float,
-        align_suffix: str = ".TextGrid"
+    root: Path,
+    textgrid: Path,
+    output: Path,
+    split: Literal["train", "dev", "test"],
+    language_file: Path,
+    length_threshold: float,
+    align_suffix: str = ".TextGrid",
 ) -> None:
     length_threshold *= SAMPLE_RATE
 
@@ -337,16 +304,11 @@ def enrich_low_resource(
             split,
             lang,
             length_threshold,
-            align_suffix
+            align_suffix,
         )
 
 
-def fetch_subset(
-        split: Path,
-        subset: str,
-        language_file: Path,
-        target_size: int
-) -> None:
+def fetch_subset(split: Path, subset: str, language_file: Path, target_size: int) -> None:
     with open(language_file, "r") as fp:
         languages = fp.read().splitlines()
     print(f"Found {len(languages)} language(s) in {language_file}")
@@ -377,9 +339,7 @@ def fetch_subset(
 
     alignments_dir = root / "alignments"
     alignments_dir.mkdir(exist_ok=True)
-    for lang, num_lines in tqdm(
-            zip(languages, alignment_num_lines), desc="Processing alignment files"
-    ):
+    for lang, num_lines in tqdm(zip(languages, alignment_num_lines), desc="Processing alignment files"):
         alignment_lines = []
         with open(split / "alignments" / f"{lang}.align", "r") as fp:
             for line in fp:
@@ -391,12 +351,7 @@ def fetch_subset(
             fp.write("".join(alignment_lines))
 
 
-def fetch_and_merge_subsets(
-        split: Path,
-        subset: str,
-        language_file: Path,
-        target_size: int
-) -> None:
+def fetch_and_merge_subsets(split: Path, subset: str, language_file: Path, target_size: int) -> None:
     with open(language_file, "r") as fp:
         languages = fp.read().splitlines()
     print(f"Found {len(languages)} language(s) in {language_file}")
@@ -425,9 +380,7 @@ def fetch_and_merge_subsets(
         fp.write("\n".join(manifest_lines) + "\n")
 
     alignment_lines = []
-    for lang, num_lines in tqdm(
-            zip(languages, alignment_num_lines), desc="Processing alignment files"
-    ):
+    for lang, num_lines in tqdm(zip(languages, alignment_num_lines), desc="Processing alignment files"):
         count = 0
         with open(split / "alignments" / f"{lang}.align", "r") as fp:
             for line in fp:
@@ -461,11 +414,7 @@ def filter_data(root: Path, utt_accuracy: Path, thresholds: list[int]) -> None:
     tokenizer = FeatureTokenizer("unk-ign", feature_decoder)
     silence_prediction = True
     dataset = PhoneticFeatureDataset(
-        manifests_dir,
-        alignments_dir,
-        tokenizer,
-        separate_files=True,
-        silence_prediction=silence_prediction
+        manifests_dir, alignments_dir, tokenizer, separate_files=True, silence_prediction=silence_prediction
     )
 
     cv_root = Path("/lustre/fsmisc/dataset/CommonVoice/cv-corpus-16.1-2023-12-06")

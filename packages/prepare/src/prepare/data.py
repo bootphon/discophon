@@ -15,8 +15,7 @@ from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 
 from .decoder import FeatureDecoder, SILENCE
-from .io import read_alignment, read_manifest
-from .utils import MyPathLike
+from .io import read_alignment, read_manifest, MyPathLike
 
 SAMPLE_RATE = 16_000
 ALIGNMENT_FREQ = 100  # in Hz
@@ -69,17 +68,17 @@ class FeatureTokenizer:
     Positive features are encoded as 1, negative features are encoded as 0, and zero
     features are encoded as 0 (if unknown mode is "no-unk") or 2 (otherwise).
     """
+
     PAD_INDEX: int = 3
 
     def __init__(
-            self,
-            unknown_mode: Literal["no-unk", "unk-pred", "unk-ign"],
-            feature_decoder: FeatureDecoder,
+        self,
+        unknown_mode: Literal["no-unk", "unk-pred", "unk-ign"],
+        feature_decoder: FeatureDecoder,
     ) -> None:
         self._unknown_mode = unknown_mode
         self._feat_decoder = feature_decoder
-        self._ipa_to_feats = {seg: feats for seg, feats in
-                              zip(feature_decoder.segments, feature_decoder.features)}
+        self._ipa_to_feats = {seg: feats for seg, feats in zip(feature_decoder.segments, feature_decoder.features)}
 
     @property
     def unknown_mode(self) -> Literal["no-unk", "unk-pred", "unk-ign"]:
@@ -98,8 +97,7 @@ class FeatureTokenizer:
         return self._feat_decoder.multilingual_mode
 
     @cache
-    def ipa_to_features(self, ipa_phone: str) \
-            -> tuple[tuple[str, ...], Num[torch.Tensor, "_ {self.num_features}"]]:
+    def ipa_to_features(self, ipa_phone: str) -> tuple[tuple[str, ...], Num[torch.Tensor, "_ {self.num_features}"]]:
         """Get the representative form and the feature representation of an IPA phone.
 
         Parameters
@@ -124,11 +122,7 @@ class FeatureTokenizer:
 
         return rep_phones, tensor
 
-    def encode(
-            self,
-            ipa_phones: tuple[str, ...],
-            counts: tuple[int, ...]
-    ) -> tuple[torch.Tensor, list[str]]:
+    def encode(self, ipa_phones: tuple[str, ...], counts: tuple[int, ...]) -> tuple[torch.Tensor, list[str]]:
         """Encode a sequence of IPA phones along with their counts into tensors.
 
         Parameters
@@ -145,9 +139,9 @@ class FeatureTokenizer:
         phones : list of str
             A list of phone strings.
         """
-        assert len(counts) == len(ipa_phones), \
-            (f"Length mismatch between the IPA phones ({len(ipa_phones)}) and counts "
-             f"({len(counts)})")
+        assert len(counts) == len(ipa_phones), (
+            f"Length mismatch between the IPA phones ({len(ipa_phones)}) and counts ({len(counts)})"
+        )
         vectors = []
         phones = []
         for phone, reps in zip(ipa_phones, counts):
@@ -211,8 +205,7 @@ class Tokenizer:
     def __init__(self, feature_decoder: FeatureDecoder, inventory: list[str]) -> None:
         self._feat_decoder = feature_decoder
         self._inventory = inventory
-        self._ipa_to_feats = {seg: feats for seg, feats in
-                              zip(feature_decoder.segments, feature_decoder.features)}
+        self._ipa_to_feats = {seg: feats for seg, feats in zip(feature_decoder.segments, feature_decoder.features)}
 
     @property
     def sum_diphthong(self):
@@ -227,8 +220,7 @@ class Tokenizer:
         return len(self._feat_decoder.segments)
 
     @cache
-    def ipa_to_token(self, ipa_phone: str) \
-            -> tuple[tuple[str, ...], list[int]]:
+    def ipa_to_token(self, ipa_phone: str) -> tuple[tuple[str, ...], list[int]]:
         """Get the representative form and the token (index) of an IPA phone.
 
         Parameters
@@ -247,9 +239,7 @@ class Tokenizer:
         tokens = [self._inventory.index(phone) for phone in rep_phones]
         return rep_phones, tokens
 
-    def encode(
-            self, ipa_phones: tuple[str, ...], counts: tuple[int, ...]
-    ) -> torch.LongTensor:
+    def encode(self, ipa_phones: tuple[str, ...], counts: tuple[int, ...]) -> torch.LongTensor:
         """Encode a sequence of IPA phones into tensors.
         Parameters
         ----------
@@ -263,9 +253,9 @@ class Tokenizer:
         tokens : torch.Tensor
             The tensor containing the phone tokens.
         """
-        assert len(counts) == len(ipa_phones), \
-            (f"Length mismatch between the IPA phones ({len(ipa_phones)}) and counts "
-             f"({len(counts)})")
+        assert len(counts) == len(ipa_phones), (
+            f"Length mismatch between the IPA phones ({len(ipa_phones)}) and counts ({len(counts)})"
+        )
 
         tokens = []
         for phone, reps in zip(ipa_phones, counts):
@@ -291,19 +281,51 @@ class Tokenizer:
         ipa_phones : str
             A concatenation of IPA phone strings separated by whitespace.
         """
-        return " ".join(
-            self._inventory[token] for token in tokens if token != self.pad_token
-        )
+        return " ".join(self._inventory[token] for token in tokens if token != self.pad_token)
 
 
 class Librispeech:
     LIBRI_TO_IPA: dict[str, str] = {  # no AX, AXR, DX, IX, NX, Q, WH
-        "AA": "ɑ", "AE": "æ", "AH": "ʌ", "AO": "ɔ", "AW": "aʊ", "AY": "aɪ", "B": "b",
-        "CH": "t͡ʃ", "D": "d", "DH": "ð", "EH": "ɛ", "ER": "ɜ˞", "EY": "eɪ", "F": "f",
-        "G": "ɡ", "HH": "h", "IH": "ɪ", "IY": "i", "JH": "d͡ʒ", "K": "k", "L": "l",
-        "M": "m", "N": "n", "NG": "ŋ", "OW": "oʊ", "OY": "ɔɪ", "P": "p", "R": "ɹ",
-        "S": "s", "SH": "ʃ", "T": "t", "TH": "θ", "UH": "ʊ", "UW": "u", "V": "v",
-        "W": "w", "Y": "j", "Z": "z", "ZH": "ʒ", "SIL": SILENCE,
+        "AA": "ɑ",
+        "AE": "æ",
+        "AH": "ʌ",
+        "AO": "ɔ",
+        "AW": "aʊ",
+        "AY": "aɪ",
+        "B": "b",
+        "CH": "t͡ʃ",
+        "D": "d",
+        "DH": "ð",
+        "EH": "ɛ",
+        "ER": "ɜ˞",
+        "EY": "eɪ",
+        "F": "f",
+        "G": "ɡ",
+        "HH": "h",
+        "IH": "ɪ",
+        "IY": "i",
+        "JH": "d͡ʒ",
+        "K": "k",
+        "L": "l",
+        "M": "m",
+        "N": "n",
+        "NG": "ŋ",
+        "OW": "oʊ",
+        "OY": "ɔɪ",
+        "P": "p",
+        "R": "ɹ",
+        "S": "s",
+        "SH": "ʃ",
+        "T": "t",
+        "TH": "θ",
+        "UH": "ʊ",
+        "UW": "u",
+        "V": "v",
+        "W": "w",
+        "Y": "j",
+        "Z": "z",
+        "ZH": "ʒ",
+        "SIL": SILENCE,
     }
 
     @classmethod
@@ -325,12 +347,7 @@ class MontrealForcedAligner:
 
 class PanPhonInventory:
     def __init__(self):
-        with open(
-                importlib.resources.files(
-                    "phind"
-                ) / "../../data" / "correction_map.pickle",
-                "rb"
-        ) as fp:
+        with open(importlib.resources.files("phind") / "../../data" / "correction_map.pickle", "rb") as fp:
             self._corrections = pickle.load(fp)
 
     def convert_to_ipa(self, panphon_phones: list[str] | str) -> list[str]:
@@ -347,9 +364,7 @@ def conv_output_length(input_length: int):
     return input_length
 
 
-def subsample_tokens(
-        tokens: list, num_samples: int, pad_token: Optional[Any] = None
-) -> list:
+def subsample_tokens(tokens: list, num_samples: int, pad_token: Optional[Any] = None) -> list:
     """Subsample the phone sequence to match the output length of HuBERT."""
     subsampled = tokens[::SUBSAMPLE]
     output_length = conv_output_length(num_samples)
@@ -360,19 +375,11 @@ def subsample_tokens(
 
 
 class IPADataset:
-    def __init__(
-            self,
-            manifest_path: MyPathLike,
-            alignments_path: MyPathLike,
-            sep_diphthong: bool = False
-    ) -> None:
+    def __init__(self, manifest_path: MyPathLike, alignments_path: MyPathLike, sep_diphthong: bool = False) -> None:
         manifest = read_manifest(manifest_path)
         self.manifest = list(manifest.items())
         alignments = read_alignment(alignments_path)
-        self.ipa_phones = {
-            file_id: Librispeech.convert_to_ipa(phones)
-            for file_id, phones in alignments.items()
-        }
+        self.ipa_phones = {file_id: Librispeech.convert_to_ipa(phones) for file_id, phones in alignments.items()}
         self.sep_diphthong = sep_diphthong
         self._ft = panphon.FeatureTable()
 
@@ -402,25 +409,24 @@ class IPADataset:
 
 class PhoneticFeatureDataset(Dataset):
     def __init__(
-            self,
-            manifest_path: MyPathLike,
-            alignment_path: MyPathLike,
-            feature_tokenizer: FeatureTokenizer,
-            separate_files: bool = False,
-            max_audio_length: int = 28_800_000,  # for backwards compatibility
-            pad_audio: bool = True,  # for backwards compatibility
-            random_crop: bool = False,
-            boundary_prediction: bool = False,
-            silence_prediction: bool = False
+        self,
+        manifest_path: MyPathLike,
+        alignment_path: MyPathLike,
+        feature_tokenizer: FeatureTokenizer,
+        separate_files: bool = False,
+        max_audio_length: int = 28_800_000,  # for backwards compatibility
+        pad_audio: bool = True,  # for backwards compatibility
+        random_crop: bool = False,
+        boundary_prediction: bool = False,
+        silence_prediction: bool = False,
     ) -> None:
         super().__init__()
         if boundary_prediction or silence_prediction:
-            assert feature_tokenizer.unknown_mode in ["no-unk", "unk-ign"], \
-                (
-                    "Boundary and silence predictions are only compatible with unknown "
-                    "modes 'no-unk' and 'unk-ign', but got "
-                    f"'{feature_tokenizer.unknown_mode}'"
-                )
+            assert feature_tokenizer.unknown_mode in ["no-unk", "unk-ign"], (
+                "Boundary and silence predictions are only compatible with unknown "
+                "modes 'no-unk' and 'unk-ign', but got "
+                f"'{feature_tokenizer.unknown_mode}'"
+            )
 
         self.max_audio_length = max_audio_length
         self.pad_audio = pad_audio
@@ -430,16 +436,13 @@ class PhoneticFeatureDataset(Dataset):
         self.feature_tokenizer = feature_tokenizer
         panphon_inventory = PanPhonInventory()
         if separate_files:
-            manifests = [read_manifest(man_path) for man_path in
-                         Path(manifest_path).glob("¡*.tsv")]
+            manifests = [read_manifest(man_path) for man_path in Path(manifest_path).glob("¡*.tsv")]
             self.manifest = [entry for man in manifests for entry in man.items()]
-            alignments = [read_alignment(align_path) for align_path in
-                          Path(alignment_path).glob("*.align")]
+            alignments = [read_alignment(align_path) for align_path in Path(alignment_path).glob("*.align")]
             self.ipa_phones: dict[str, list[str]] = {}
             for align in alignments:
                 self.ipa_phones.update(
-                    {file: panphon_inventory.convert_to_ipa(_align) for file, _align in
-                     align.items()}
+                    {file: panphon_inventory.convert_to_ipa(_align) for file, _align in align.items()}
                 )
 
             self.lang_sizes = [len(man) for man in manifests]
@@ -448,19 +451,18 @@ class PhoneticFeatureDataset(Dataset):
             self.manifest = list(manifest.items())
             alignments = read_alignment(alignment_path)
             if feature_tokenizer.multilingual_mode:
-                self.ipa_phones = {file: panphon_inventory.convert_to_ipa(_align) for
-                                   file, _align in alignments.items()}
+                self.ipa_phones = {
+                    file: panphon_inventory.convert_to_ipa(_align) for file, _align in alignments.items()
+                }
             else:
                 self.ipa_phones = {
-                    file_id: Librispeech.convert_to_ipa(phones)
-                    for file_id, phones in alignments.items()
+                    file_id: Librispeech.convert_to_ipa(phones) for file_id, phones in alignments.items()
                 }
 
     def __len__(self) -> int:
         return len(self.manifest)
 
-    def __getitem__(self, idx: int) \
-            -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, Sequence[str]]:
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, Sequence[str]]:
         if idx >= len(self.manifest):
             raise IndexError(f"Index {idx} out of range")
 
@@ -470,9 +472,7 @@ class PhoneticFeatureDataset(Dataset):
         waveform = waveform.squeeze(0)
         assert sample_rate == SAMPLE_RATE and waveform.size(0) == num_samples
         phones = subsample_tokens(self.ipa_phones[file_id], num_samples, SILENCE)
-        phones, counts = zip(
-            *[(ph, len(list(gr))) for ph, gr in itertools.groupby(phones)]
-        )
+        phones, counts = zip(*[(ph, len(list(gr))) for ph, gr in itertools.groupby(phones)])
         phon_features, phones = self.feature_tokenizer.encode(phones, counts)
         counts = torch.as_tensor(counts)
 
@@ -484,8 +484,7 @@ class PhoneticFeatureDataset(Dataset):
             additions.append(count_features)
         if self.silence_prediction:
             sil_features = phon_features.new_zeros(phon_features.size(0), 1)
-            sil_mask = [ph == self.feature_tokenizer.ipa_to_features(SILENCE)[0][0]
-                        for ph in phones]
+            sil_mask = [ph == self.feature_tokenizer.ipa_to_features(SILENCE)[0][0] for ph in phones]
             sil_features[sil_mask] = 1
             additions.append(sil_features)
 
@@ -493,8 +492,9 @@ class PhoneticFeatureDataset(Dataset):
             phon_features = torch.cat([phon_features, *additions], dim=1)
         return waveform, phon_features, counts, phones
 
-    def collate_audios(self, audios: list[torch.Tensor], target_length: int) \
-            -> tuple[torch.Tensor, list[int], list[int]]:
+    def collate_audios(
+        self, audios: list[torch.Tensor], target_length: int
+    ) -> tuple[torch.Tensor, list[int], list[int]]:
         batch = audios[0].new_zeros(len(audios), target_length)
         beginnings = [0] * len(audios)
         lengths = [target_length] * len(audios)
@@ -504,32 +504,26 @@ class PhoneticFeatureDataset(Dataset):
                 batch[i] = audio
             elif diff < 0:
                 assert self.pad_audio
-                batch[i, :audio.size(0)] = audio
+                batch[i, : audio.size(0)] = audio
                 lengths[i] = audio.size(0)
             else:
                 beg = torch.randint(diff + 1, size=(1,))[0] if self.random_crop else 0
-                batch[i] = audio[beg:beg + target_length]
+                batch[i] = audio[beg : beg + target_length]
                 beginnings[i] = beg
         return batch, beginnings, lengths
 
     def collate_phonetic_features(
-            self,
-            phon_features: list[torch.Tensor],
-            beginnings: list[int],
-            lengths: list[int]
+        self, phon_features: list[torch.Tensor], beginnings: list[int], lengths: list[int]
     ) -> tuple[torch.Tensor, torch.Tensor]:
         batch = phon_features[0].new_full(
-            (len(phon_features), max(lengths), phon_features[0].size(-1)),
-            fill_value=self.feature_tokenizer.PAD_INDEX
+            (len(phon_features), max(lengths), phon_features[0].size(-1)), fill_value=self.feature_tokenizer.PAD_INDEX
         )
         for i, feats in enumerate(phon_features):
-            batch[i, :lengths[i]] = feats[beginnings[i]:beginnings[i] + lengths[i]]
+            batch[i, : lengths[i]] = feats[beginnings[i] : beginnings[i] + lengths[i]]
         return batch, torch.as_tensor(lengths)
 
     @staticmethod
-    def collate_counts(
-            counts: list[torch.Tensor], phon_begs: list[int], phon_lengths: list[int]
-    ) -> torch.Tensor:
+    def collate_counts(counts: list[torch.Tensor], phon_begs: list[int], phon_lengths: list[int]) -> torch.Tensor:
         new_counts = []
         for _counts, beg, length in zip(counts, phon_begs, phon_lengths):
             cumul = _counts.cumsum(dim=0)
@@ -539,16 +533,12 @@ class PhoneticFeatureDataset(Dataset):
             cumul = _counts.cumsum(dim=0)
             idx = torch.searchsorted(cumul, length)
             _counts[idx] = length - (cumul[idx - 1] if idx > 0 else 0)
-            new_counts.append(_counts[:idx + 1])
+            new_counts.append(_counts[: idx + 1])
         return pad_sequence(new_counts, batch_first=True)
 
     def collate_fn(
-            self,
-            batch: list[tuple[torch.Tensor, torch.Tensor, torch.Tensor, Sequence[str]]]
-    ) -> tuple[
-        torch.Tensor, torch.Tensor, torch.Tensor,
-        torch.Tensor, torch.Tensor, tuple[Sequence[str], ...]
-    ]:
+        self, batch: list[tuple[torch.Tensor, torch.Tensor, torch.Tensor, Sequence[str]]]
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, tuple[Sequence[str], ...]]:
         waveforms, phon_features, counts, phones = zip(*batch)
 
         waveform_lengths = [len(w) for w in waveforms]
@@ -556,49 +546,39 @@ class PhoneticFeatureDataset(Dataset):
             audio_length = min(max(waveform_lengths), self.max_audio_length)
         else:
             audio_length = min(min(waveform_lengths), self.max_audio_length)
-        waveforms, waveform_beginnings, waveform_lengths = self.collate_audios(
-            waveforms, audio_length
-        )
+        waveforms, waveform_beginnings, waveform_lengths = self.collate_audios(waveforms, audio_length)
         # TODO: how to handle the mismatch between the waveform shift and the
         #  waveform-phone alignment (20ms frames) for random cropping?
         # actual phonetic sequence lengths
-        phon_feature_beginnings = [max(0, conv_output_length(wb + 1)) for wb in
-                                   waveform_beginnings]
+        phon_feature_beginnings = [max(0, conv_output_length(wb + 1)) for wb in waveform_beginnings]
         phon_feature_lengths = [conv_output_length(wl) for wl in waveform_lengths]
         phones = tuple(
-            phn_seq[beg:beg + length] for phn_seq, beg, length in
-            zip(phones, phon_feature_beginnings, phon_feature_lengths)
+            phn_seq[beg : beg + length]
+            for phn_seq, beg, length in zip(phones, phon_feature_beginnings, phon_feature_lengths)
         )
-        counts = self.collate_counts(
-            counts, phon_feature_beginnings, phon_feature_lengths
-        )
+        counts = self.collate_counts(counts, phon_feature_beginnings, phon_feature_lengths)
         waveform_lengths = torch.as_tensor(waveform_lengths)
         phon_features, phon_feature_lengths = self.collate_phonetic_features(
             phon_features, phon_feature_beginnings, phon_feature_lengths
         )
-        return (waveforms, phon_features, counts, waveform_lengths,
-                phon_feature_lengths, phones)
+        return (waveforms, phon_features, counts, waveform_lengths, phon_feature_lengths, phones)
 
 
 class AudioLabelDataset(Dataset):
-    def __init__(
-            self,
-            manifest_path: MyPathLike,
-            labels_path: MyPathLike
-    ) -> None:
+    def __init__(self, manifest_path: MyPathLike, labels_path: MyPathLike) -> None:
         super().__init__()
         manifest = read_manifest(manifest_path)
         self.manifest = list(manifest.items())
         with open(labels_path, "r") as fp:
             self.labels = [line.rstrip() for line in fp]
-        assert len(self.manifest) == len(self.labels), \
+        assert len(self.manifest) == len(self.labels), (
             f"{len(self.manifest)} in manifest vs {len(self.labels)} labelled "
+        )
 
     def __len__(self) -> int:
         return len(self.manifest)
 
-    def __getitem__(self, idx: int) \
-            -> tuple[Float[torch.Tensor, "length"], Integer[torch.Tensor, "seq"]]:
+    def __getitem__(self, idx: int) -> tuple[Float[torch.Tensor, "length"], Integer[torch.Tensor, "seq"]]:
         if idx >= len(self.manifest):
             raise IndexError(f"Index {idx} out of range")
 
@@ -612,9 +592,7 @@ class AudioLabelDataset(Dataset):
 
     @staticmethod
     def collate_fn(
-            batch: list[
-                tuple[Float[torch.Tensor, "length"], Integer[torch.Tensor, "seq"]]
-            ]
+        batch: list[tuple[Float[torch.Tensor, "length"], Integer[torch.Tensor, "seq"]]],
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         waveforms, labels = zip(*batch)
         waveform_lengths = torch.as_tensor([len(w) for w in waveforms])
