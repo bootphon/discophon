@@ -709,7 +709,6 @@ name = "prepare"
 version = "0.1.0"
 source = { editable = "packages/prepare" }
 dependencies = [
-    { name = "bootphon" },
     { name = "jaxtyping" },
     { name = "numpy" },
     { name = "panphon" },
@@ -727,7 +726,6 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "bootphon", editable = "." },
     { name = "jaxtyping", specifier = ">=0.3.3" },
     { name = "numpy", specifier = ">=2.3.4" },
     { name = "panphon", specifier = ">=0.22.2" },
