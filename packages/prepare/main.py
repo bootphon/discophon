@@ -5,7 +5,8 @@ from prepare.prepare_multilingual import create_split
 root = Path("/store/data/raw_data/commonvoice/cv17/")
 textgrid = Path("/store/data/raw_data/commonvoice/cv_textgrid")
 output = Path("cv17_ja")
-language_file = Path("/scratch2/mkhentout/multiling/scripts/angelo_multiligPrepare/languages.txt")
+# language_file = Path("/scratch2/mkhentout/multiling/scripts/angelo_multiligPrepare/languages.txt")
+language_file = Path("./languages.txt")
 
 # Create output directory if it doesn't exist
 output.mkdir(parents=True, exist_ok=True)
