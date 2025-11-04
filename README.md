@@ -1,1 +1,1 @@
-# S3L-adapt
+# The Phoneme Discovery Challenge
