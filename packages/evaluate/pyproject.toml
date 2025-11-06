@@ -1,0 +1,48 @@
+[project]
+name = "discophon.evaluate"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Maxime Poli" },
+    { name = "CoML", email = "dev@cognitive-ml.fr" },
+]
+requires-python = ">=3.13"
+dependencies = [
+    "joblib>=1.5.2",
+    "numba>=0.62.1",
+    "numpy>=2.3.4",
+    "polars>=1.35.1",
+]
+
+[project.optional-dependencies]
+abx = [
+    "fastabx>=0.6.0",
+]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.1.0",
+    "matplotlib>=3.10.7",
+    "seaborn>=0.13.2",
+]
+
+[build-system]
+requires = ["flit_core>=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.ruff]
+line-length = 119
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "COM812",  # missing-trailing-comma
+    "D1",      # TODO: to actually enforce later (at least in part)
+    "D203",    # incorrect-blank-line-before-class
+    "D213",    # multi-line-summary-second-line
+    "PLR0913", # too-many-arguments
+]
+
+[tool.ruff.lint.pylint]
+allow-magic-value-types = ["int", "str"]
