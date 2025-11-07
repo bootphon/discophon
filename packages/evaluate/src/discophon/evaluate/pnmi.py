@@ -1,3 +1,5 @@
+"""Assignment and mutual information."""
+
 import itertools
 
 import numpy as np
@@ -13,6 +15,11 @@ def align_units_and_phones(
     step_units: int,
     step_phones: int,
 ) -> dict[str, UnitsAndPhones]:
+    """Align units and phones by repeating each unit step_units // step_phones times.
+
+    This assumes that step_units <= step_phones and they step_phones is a multiple of step_units.
+    Allows for a small margin in the end, in case where the final unit is missing.
+    """
     repeat = step_units // step_phones
     data = {}
     for fileid, this_phones in phones.items():
@@ -24,7 +31,7 @@ def align_units_and_phones(
     return data
 
 
-def cooccurence_matrix(
+def contingency_table(
     units: Units,
     phones: Phones,
     *,
@@ -32,7 +39,12 @@ def cooccurence_matrix(
     n_phones: int,
     step_units: int,
     step_phones: int,
-) -> tuple[np.ndarray[tuple[int], np.dtype[np.int64]], dict[int, str]]:
+) -> tuple[np.ndarray[tuple[int, int], np.dtype[np.int64]], dict[int, str]]:
+    """Return a 2D contingency table of shape (n_phones, n_units).
+
+    Element (i, j) is the number of times the unit j has appeared where the underlying phoneme is i.
+    The phonemes are ordered according to the returned dictionary (sorted by frequency).
+    """
     index, phone_to_index, index_to_phone = 0, {}, {}
     phone_indices, unit_indices = [], []
     data = align_units_and_phones(units, phones, step_units=step_units, step_phones=step_phones)
@@ -55,16 +67,24 @@ def cooccurence_matrix(
     return count[most_frequent_phones], phone_order
 
 
-def pnmi(cooccurence: np.ndarray, *, eps: float = 1e-10) -> float:
-    proba = cooccurence / cooccurence.sum()
+def pnmi(count: np.ndarray[tuple[int, int], np.dtype[np.int64]], *, eps: float = 1e-10) -> float:
+    """Phone normalized mutual information, as in (Hsu et al., 2021)."""
+    proba = count / count.sum()
     px, py = proba.sum(axis=1, keepdims=True), proba.sum(axis=0, keepdims=True)
     mutual_info = (proba * np.log(proba / (px @ py + eps) + eps)).sum()
     entropy_x = (-px * np.log(px + eps)).sum()
     return (mutual_info / entropy_x).item()
 
 
-def find_mapping(cooccurence: np.ndarray, phone_order: dict[int, str]) -> dict[int, str]:
-    most_frequent = cooccurence.argmax(axis=0).tolist()
+def mapping_many_to_one(
+    count: np.ndarray[tuple[int, int], np.dtype[np.int64]],
+    phone_order: dict[int, str],
+) -> dict[int, str]:
+    """Map each unit to the phoneme that it was associated with the most.
+
+    Many units can be associated to the same phoneme.
+    """
+    most_frequent = count.argmax(axis=0).tolist()
     return {k: phone_order[p] for k, p in enumerate(most_frequent)}
 
 
@@ -78,7 +98,8 @@ def evaluate_pnmi_and_predict(
     step_units: int,
     step_phones: int,
 ) -> tuple[float, Phones]:
-    cooccurence, phone_order = cooccurence_matrix(
+    """Compute the PNMI and the predicted phoneme transcription using the many-to-one scheme."""
+    count, phone_order = contingency_table(
         units,
         phones,
         n_units=n_units,
@@ -86,6 +107,6 @@ def evaluate_pnmi_and_predict(
         step_units=step_units,
         step_phones=step_phones,
     )
-    mapping = find_mapping(cooccurence, phone_order)
+    mapping = mapping_many_to_one(count, phone_order)
     predictions = {fileid: [mapping[u] for u in this_units] for fileid, this_units in units.items()}
-    return pnmi(cooccurence), predictions
+    return pnmi(count), predictions

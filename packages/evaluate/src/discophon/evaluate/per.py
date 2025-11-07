@@ -1,3 +1,5 @@
+"""Phoneme recognition."""
+
 from collections.abc import Iterable, Sequence
 from itertools import groupby
 
@@ -9,6 +11,7 @@ from .utils import Phones, validate_same_keys
 
 
 def deduplicate[T](seq: Iterable[T]) -> list[T]:
+    """Deduplicate consecutive values."""
     return [key for key, _ in groupby(seq)]
 
 
@@ -37,6 +40,7 @@ def edit_distance[T](hypothesis: Sequence[int], target: Sequence[T]) -> int:
 
 @validate_same_keys
 def phone_error_rate(hypothesis: Phones, target: Phones, *, n_jobs: int = -1) -> float:
+    """Phone error rate: total edit distances divided by the length of the target corpus."""
     results = Parallel(n_jobs=n_jobs)(
         delayed(lambda x, y: (edit_distance(x, y), len(y)))(
             deduplicate(hypothesis[fileid]), deduplicate(target[fileid])

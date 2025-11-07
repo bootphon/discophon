@@ -1,3 +1,5 @@
+"""ABX discriminability."""
+
 from pathlib import Path
 
 from fastabx import Dataset, Score, Subsampler, Task
@@ -7,6 +9,7 @@ from .utils import ABX
 
 
 def abx(dataset: Dataset, distance_name: DistanceName, *, seed: int = 0) -> ABX:
+    """Compute the phoneme ABX on the given dataset, within or across speaker."""
     within = Score(
         Task(
             dataset,
@@ -30,10 +33,12 @@ def abx(dataset: Dataset, distance_name: DistanceName, *, seed: int = 0) -> ABX:
 
 
 def discrete_abx(path_item: str | Path, path_units: str | Path, *, frequency: float) -> ABX:
+    """Phoneme ABX on discrete units."""
     return abx(Dataset.from_item_and_units(path_item, path_units, frequency), "identical")
 
 
 def continuous_abx(path_item: str | Path, path_features: str | Path, *, frequency: float) -> ABX:
+    """Phoneme ABX on continuous representations."""
     return abx(Dataset.from_item(path_item, path_features, frequency), "angular")
 
 
@@ -51,4 +56,4 @@ if __name__ == "__main__":
         abx = discrete_abx(args.item, args.units, frequency=args.frequency)
     else:
         raise ValueError(args.root)
-    print(f"Within speaker: {abx['within']:.2%}\nAcross speaker: {abx['across']:.2%}")  # noqa: T201
+    print(f"Within speaker: {abx['within']:.2%}\nAcross speaker: {abx['across']:.2%}")

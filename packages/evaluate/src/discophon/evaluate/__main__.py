@@ -1,3 +1,5 @@
+"""CLI entry-point for phoneme discovery evaluation."""
+
 from pathlib import Path
 
 from .evaluate import discovery_evaluation

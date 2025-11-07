@@ -1,7 +1,7 @@
 [project]
 name = "discophon.evaluate"
 version = "0.1.0"
-description = "Add your description here"
+description = "Evaluation package for the Phoneme Discovery challenge"
 readme = "README.md"
 authors = [
     { name = "Maxime Poli" },
@@ -25,6 +25,7 @@ dev = [
     "ipykernel>=7.1.0",
     "matplotlib>=3.10.7",
     "seaborn>=0.13.2",
+    "typos>=1.39.0",
 ]
 
 [build-system]
@@ -38,11 +39,13 @@ line-length = 119
 select = ["ALL"]
 ignore = [
     "COM812",  # missing-trailing-comma
-    "D1",      # TODO: to actually enforce later (at least in part)
+    "D105",    # undocumented-magic-method
+    "D107",    # undocumented-public-init
     "D203",    # incorrect-blank-line-before-class
     "D213",    # multi-line-summary-second-line
-    "PLR0913", # too-many-arguments
+    "T201",    # print
 ]
 
 [tool.ruff.lint.pylint]
 allow-magic-value-types = ["int", "str"]
+max-args = 10
