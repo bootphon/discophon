@@ -1,0 +1,18 @@
+[project]
+name = "discophon.baselines"
+version = "0.1.0"
+description = "Baselines for the Phoneme Discovery challenge"
+readme = "README.md"
+authors = [
+    { name = "Maxime Poli" },
+    { name = "CoML", email = "dev@cognitive-ml.fr" },
+]
+requires-python = ">=3.13"
+dependencies = [
+    "spidr[train]>=0.1.0",
+    "torchaudio>=2.9.0",
+]
+
+[build-system]
+requires = ["flit_core>=3.2,<4"]
+build-backend = "flit_core.buildapi"
