@@ -17,3 +17,11 @@ Contact: ???@cognitive-ml.fr
 ```bash
 pip install discophon.prepare discophon.evaluate discophon.baselines discophon.submission
 ```
+
+## Data preparation
+
+## Evaluation
+
+## Baseline systems
+
+## Submission
