@@ -17,11 +17,54 @@ plot = [
 line-length = 119
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "W", "RUF"]
+exclude = ["builder/*"]
+preview = true
+select = [
+  "A",  # flake8-builtins
+  "ARG",  # flake8-unused-arguments
+  "ANN",  # flake8-annotations
+  "B",  # flake8-bugbear
+  "BLE",  # flake8-blind-except
+  "C4",  # flake8-comprehensions
+  "C90",  # mccabe
+  "E",  # pycodestyle error
+  "EXE",  # flake8-executable
+  "F",  # Pyflakes
+  "FBT",  # flake8-boolean-trap
+  "FLY",  # flynt
+  "FURB",  # refurb
+  "G",  # flake8-logging-format
+  "I",  # isort
+  "ICN",  # flake8-import-conventions
+  "ISC",  # flake8-implicit-str-concat
+  "LOG",  # flake8-logging
+  "N",  # pep8-naming
+  "NPY",  # NumPy-specific rules
+  "PERF",  # Perflint
+  "PIE",  # flake8-pie
+  "PGH",  # pygrep-hooks
+  "PL",  # Pylint
+  "PTH",  # flake8-use-pathlib
+  "Q",  # flake8-quotes
+  "RET",  # flake8-return
+  "RSE",  # flake8-raise
+  "RUF",  # Ruff-specific rules
+  "SIM",  # flake8-simplify
+  "SLF",  # flake8-slots
+  "T10",  # flake8-debugger
+  "TC",  # flake8-type-checking
+  "TD",  # flake8-todos
+  "TID",  # flake8-tidy-imports
+  "UP",  # pyupgrade
+  "W",  # pycodestyle warning
+]
 
 [tool.ruff.lint.pylint]
 allow-magic-value-types = ["int", "str"]
 max-args = 10
+
+[tool.typos.default.extend-words]
+IY = "IY"
 
 [tool.uv.workspace]
 members = [

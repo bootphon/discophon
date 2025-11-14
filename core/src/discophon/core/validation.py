@@ -1,31 +1,5 @@
-"""Various utilities (mostly typing)."""
-
 from collections.abc import Callable
 from functools import wraps
-from typing import TypedDict
-
-
-class UnitsAndPhones(TypedDict):
-    """Dictionary mapping filenames to the corresponding predicted units and gold phonemes."""
-
-    units: list[int]
-    phones: list[str]
-
-
-class ABX(TypedDict):
-    """Output of ABX evaluation."""
-
-    within: float
-    across: float
-
-
-class DiscoveryEvaluationResult(TypedDict):
-    """Output of phoneme discovery evaluation."""
-
-    pnmi: float
-    per: float
-    f1: float
-    r_val: float
 
 
 class ArgumentsError(ValueError):
@@ -42,7 +16,7 @@ class ValidateSameKeysError(ValueError):
         super().__init__("The first two arguments must be dictionaries with the same keys")
 
 
-def validate_same_keys[R, **P](func: Callable[P, R]) -> Callable[P, R]:
+def validate_first_two_arguments_same_keys[R, **P](func: Callable[P, R]) -> Callable[P, R]:
     """Decoractor that checks that the first two arguments of the function are dictionaries with the same keys."""
 
     @wraps(func)

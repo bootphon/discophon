@@ -5,10 +5,8 @@ from itertools import groupby
 
 import numba
 import numpy as np
-from discophon.core import Phones
+from discophon.core import Phones, validate_first_two_arguments_same_keys
 from joblib import Parallel, delayed
-
-from .utils import validate_same_keys
 
 
 def deduplicate[T](seq: Iterable[T]) -> list[T]:
@@ -39,7 +37,7 @@ def edit_distance[T](hypothesis: Sequence[int], target: Sequence[T]) -> int:
     return dold[-1].item()
 
 
-@validate_same_keys
+@validate_first_two_arguments_same_keys
 def phoneme_error_rate(hypothesis: Phones, target: Phones, *, n_jobs: int = -1) -> float:
     """Phoneme error rate: total edit distances divided by the length of the target corpus."""
     results = Parallel(n_jobs=n_jobs)(

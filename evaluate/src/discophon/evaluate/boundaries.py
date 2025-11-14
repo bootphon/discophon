@@ -7,9 +7,7 @@ from functools import cached_property
 from itertools import groupby
 
 import numpy as np
-from discophon.core import Phones
-
-from .utils import validate_same_keys
+from discophon.core import Phones, validate_first_two_arguments_same_keys
 
 
 @dataclass(frozen=True)
@@ -78,7 +76,7 @@ class Boundaries:
     def __init__(self, times_in_ms: Iterable[int]) -> None:
         self._times = np.array(times_in_ms, dtype=np.int64)
         self._times.sort()
-        self._times.setflags(write=0)
+        self._times.setflags(write=False)
 
     def __len__(self) -> int:
         return len(self._times)
@@ -129,7 +127,7 @@ def boundary_detection(gold: Boundaries, prediction: Boundaries, *, margin_in_ms
     )
 
 
-@validate_same_keys
+@validate_first_two_arguments_same_keys
 def boundary_evaluation(
     predicted_phones_from_units: Phones,
     gold_phones: Phones,

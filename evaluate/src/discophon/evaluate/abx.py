@@ -1,11 +1,17 @@
 """ABX discriminability."""
 
 from pathlib import Path
+from typing import TypedDict
 
 from fastabx import Dataset, Score, Subsampler, Task
 from fastabx.distance import DistanceName
 
-from .utils import ABX
+
+class ABX(TypedDict):
+    """Output of ABX evaluation."""
+
+    within: float
+    across: float
 
 
 def abx(dataset: Dataset, distance_name: DistanceName, *, seed: int = 0) -> ABX:
@@ -47,7 +53,11 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Continuous or discrete ABX")
     parser.add_argument("item", type=Path, help="Path to the item file")
-    parser.add_argument("root", type=Path, help="Path to the JSONL with units or directory with continuous features")
+    parser.add_argument(
+        "root",
+        type=Path,
+        help="Path to the JSONL with units or directory with continuous features",
+    )
     parser.add_argument("--frequency", required=True, type=int, help="Units frequency in Hz")
     args = parser.parse_args()
     if args.root.is_dir():

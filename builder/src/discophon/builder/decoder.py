@@ -24,9 +24,9 @@ class UniqueSegmentFeature:
         self.add_segment_feature_batch(mono_segment_feature)
         self.add_segment_feature_batch(multi_segment_feature)
 
-    def stratify_segments(self, segments: Iterable[str]) -> tuple[
-        list[tuple[str, list[tuple[int, ...]]]], list[tuple[str, list[tuple[int, ...]]]]
-    ]:
+    def stratify_segments(
+        self, segments: Iterable[str]
+    ) -> tuple[list[tuple[str, list[tuple[int, ...]]]], list[tuple[str, list[tuple[int, ...]]]]]:
         mono_segment_feature, multi_segment_feature = [], []
         for seg in segments:
             feats = self.ft.word_to_vector_list(seg, numeric=True)
@@ -53,24 +53,18 @@ class UniqueSegmentFeature:
             except KeyError:
                 self.features_to_segment[features] = (segment, {segment})
 
-    def add_segment_feature_batch(
-            self,
-            segment_feature_batch: list[tuple[str, list[tuple[int, ...]]]]
-    ) -> None:
+    def add_segment_feature_batch(self, segment_feature_batch: list[tuple[str, list[tuple[int, ...]]]]) -> None:
         for segment, features in segment_feature_batch:
             if len(features) == 1:
                 self.add_segment_feature(segment, features[0])
             elif self.sum_diphthong:
                 self.add_segment_feature(
-                    segment,
-                    tuple(
-                        feats[0] if len(set(feats)) == 1 else 0 for feats in
-                        zip(*features)
-                    )
+                    segment, tuple(feats[0] if len(set(feats)) == 1 else 0 for feats in zip(*features))
                 )
             else:
-                assert len(segment) == len(features), \
+                assert len(segment) == len(features), (
                     f"Expected {len(features)} segments for '{segment}', but got {len(segment)}"
+                )
                 self.multithongs.add(segment)
                 for seg, feats in zip(segment, features):
                     self.add_segment_feature(seg, feats)
@@ -98,9 +92,7 @@ class UniversalUniqueSegmentFeature:
 
 
 class FeatureDecoder:
-    def __init__(
-            self, sum_diphthong: bool, lang_segments: Optional[Iterable[str]] = None
-    ) -> None:
+    def __init__(self, sum_diphthong: bool, lang_segments: Optional[Iterable[str]] = None) -> None:
         self.fake_segments: dict[tuple[int, ...], str] = {}
         self._segment_to_representative: dict[str, tuple[str, ...]] = {}
 
@@ -111,9 +103,7 @@ class FeatureDecoder:
             assert sum_diphthong is not None
             self.unique_seg_feats = UniqueSegmentFeature(lang_segments, sum_diphthong)
 
-        self._features = np.asarray(
-            list(self.unique_seg_feats.features_to_segment.keys())
-        )
+        self._features = np.asarray(list(self.unique_seg_feats.features_to_segment.keys()))
         self._representative_to_feature = dict(zip(self.segments, self._features))
 
         for rep, eq_segments in self.unique_seg_feats.features_to_segment.values():
@@ -136,9 +126,7 @@ class FeatureDecoder:
 
     @functools.cached_property
     def segments(self) -> tuple[str, ...]:
-        return tuple(
-            rep for rep, _ in self.unique_seg_feats.features_to_segment.values()
-        )
+        return tuple(rep for rep, _ in self.unique_seg_feats.features_to_segment.values())
 
     @property
     def features(self) -> Integer[np.ndarray, "segments features"]:
@@ -147,9 +135,7 @@ class FeatureDecoder:
     @functools.cached_property
     def zero_index(self) -> int:
         if self.multilingual_mode:
-            for k, (_, segs) in enumerate(
-                    self.unique_seg_feats.features_to_segment.values()
-            ):
+            for k, (_, segs) in enumerate(self.unique_seg_feats.features_to_segment.values()):
                 if ZERO_TONE in segs:
                     return k
         else:
@@ -160,24 +146,20 @@ class FeatureDecoder:
             return (self.segments[self.zero_index],)
         if segment in self._segment_to_representative:
             return self._segment_to_representative[segment]
-        assert self.multilingual_mode, \
-            (f"Unable to find segment {segment} in the segment list provided for the "
-             f"language.")
-        features = self.unique_seg_feats.ft.word_to_vector_list(segment, numeric=True)
-        return tuple(
-            self.unique_seg_feats.features_to_segment[tuple(feats[:PHON_FEAT_DIM])][0]
-            for feats in features
+        assert self.multilingual_mode, (
+            f"Unable to find segment {segment} in the segment list provided for the language."
         )
+        features = self.unique_seg_feats.ft.word_to_vector_list(segment, numeric=True)
+        return tuple(self.unique_seg_feats.features_to_segment[tuple(feats[:PHON_FEAT_DIM])][0] for feats in features)
 
-    def canonical_representation(self, representative: tuple[str, ...]) \
-            -> tuple[tuple[str, ...], Integer[np.ndarray, "_ features"]]:
+    def canonical_representation(
+        self, representative: tuple[str, ...]
+    ) -> tuple[tuple[str, ...], Integer[np.ndarray, "_ features"]]:
         features = [self._representative_to_feature[rep] for rep in representative]
         if self.unique_seg_feats.sum_diphthong and len(representative) > 1:
             assert self.multilingual_mode
             representative = ("".join(representative),)
-            features = [np.asarray(
-                [feats[0] if len(set(feats)) == 1 else 0 for feats in zip(*features)]
-            )]
+            features = [np.asarray([feats[0] if len(set(feats)) == 1 else 0 for feats in zip(*features)])]
         return representative, np.stack(features, axis=0)
 
     def find_segment(self, features: tuple[int, ...]) -> str:
@@ -192,8 +174,7 @@ class FeatureDecoder:
         else:
             indices = np.flatnonzero(
                 np.logical_and.reduce(
-                    [feat2idx[f] for feat2idx, f in
-                     zip(self.feature_to_indices, features) if f != 0]
+                    [feat2idx[f] for feat2idx, f in zip(self.feature_to_indices, features) if f != 0]
                 )
             )
 

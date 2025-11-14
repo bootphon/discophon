@@ -2,16 +2,22 @@
 
 import itertools
 from collections.abc import Iterable
+from typing import TypedDict
 
 import numpy as np
 import polars as pl
-from discophon.core import Phones, Units
+from discophon.core import Phones, Units, validate_first_two_arguments_same_keys
 from xarray import DataArray
 
-from .utils import UnitsAndPhones, validate_same_keys
+
+class UnitsAndPhones(TypedDict):
+    """Dictionary mapping filenames to the corresponding predicted units and gold phonemes."""
+
+    units: list[int]
+    phones: list[str]
 
 
-@validate_same_keys
+@validate_first_two_arguments_same_keys
 def align_units_and_phones(
     units: Units,
     phones: Phones,
@@ -75,6 +81,7 @@ def contingency_table(
 
 
 def probability_phone_given_unit(count: DataArray) -> DataArray:
+    """Return P(phone|unit) as a xarray DataArray."""
     count = count[:, count.any(dim="phone")]
     proba = count / count.sum(dim="phone")
     most_probable_phones = proba.idxmax(dim="phone")
@@ -86,6 +93,7 @@ def probability_phone_given_unit(count: DataArray) -> DataArray:
 
 
 def relabel_assignment(assignment: Iterable[int], proba: DataArray) -> DataArray:
+    """Relabel the assignment of units to phones according to the most probable phones."""
     c_proba, c_phone, c_unit = str(proba.name), "phone", "unit"
     df_assignment = pl.DataFrame({c_unit: proba[c_unit].to_numpy(), "assignment": np.array(assignment)})
     df_proba = pl.DataFrame(proba.to_dataframe().reset_index()).join(df_assignment, on=c_unit, how="left")
@@ -94,12 +102,20 @@ def relabel_assignment(assignment: Iterable[int], proba: DataArray) -> DataArray
         .agg(pl.col(c_proba).mean())
         .group_by("assignment", maintain_order=True)
         .agg(pl.all().sort_by(c_proba).last())
-        .join(pl.DataFrame(proba[c_phone].to_numpy(), schema={c_phone: pl.String}).with_row_index(), on=c_phone)
+        .join(
+            pl.DataFrame(proba[c_phone].to_numpy(), schema={c_phone: pl.String}).with_row_index(),
+            on=c_phone,
+        )
         .sort(pl.col("index"), -pl.col(c_proba))
     )
     order = {v: k for k, v in enumerate(most_probable["assignment"].to_list())}
     new_assignment = df_assignment.with_columns(pl.col("assignment").replace_strict(order))
-    return DataArray(new_assignment["assignment"], dims=[c_unit], coords=[proba[c_unit]], name="assignment")
+    return DataArray(
+        new_assignment["assignment"],
+        dims=[c_unit],
+        coords=[proba[c_unit]],
+        name="assignment",
+    )
 
 
 def pnmi(count: np.ndarray[tuple[int, int], np.dtype[np.int64]], *, eps: float = 1e-10) -> float:
@@ -129,6 +145,11 @@ def mapping_one_to_one(
     *,
     unk_template: str = "<unknown-{index}>",
 ) -> dict[int, str]:
+    """Map the most frequent unit to the corresponding phoneme.
+
+    The mapping is one-to-one: each phoneme is assigned to exactly one unit.
+    Units that are not assigned to any phoneme are set to unknown.
+    """
     most_frequent = count.argmax(axis=0)
     highest_counts = count[most_frequent, np.arange(count.shape[1])]
     assignments = {}
@@ -142,7 +163,7 @@ def mapping_one_to_one(
     return dict(sorted(assignments.items()))
 
 
-@validate_same_keys
+@validate_first_two_arguments_same_keys
 def compute_pnmi_and_predict(
     units: Units,
     phones: Phones,

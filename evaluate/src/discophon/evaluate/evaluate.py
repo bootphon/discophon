@@ -1,14 +1,24 @@
 """Phoneme discovery evaluation."""
 
-from discophon.core import Phones, Units
+from typing import TypedDict
+
+from discophon.core import Phones, Units, validate_first_two_arguments_same_keys
 
 from .boundaries import boundary_evaluation
 from .per import phoneme_error_rate
 from .pnmi import compute_pnmi_and_predict
-from .utils import DiscoveryEvaluationResult, validate_same_keys
 
 
-@validate_same_keys
+class DiscoveryEvaluationResult(TypedDict):
+    """Output of phoneme discovery evaluation."""
+
+    pnmi: float
+    per: float
+    f1: float
+    r_val: float
+
+
+@validate_first_two_arguments_same_keys
 def phoneme_discovery(
     units: Units,
     phones: Phones,

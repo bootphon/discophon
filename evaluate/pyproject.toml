@@ -38,5 +38,17 @@ abx = [
 requires = ["flit_core>=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
+[tool.ruff]
+extend = "../pyproject.toml"
+
+[tool.ruff.lint]
+extend-select = ["D"]
+ignore = [
+  "D105",  # undocumented-magic-method
+  "D107",  # undocumented-public-init
+  "D203",  # incorrect-blank-line-before-class
+  "D213",  # multi-line-summary-second-line
+]
+
 [tool.uv.sources]
 discophon-core = { workspace = true }
