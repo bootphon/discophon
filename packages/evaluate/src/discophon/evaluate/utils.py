@@ -4,9 +4,6 @@ from collections.abc import Callable
 from functools import wraps
 from typing import TypedDict
 
-type Units = dict[str, list[int]]
-type Phones = dict[str, list[str]]
-
 
 class UnitsAndPhones(TypedDict):
     """Dictionary mapping filenames to the corresponding predicted units and gold phonemes."""

@@ -1,17 +1,21 @@
-[build-system]
-requires = ["flit_core>=3.2,<4"]
-build-backend = "flit_core.buildapi"
-
-[project]
-name = "bootphon"
-version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
-requires-python = ">=3.13"
-dependencies = [
-    "polars>=1.34.0",
-    "praat-textgrids>=1.4.0",
-]
-
 [tool.uv.workspace]
 members = ["packages/*"]
+
+[tool.ruff]
+line-length = 119
+
+[tool.ruff.lint]
+# select = ["ALL"]
+# ignore = [
+#     "COM812",  # missing-trailing-comma
+#     "D105",    # undocumented-magic-method
+#     "D107",    # undocumented-public-init
+#     "D203",    # incorrect-blank-line-before-class
+#     "D213",    # multi-line-summary-second-line
+#     "T201",    # print
+# ]
+select = ["E", "F", "I", "W", "RUF"]
+
+[tool.ruff.lint.pylint]
+allow-magic-value-types = ["int", "str"]
+max-args = 10

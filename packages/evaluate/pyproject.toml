@@ -9,10 +9,12 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
+    "discophon-core",
     "joblib>=1.5.2",
     "numba>=0.62.1",
     "numpy>=2.3.4",
     "polars>=1.35.1",
+    "xarray>=2025.10.1",
 ]
 
 [project.optional-dependencies]
@@ -32,20 +34,5 @@ dev = [
 requires = ["flit_core>=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
-[tool.ruff]
-line-length = 119
-
-[tool.ruff.lint]
-select = ["ALL"]
-ignore = [
-    "COM812",  # missing-trailing-comma
-    "D105",    # undocumented-magic-method
-    "D107",    # undocumented-public-init
-    "D203",    # incorrect-blank-line-before-class
-    "D213",    # multi-line-summary-second-line
-    "T201",    # print
-]
-
-[tool.ruff.lint.pylint]
-allow-magic-value-types = ["int", "str"]
-max-args = 10
+[tool.uv.sources]
+discophon-core = { workspace = true }

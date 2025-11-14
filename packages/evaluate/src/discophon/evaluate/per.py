@@ -5,9 +5,10 @@ from itertools import groupby
 
 import numba
 import numpy as np
+from discophon.core import Phones
 from joblib import Parallel, delayed
 
-from .utils import Phones, validate_same_keys
+from .utils import validate_same_keys
 
 
 def deduplicate[T](seq: Iterable[T]) -> list[T]:
@@ -39,8 +40,8 @@ def edit_distance[T](hypothesis: Sequence[int], target: Sequence[T]) -> int:
 
 
 @validate_same_keys
-def phone_error_rate(hypothesis: Phones, target: Phones, *, n_jobs: int = -1) -> float:
-    """Phone error rate: total edit distances divided by the length of the target corpus."""
+def phoneme_error_rate(hypothesis: Phones, target: Phones, *, n_jobs: int = -1) -> float:
+    """Phoneme error rate: total edit distances divided by the length of the target corpus."""
     results = Parallel(n_jobs=n_jobs)(
         delayed(lambda x, y: (edit_distance(x, y), len(y)))(
             deduplicate(hypothesis[fileid]), deduplicate(target[fileid])

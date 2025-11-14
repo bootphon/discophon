@@ -1,10 +1,14 @@
 """Assignment and mutual information."""
 
 import itertools
+from collections.abc import Iterable
 
 import numpy as np
+import polars as pl
+from discophon.core import Phones, Units
+from xarray import DataArray
 
-from .utils import Phones, Units, UnitsAndPhones, validate_same_keys
+from .utils import UnitsAndPhones, validate_same_keys
 
 
 @validate_same_keys
@@ -39,32 +43,63 @@ def contingency_table(
     n_phones: int,
     step_units: int,
     step_phones: int,
-) -> tuple[np.ndarray[tuple[int, int], np.dtype[np.int64]], dict[int, str]]:
+) -> DataArray:
     """Return a 2D contingency table of shape (n_phones, n_units).
 
     Element (i, j) is the number of times the unit j has appeared where the underlying phoneme is i.
     The phonemes are ordered according to the returned dictionary (sorted by frequency).
     """
-    index, phone_to_index, index_to_phone = 0, {}, {}
+    index, phone_to_index = 0, {}
     phone_indices, unit_indices = [], []
     data = align_units_and_phones(units, phones, step_units=step_units, step_phones=step_phones)
     for phones_and_units in data.values():
         for phone, unit in zip(phones_and_units["phones"], phones_and_units["units"], strict=True):
             if phone not in phone_to_index:
                 phone_to_index[phone] = index
-                index_to_phone[index] = phone
                 index += 1
             if phone_to_index[phone] >= n_phones or unit >= n_units:
                 raise IndexError
             phone_indices.append(phone_to_index[phone])
             unit_indices.append(unit)
+    for missing in range(len(phone_to_index), n_phones):
+        phone_to_index[f"<missing-{missing}>"] = missing
 
     flattened_indices = np.array(phone_indices) * n_units + np.array(unit_indices)
-    count = np.bincount(flattened_indices, minlength=n_phones * n_units).reshape(n_phones, n_units)
-    most_frequent_phones = np.argsort(count.sum(axis=1))[::-1]
-    index_to_phone = {v: k for k, v in phone_to_index.items()}
-    phone_order = {k: index_to_phone[i.item()] for k, i in enumerate(most_frequent_phones)}
-    return count[most_frequent_phones], phone_order
+    count = DataArray(
+        np.bincount(flattened_indices, minlength=n_phones * n_units).reshape(n_phones, n_units),
+        dims=["phone", "unit"],
+        coords=[list(phone_to_index.keys()), list(range(n_units))],
+        name="Contingency Table",
+    )
+    return count.sortby(count.sum(axis=1), ascending=False)
+
+
+def probability_phone_given_unit(count: DataArray) -> DataArray:
+    count = count[:, count.any(dim="phone")]
+    proba = count / count.sum(dim="phone")
+    most_probable_phones = proba.idxmax(dim="phone")
+    units_order = []
+    for phone in proba["phone"]:
+        indices = np.where(most_probable_phones == phone)[0]
+        units_order.extend(indices[np.argsort(proba.sel(phone=phone).values[indices])[::-1]].tolist())
+    return proba[:, units_order].rename("P(phone|unit)")
+
+
+def relabel_assignment(assignment: Iterable[int], proba: DataArray) -> DataArray:
+    c_proba, c_phone, c_unit = str(proba.name), "phone", "unit"
+    df_assignment = pl.DataFrame({c_unit: proba[c_unit].to_numpy(), "assignment": np.array(assignment)})
+    df_proba = pl.DataFrame(proba.to_dataframe().reset_index()).join(df_assignment, on=c_unit, how="left")
+    most_probable = (
+        df_proba.group_by("assignment", c_phone, maintain_order=True)
+        .agg(pl.col(c_proba).mean())
+        .group_by("assignment", maintain_order=True)
+        .agg(pl.all().sort_by(c_proba).last())
+        .join(pl.DataFrame(proba[c_phone].to_numpy(), schema={c_phone: pl.String}).with_row_index(), on=c_phone)
+        .sort(pl.col("index"), -pl.col(c_proba))
+    )
+    order = {v: k for k, v in enumerate(most_probable["assignment"].to_list())}
+    new_assignment = df_assignment.with_columns(pl.col("assignment").replace_strict(order))
+    return DataArray(new_assignment["assignment"], dims=[c_unit], coords=[proba[c_unit]], name="assignment")
 
 
 def pnmi(count: np.ndarray[tuple[int, int], np.dtype[np.int64]], *, eps: float = 1e-10) -> float:
@@ -88,8 +123,27 @@ def mapping_many_to_one(
     return {k: phone_order[p] for k, p in enumerate(most_frequent)}
 
 
+def mapping_one_to_one(
+    count: np.ndarray[tuple[int, int], np.dtype[np.int64]],
+    phone_order: dict[int, str],
+    *,
+    unk_template: str = "<unknown-{index}>",
+) -> dict[int, str]:
+    most_frequent = count.argmax(axis=0)
+    highest_counts = count[most_frequent, np.arange(count.shape[1])]
+    assignments = {}
+    for phone in np.unique(most_frequent):
+        (assigned_units,) = np.where(most_frequent == phone)
+        best_unit = assigned_units[np.argmax(highest_counts[assigned_units])]
+        assignments[best_unit.item()] = phone_order[phone]
+    for unit in range(count.shape[1]):
+        if unit not in assignments:
+            assignments[unit] = unk_template.format(index=unit)
+    return dict(sorted(assignments.items()))
+
+
 @validate_same_keys
-def evaluate_pnmi_and_predict(
+def compute_pnmi_and_predict(
     units: Units,
     phones: Phones,
     *,

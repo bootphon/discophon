@@ -7,8 +7,9 @@ from functools import cached_property
 from itertools import groupby
 
 import numpy as np
+from discophon.core import Phones
 
-from .utils import Phones, validate_same_keys
+from .utils import validate_same_keys
 
 
 @dataclass(frozen=True)
@@ -129,7 +130,7 @@ def boundary_detection(gold: Boundaries, prediction: Boundaries, *, margin_in_ms
 
 
 @validate_same_keys
-def evaluate_boundaries(
+def boundary_evaluation(
     predicted_phones_from_units: Phones,
     gold_phones: Phones,
     *,

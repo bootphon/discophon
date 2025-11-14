@@ -15,7 +15,7 @@ def abx(dataset: Dataset, distance_name: DistanceName, *, seed: int = 0) -> ABX:
             dataset,
             on="#phone",
             by=["next-phone", "prev-phone", "speaker"],
-            subsampler=Subsampler(max_size_group=10, max_x_across=5, seed=seed),
+            subsampler=Subsampler(max_size_group=None, max_x_across=5, seed=seed),
         ),
         distance_name,
     ).collapse(levels=[("next-phone", "prev-phone"), "speaker"])
@@ -25,7 +25,7 @@ def abx(dataset: Dataset, distance_name: DistanceName, *, seed: int = 0) -> ABX:
             on="#phone",
             by=["next-phone", "prev-phone"],
             across=["speaker"],
-            subsampler=Subsampler(max_size_group=10, max_x_across=5, seed=seed),
+            subsampler=Subsampler(max_size_group=None, max_x_across=5, seed=seed),
         ),
         distance_name,
     ).collapse(levels=[("next-phone", "prev-phone"), "speaker"])
