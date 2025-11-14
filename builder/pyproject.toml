@@ -1,7 +1,7 @@
 [project]
-name = "discophon.baselines"
+name = "discophon.builder"
 version = "0.1.0"
-description = "Baselines for the Phoneme Discovery challenge"
+description = "Internal dataset builder for the Phoneme Discovery challenge"
 readme = "README.md"
 requires-python = ">=3.13"
 license = "MIT"
@@ -17,9 +17,14 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
-  "discophon-core",
-  "spidr[train]>=0.1.0",
+  "jaxtyping>=0.3.3",
+  "numpy>=2.3.4",
+  "panphon>=0.22.2",
+  "praat-textgrids>=1.4.0",
+  "soundfile>=0.13.1",
+  "torch>=2.9.0",
   "torchaudio>=2.9.0",
+  "tqdm>=4.67.1",
 ]
 
 [project.urls]
@@ -29,6 +34,3 @@ source = "https://github.com/bootphon/phoneme_discovery"
 [build-system]
 requires = ["flit_core>=3.2,<4"]
 build-backend = "flit_core.buildapi"
-
-[tool.uv.sources]
-discophon-core = { workspace = true }

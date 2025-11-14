@@ -1,6 +1,6 @@
 # The Phoneme Discovery Challenge
 
-[Challenge website](https://benchmarks.cognitive-ml.fr/phoneme_discovery) · [Submission](https://github.com/bootphon/phoneme-discovery/tree/main/packages/submission)
+[Challenge website](https://benchmarks.cognitive-ml.fr/phoneme_discovery) · [Submission](https://github.com/bootphon/phoneme_discovery/tree/main/packages/submission)
 
 **Important dates**
 - Website online, challenge announced, datasets released: December 11th, 2025

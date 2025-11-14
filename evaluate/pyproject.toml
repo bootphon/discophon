@@ -3,31 +3,35 @@ name = "discophon.evaluate"
 version = "0.1.0"
 description = "Evaluation package for the Phoneme Discovery challenge"
 readme = "README.md"
-authors = [
-    { name = "Maxime Poli" },
-    { name = "CoML", email = "dev@cognitive-ml.fr" },
-]
 requires-python = ">=3.13"
-dependencies = [
-    "discophon-core",
-    "joblib>=1.5.2",
-    "numba>=0.62.1",
-    "numpy>=2.3.4",
-    "polars>=1.35.1",
-    "xarray>=2025.10.1",
+license = "MIT"
+authors = [{ name = "CoML", email = "dev@cognitive-ml.fr" }]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
+dependencies = [
+  "discophon-core",
+  "joblib>=1.5.2",
+  "numba>=0.62.1",
+  "numpy>=2.3.4",
+  "polars>=1.35.1",
+  "xarray>=2025.10.1",
+]
+
+[project.urls]
+homepage = "https://benchmarks.cognitive-ml.fr/phoneme_discovery"
+source = "https://github.com/bootphon/phoneme_discovery"
 
 [project.optional-dependencies]
 abx = [
-    "fastabx>=0.6.0",
-]
-
-[dependency-groups]
-dev = [
-    "ipykernel>=7.1.0",
-    "matplotlib>=3.10.7",
-    "seaborn>=0.13.2",
-    "typos>=1.39.0",
+  "fastabx>=0.6.0",
 ]
 
 [build-system]

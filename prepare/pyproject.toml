@@ -1,25 +1,27 @@
+[project]
+name = "discophon.prepare"
+version = "0.1.0"
+description = "Data preparation package for the Phoneme Discovery challenge"
+readme = "README.md"
+requires-python = ">=3.13"
+license = "MIT"
+authors = [{ name = "CoML", email = "dev@cognitive-ml.fr" }]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = []
+
+[project.urls]
+homepage = "https://benchmarks.cognitive-ml.fr/phoneme_discovery"
+source = "https://github.com/bootphon/phoneme_discovery"
+
 [build-system]
 requires = ["flit_core>=3.2,<4"]
 build-backend = "flit_core.buildapi"
-
-[project]
-name = "prepare"
-version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
-requires-python = ">=3.13"
-dependencies = [
-    "jaxtyping>=0.3.3",
-    "numpy>=2.3.4",
-    "panphon>=0.22.2",
-    "praat-textgrids>=1.4.0",
-    "soundfile>=0.13.1",
-    "torch>=2.9.0",
-    "torchaudio>=2.9.0",
-    "tqdm>=4.67.1",
-]
-
-[dependency-groups]
-dev = [
-    "ipykernel>=7.1.0",
-]

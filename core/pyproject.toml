@@ -1,14 +1,30 @@
-[build-system]
-requires = ["flit_core>=3.2,<4"]
-build-backend = "flit_core.buildapi"
-
 [project]
 name = "discophon.core"
 version = "0.1.0"
-description = "Add your description here"
+description = "Core utilities for the Phoneme Discovery challenge"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = [
-    "polars>=1.35.1",
-    "praat-textgrids>=1.4.0",
+license = "MIT"
+authors = [{ name = "CoML", email = "dev@cognitive-ml.fr" }]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
+dependencies = [
+  "polars>=1.35.1",
+  "praat-textgrids>=1.4.0",
+]
+
+[project.urls]
+homepage = "https://benchmarks.cognitive-ml.fr/phoneme_discovery"
+source = "https://github.com/bootphon/phoneme_discovery"
+
+[build-system]
+requires = ["flit_core>=3.2,<4"]
+build-backend = "flit_core.buildapi"

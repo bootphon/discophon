@@ -1,5 +1,6 @@
 from pathlib import Path
-from prepare.prepare_multilingual import create_split
+
+from discophon.builder.prepare_multilingual import create_split
 
 # Your paths
 root = Path("/store/data/raw_data/commonvoice/cv17/")
