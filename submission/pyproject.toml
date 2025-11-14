@@ -1,13 +1,33 @@
+[project]
+name = "discophon.submission"
+version = "0.1.0"
+description = "Submission interface for the Phoneme Discovery challenge"
+readme = "README.md"
+requires-python = ">=3.13"
+license = "MIT"
+authors = [{ name = "CoML", email = "dev@cognitive-ml.fr" }]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+  "discophon-core",
+  "pydantic>=2.12.4",
+]
+
+[project.urls]
+homepage = "https://benchmarks.cognitive-ml.fr/phoneme_discovery"
+source = "https://github.com/bootphon/phoneme_discovery"
+
 [build-system]
 requires = ["flit_core>=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
-[project]
-name = "discophon.submission"
-version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
-requires-python = ">=3.13"
-dependencies = [
-    "pydantic>=2.12.4",
-]
+[tool.uv.sources]
+discophon-core = { workspace = true }
