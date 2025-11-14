@@ -1,5 +1,5 @@
 """Evaluation package for the Phoneme Discovery challenge."""
 
-from .evaluate import discovery_evaluation
+from .evaluate import phoneme_discovery
 
-__all__ = ["discovery_evaluation"]
+__all__ = ["phoneme_discovery"]

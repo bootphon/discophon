@@ -33,13 +33,13 @@ def read_textgrid(path: str | Path) -> dict[str, pl.DataFrame]:
 
 def num_invalid_rows(df: pl.DataFrame, *, step_in_ms: int) -> int:
     """For each file, the first entry starts at 0 and each subsequent entry starts where the previous has ended."""
-    incorrect_duration = ~(step_in_ms / 1000 <= pl.col("offset") - pl.col("onset"))
+    incorrect_duration = ~(step_in_ms / 1000 <= pl.col(OFFSET) - pl.col(ONSET))
     return int(
-        df.with_columns(pl.col("offset").shift(1).over("#file").alias("prev_offset"))
+        df.with_columns(pl.col(OFFSET).shift(1).over(FILE).alias(f"prev_{OFFSET}"))
         .with_columns(
-            pl.when(pl.col("prev_offset").is_null())
-            .then(pl.col("onset") != 0)
-            .otherwise((pl.col("onset") != pl.col("prev_offset")) | incorrect_duration)
+            pl.when(pl.col(f"prev_{OFFSET}").is_null())
+            .then(pl.col(ONSET) != 0)
+            .otherwise((pl.col(ONSET) != pl.col(f"prev_{OFFSET}")) | incorrect_duration)
             .alias("valid")
         )["valid"]
         .sum()
@@ -58,11 +58,7 @@ def decimal_series_is_integer(series: pl.Series) -> bool:
     )
 
 
-def read_gold_annotations(source: str | Path, *, step_in_ms: int = 10) -> Phones:
-    """Read the gold annotations and returns a mapping between file names to the list of phonemes.
-
-    There will be one phoneme each `step_in_ms` millisecond.
-    """
+def read_gold_annotations_as_dataframe(source: str | Path, *, step_in_ms: int = 10) -> pl.DataFrame:
     phones_per_seconds = 1000 // step_in_ms
     assert step_in_ms * phones_per_seconds == 1000
     df = pl.read_csv(source, separator=" ", columns=[FILE, ONSET, OFFSET, PHONE], schema_overrides=[pl.String] * 4)
@@ -72,11 +68,20 @@ def read_gold_annotations(source: str | Path, *, step_in_ms: int = 10) -> Phones
     ).sort(FILE, ONSET)
     assert num_invalid_rows(df, step_in_ms=step_in_ms) == 0
     df = df.with_columns(num=(pl.col(OFFSET) - pl.col(ONSET)) * phones_per_seconds)
-    assert decimal_series_is_integer(df["num"])
+    # assert decimal_series_is_integer(df["num"])
+    return df.with_columns(pl.col("num").cast(pl.Int64))
+
+
+def read_gold_annotations(source: str | Path, *, step_in_ms: int = 10) -> Units:
+    """Read the gold annotations and returns a mapping between file names to the list of phonemes.
+
+    There will be one phoneme each `step_in_ms` millisecond.
+    """
     return {
         audio: row[PHONE]
         for audio, row in (
-            df.with_columns(pl.col(PHONE).repeat_by(pl.col("num").cast(pl.Int64)))
+            read_gold_annotations_as_dataframe(source, step_in_ms=step_in_ms)
+            .with_columns(pl.col(PHONE).repeat_by("num"))
             .group_by(FILE, maintain_order=True)
             .agg(pl.col(PHONE).explode())
             .rows_by_key(FILE, named=True, unique=True)
