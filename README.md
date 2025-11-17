@@ -14,6 +14,11 @@ Contact: ???@cognitive-ml.fr
 
 ## Overview
 
+For development:
+```bash
+uv sync --all-packages
+```
+
 ```bash
 pip install discophon.prepare discophon.evaluate discophon.baselines discophon.submission
 ```
