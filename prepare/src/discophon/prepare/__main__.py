@@ -6,9 +6,8 @@ from discophon.core import COMMONVOICE_TO_ISO6393
 from .core import download_benchmark, prepare_downloaded_benchmark
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="Prepare Phoneme Discovery benchmark", prog="discophon.prepare")
     subparsers = parser.add_subparsers(
-        description="Prepare Phoneme Discovery benchmark",
         dest="command",
         required=True,
         help="command to run",

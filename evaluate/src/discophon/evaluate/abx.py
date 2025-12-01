@@ -61,9 +61,9 @@ if __name__ == "__main__":
     parser.add_argument("--frequency", required=True, type=int, help="Units frequency in Hz")
     args = parser.parse_args()
     if args.root.is_dir():
-        abx = continuous_abx(args.item, args.root, frequency=args.frequency)
+        score = continuous_abx(args.item, args.root, frequency=args.frequency)
     elif args.root.suffix == ".jsonl":
-        abx = discrete_abx(args.item, args.units, frequency=args.frequency)
+        score = discrete_abx(args.item, args.units, frequency=args.frequency)
     else:
         raise ValueError(args.root)
-    print(f"Within speaker: {abx['within']:.2%}\nAcross speaker: {abx['across']:.2%}")
+    print(f"Within speaker: {score['within']:.2%}\nAcross speaker: {score['across']:.2%}")
