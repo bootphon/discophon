@@ -43,7 +43,7 @@ Follow [the instructions](https://github.com/bootphon/phoneme_discovery/tree/mai
 pip install discophon.evaluate
 ```
 
-Follow [the instructions](https://github.com/bootphon/phoneme_discovery/tree/main/evaluate) to learn how to evaluate
+[Check out the README](https://github.com/bootphon/phoneme_discovery/tree/main/evaluate) to know how to evaluate
 your model on this benchmark.
 
 ## Baseline systems
@@ -52,8 +52,8 @@ your model on this benchmark.
 pip install discophon.baselines
 ```
 
-Follow [the instructions](https://github.com/bootphon/phoneme_discovery/tree/main/baselines) to load and finetune
-baseline models.
+[Read the documentation](https://github.com/bootphon/phoneme_discovery/tree/main/baselines) to learn how to load and
+finetune baseline models.
 
 ## Submission
 
@@ -61,7 +61,7 @@ baseline models.
 pip install discophon.submission
 ```
 
-COMING SOON: gollow [the instructions](https://github.com/bootphon/phoneme_discovery/tree/main/submission) to submit
+COMING SOON: follow [the instructions](https://github.com/bootphon/phoneme_discovery/tree/main/submission) to submit
 your results to the leaderboard.
 
 ## Development
