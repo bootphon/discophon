@@ -2,7 +2,6 @@
 dev = [
   "ipykernel>=7.1.0",
   "ruff>=0.14.5",
-  "ty>=0.0.1a26",
   "typos>=1.39.2",
 ]
 plot = [

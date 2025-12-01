@@ -9,7 +9,7 @@ from .per import phoneme_error_rate
 from .pnmi import compute_pnmi_and_predict
 
 
-class DiscoveryEvaluationResult(TypedDict):
+class PhonemeDiscoveryEvaluation(TypedDict):
     """Output of phoneme discovery evaluation."""
 
     pnmi: float
@@ -27,7 +27,7 @@ def phoneme_discovery(
     n_phones: int,
     step_units: int,
     step_phones: int = 10,
-) -> DiscoveryEvaluationResult:
+) -> PhonemeDiscoveryEvaluation:
     """Full evaluation of phoneme discovery: PNMI, PER, F1 and R-value boundary detection."""
     pnmi, predictions = compute_pnmi_and_predict(
         units,

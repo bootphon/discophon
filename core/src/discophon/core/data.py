@@ -6,7 +6,7 @@ import textgrids
 type Units = dict[str, list[int]]
 type Phones = dict[str, list[str]]
 
-
+SAMPLE_RATE = 16_000
 FILE, ONSET, OFFSET, PHONE, UNITS = "file", "onset", "offset", "phone", "units"
 
 
@@ -72,7 +72,7 @@ def read_gold_annotations_as_dataframe(source: str | Path, *, step_in_ms: int = 
     return df.with_columns(pl.col("num").cast(pl.Int64))
 
 
-def read_gold_annotations(source: str | Path, *, step_in_ms: int = 10) -> Units:
+def read_gold_annotations(source: str | Path, *, step_in_ms: int = 10) -> Phones:
     """Read the gold annotations and returns a mapping between file names to the list of phonemes.
 
     There will be one phoneme each `step_in_ms` millisecond.

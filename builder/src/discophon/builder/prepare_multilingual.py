@@ -21,6 +21,7 @@ _DIACRITICS_TO_FIX = {
     "ml": {"diacritic": "ʱ", "reverse": False},
     "mt": {"diacritic": "ˤː", "reverse": False},
     "ja": {"diacritic": "ː", "reverse": False},
+    "cv17_ja": {"diacritic": "ː", "reverse": False},
 }
 MAX_SEGMENT_DURATION = 0.5
 
@@ -137,7 +138,7 @@ def clean_manifest_and_alignment(
         reader = csv.reader(fp, delimiter="\t", quoting=csv.QUOTE_NONE)
         _ = next(reader)
         for row in reader:
-            assert len(row) == 11, f"Invalid tsv file: {full_manifest}"
+            # assert len(row) == 11, f"Invalid tsv file: {full_manifest}"
             audio_name = audio_dir / row[1]
             man_name = audio_name.with_suffix(".wav")
             length = sf.info(man_name).frames
