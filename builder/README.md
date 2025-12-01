@@ -8,17 +8,17 @@
 -   To-add: Germain,English, frensh
   
 - dev languages:
-- Turkish, ukranian, Tamil, thai
+- Turkish, ukrainian, Tamil, thai
 
   1) Convert to wav and reasmple audio files
   2) Prepare dataset splits based on the validate file and sets from cm
   3) Merge all the output files to have a best distribution
   4) order speaker based on speech duration
-  5) split sets balanced with dev,test 2hours each and all the reste to train
+  5) split sets balanced with dev,test 2hours each and all the rest to train
   6) align files
   7) correct phones
   8) phonebase item files
   9) triphone item files
   10) clean and correct item files
-  11) copy audio files for deva nd test
+  11) copy audio files for dev and test
   12) cereate  subfolders and copy audio files for train set
