@@ -1,6 +1,6 @@
 # The Phoneme Discovery benchmark
 
-Contact: `benchmarks [at] cognitive-ml [dot] fr`
+[[Website](https://benchmarks.cognitive-ml.fr/phoneme_discovery)] [[Paper]()] [[BibTex]()]
 
 ## Introduction
 
@@ -77,3 +77,5 @@ uv sync --all-packages --all-extras
 ```bibtex
 
 ```
+
+Contact: `benchmarks [at] cognitive-ml [dot] fr`
