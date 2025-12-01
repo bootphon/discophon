@@ -9,12 +9,15 @@ from .evaluate import phoneme_discovery
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("units", type=Path)
-    parser.add_argument("phones", type=Path)
-    parser.add_argument("--n-units", type=int, default=256)
-    parser.add_argument("--n-phones", type=int, default=40)
-    parser.add_argument("--step-units", type=int, default=20)
+    parser = argparse.ArgumentParser(
+        description="Evaluate predicted units on phoneme discovery",
+        prog="discophon.evaluate",
+    )
+    parser.add_argument("units", type=Path, help="path to predicted units")
+    parser.add_argument("phones", type=Path, help="path to gold alignments")
+    parser.add_argument("--n-units", type=int, default=256, help="number of units")
+    parser.add_argument("--n-phones", type=int, default=40, help="number of phonemes")
+    parser.add_argument("--step-units", type=int, default=20, help="step between units (in ms)")
     args = parser.parse_args()
     print(
         phoneme_discovery(

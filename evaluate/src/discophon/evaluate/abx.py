@@ -51,7 +51,7 @@ def continuous_abx(path_item: str | Path, path_features: str | Path, *, frequenc
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Continuous or discrete ABX")
+    parser = argparse.ArgumentParser(prog="discophon.evaluate.abx", description="Continuous or discrete ABX")
     parser.add_argument("item", type=Path, help="Path to the item file")
     parser.add_argument(
         "root",
