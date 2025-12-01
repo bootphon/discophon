@@ -64,6 +64,7 @@ max-args = 10
 
 [tool.typos.default.extend-words]
 IY = "IY"
+tha = "tha"
 
 [tool.uv.workspace]
 members = [
