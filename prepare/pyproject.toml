@@ -1,6 +1,6 @@
 [project]
 name = "discophon.prepare"
-version = "0.1.0"
+version = "0.0.1"
 description = "Data preparation package for the Phoneme Discovery benchmark"
 readme = "README.md"
 requires-python = ">=3.13"

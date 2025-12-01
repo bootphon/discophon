@@ -354,7 +354,7 @@ wheels = [
 
 [[package]]
 name = "discophon-baselines"
-version = "0.1.0"
+version = "0.0.1"
 source = { editable = "baselines" }
 dependencies = [
     { name = "discophon-core" },
@@ -371,7 +371,7 @@ requires-dist = [
 
 [[package]]
 name = "discophon-builder"
-version = "0.1.0"
+version = "0.0.1"
 source = { editable = "builder" }
 dependencies = [
     { name = "jaxtyping" },
@@ -400,7 +400,7 @@ requires-dist = [
 
 [[package]]
 name = "discophon-core"
-version = "0.1.0"
+version = "0.0.1"
 source = { editable = "core" }
 dependencies = [
     { name = "polars" },
@@ -415,7 +415,7 @@ requires-dist = [
 
 [[package]]
 name = "discophon-evaluate"
-version = "0.1.0"
+version = "0.0.1"
 source = { editable = "evaluate" }
 dependencies = [
     { name = "discophon-core" },
@@ -445,7 +445,7 @@ provides-extras = ["abx"]
 
 [[package]]
 name = "discophon-prepare"
-version = "0.1.0"
+version = "0.0.1"
 source = { editable = "prepare" }
 dependencies = [
     { name = "discophon-core" },
@@ -466,7 +466,7 @@ requires-dist = [
 
 [[package]]
 name = "discophon-submission"
-version = "0.1.0"
+version = "0.0.1"
 source = { editable = "submission" }
 dependencies = [
     { name = "discophon-core" },
