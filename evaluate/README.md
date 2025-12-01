@@ -67,6 +67,7 @@ print("Continuous: ", result_discrete)
 Or via the CLI:
 
 ```console
+❯ python -m discophon.evaluate.abx --help
 usage: discophon.evaluate.abx [-h] --frequency FREQUENCY item root
 
 Continuous or discrete ABX
