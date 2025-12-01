@@ -6,7 +6,7 @@ First, install the `discophon.prepare` package:
 pip install discophon.prepare
 ```
 
-You also need the `sox` binary available in your $PATH for pre-processing audio files.
+You also need the `sox` binary available in your `$PATH` for pre-processing audio files.
 
 Now let's say you want to install the benchmark data and assets in a directory `$DATA`.
 
