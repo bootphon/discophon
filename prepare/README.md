@@ -81,7 +81,10 @@ for code in de en eu fr ja sw ta th tr uk zh-CN; do
 done
 ```
 
+This will create directories `$DATA/audio/cmn/all`, `$DATA/audio/deu/all`, `$DATA/audio/eng/all`, etc. with
+resampled audio files. The directories corresponding to each split contain symlinks to those files.
+
 You can parellize this loop. You can delete the `$DATA/raw` folder afterwards.
 
 If you are in a SLURM cluster, you should also parallelize each dataset processing across tasks or array jobs.
-The package will automatically handle the distribution of files to process across jobs.
+The `discohpon.prepare` package will automatically handle the distribution of files to process across jobs.
