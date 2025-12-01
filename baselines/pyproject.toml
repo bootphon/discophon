@@ -1,7 +1,7 @@
 [project]
 name = "discophon.baselines"
 version = "0.1.0"
-description = "Baselines for the Phoneme Discovery challenge"
+description = "Baselines for the Phoneme Discovery benchmark"
 readme = "README.md"
 requires-python = ">=3.13"
 license = "MIT"
