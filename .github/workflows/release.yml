@@ -56,6 +56,8 @@ jobs:
     name: Publish to PyPI
     runs-on: ubuntu-latest
     needs: build
+    environment:
+      name: publish-to-pypi
     permissions:
       actions: read # Download artifact
     steps:
