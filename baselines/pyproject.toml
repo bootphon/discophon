@@ -1,6 +1,6 @@
 [project]
 name = "discophon.baselines"
-version = "0.0.1"
+version = "0.0.2"
 description = "Baselines for the Phoneme Discovery benchmark"
 readme = "README.md"
 requires-python = ">=3.13"

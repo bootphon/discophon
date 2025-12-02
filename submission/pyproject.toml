@@ -1,6 +1,6 @@
 [project]
 name = "discophon.submission"
-version = "0.0.1"
+version = "0.0.2"
 description = "Submission interface for the Phoneme Discovery benchmark"
 readme = "README.md"
 requires-python = ">=3.13"
