@@ -60,6 +60,7 @@ jobs:
       name: publish-to-pypi
     permissions:
       actions: read # Download artifact
+      id-token: write # Needed for trusted publishing
     steps:
       - name: Download all the dists
         uses: actions/download-artifact@v6
@@ -85,11 +86,16 @@ jobs:
       actions: read # Download artifact
       contents: write # Create GitHub release
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
       - name: Download all the dists
         uses: actions/download-artifact@v6
         with:
           name: python-package-distributions
-          path: dist/
+          path: ./dist/
 
       - name: Create release
         env:
