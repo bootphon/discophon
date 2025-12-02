@@ -80,6 +80,7 @@ jobs:
   github-release:
     name: GitHub release
     runs-on: ubuntu-latest
+    needs: build
     permissions:
       actions: read # Download artifact
       contents: write # Create GitHub release
