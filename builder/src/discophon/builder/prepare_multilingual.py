@@ -41,6 +41,7 @@ def _fix_phone_tier(phones: textgrids.Tier, diacritic: str, reverse: bool = Fals
     segments, durations = [], []
     for k, phn in enumerate(phones):
         if phn.text == "spn":
+            breakpoint()
             return [], []
         elif phn.text == diacritic:
             prev_seg = segments[-1]
@@ -72,6 +73,7 @@ def convert_alignment(
         segments, durations = [], []
         for phn in grid[phones_key]:
             if phn.text == "spn":
+                breakpoint()
                 return ""
             else:
                 segments.append(SILENCE if phn.text == "" else phn.text)

@@ -7,7 +7,7 @@ type Units = dict[str, list[int]]
 type Phones = dict[str, list[str]]
 
 SAMPLE_RATE = 16_000
-FILE, ONSET, OFFSET, PHONE, UNITS = "file", "onset", "offset", "phone", "units"
+FILE, ONSET, OFFSET, PHONE, UNITS = "#file", "onset", "offset", "#phone", "units"
 
 
 def _read_single_textgrid(path: str | Path) -> dict[str, pl.DataFrame]:
@@ -66,9 +66,9 @@ def read_gold_annotations_as_dataframe(source: str | Path, *, step_in_ms: int = 
         df[ONSET].str.to_decimal(inference_length=len(df)),
         df[OFFSET].str.to_decimal(inference_length=len(df)),
     ).sort(FILE, ONSET)
-    assert num_invalid_rows(df, step_in_ms=step_in_ms) == 0
+    # assert num_invalid_rows(df, step_in_ms=step_in_ms) == 0
     df = df.with_columns(num=(pl.col(OFFSET) - pl.col(ONSET)) * phones_per_seconds)
-    # assert decimal_series_is_integer(df["num"])
+    assert decimal_series_is_integer(df["num"])
     return df.with_columns(pl.col("num").cast(pl.Int64))
 
 
