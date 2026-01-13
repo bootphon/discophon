@@ -1,19 +1,18 @@
-import importlib.resources
 import json
 from dataclasses import dataclass
 from functools import cache
+from importlib import resources
+from typing import Literal
 
 
 @cache
 def load_phonology() -> dict[str, list[str]]:
-    path_json = "core/assets/phonology.json"
-    return json.loads((importlib.resources.files("discophon") / path_json).read_text(encoding="utf-8"))
+    return json.loads((resources.files("discophon") / "core/assets/phonology.json").read_text(encoding="utf-8"))
 
 
 @cache
 def load_tipa() -> dict[str, str]:
-    path_json = "core/assets/tipa.json"
-    return json.loads((importlib.resources.files("discophon") / path_json).read_text(encoding="utf-8"))
+    return json.loads((resources.files("discophon") / "core/assets/tipa.json").read_text(encoding="utf-8"))
 
 
 @dataclass(frozen=True)
@@ -21,47 +20,59 @@ class Language:
     name: str
     iso_639_3: str
     split: str
-    num_phonemes: int
+    n_phonemes: int
 
     @property
     def phonology(self) -> list[str]:
         phonemes = load_phonology()[self.iso_639_3]
-        assert len(phonemes) == self.num_phonemes
+        assert len(phonemes) == self.n_phonemes
         return phonemes
 
 
 def language(n: str, /) -> Language:  # noqa: C901, PLR0911
     match n.lower():
         case "german" | "deu":
-            return Language(name="German", iso_639_3="deu", split="dev", num_phonemes=41)
+            return Language(name="German", iso_639_3="deu", split="dev", n_phonemes=41)
         case "swahili" | "swa" | "sw":
-            return Language(name="Swahili", iso_639_3="swa", split="dev", num_phonemes=29)
+            return Language(name="Swahili", iso_639_3="swa", split="dev", n_phonemes=29)
         case "tamil" | "tam" | "ta":
-            return Language(name="Tamil", iso_639_3="tam", split="dev", num_phonemes=29)
+            return Language(name="Tamil", iso_639_3="tam", split="dev", n_phonemes=29)
         case "thai" | "tha" | "th":
-            return Language(name="Thai", iso_639_3="tha", split="dev", num_phonemes=40)
+            return Language(name="Thai", iso_639_3="tha", split="dev", n_phonemes=40)
         case "turkish" | "tur" | "tr":
-            return Language(name="Turkish", iso_639_3="tur", split="dev", num_phonemes=27)
+            return Language(name="Turkish", iso_639_3="tur", split="dev", n_phonemes=27)
         case "ukrainian" | "ukr" | "uk":
-            return Language(name="Ukrainian", iso_639_3="ukr", split="dev", num_phonemes=35)
+            return Language(name="Ukrainian", iso_639_3="ukr", split="dev", n_phonemes=35)
         case "mandarin chinese" | "mandarin" | "chinese" | "cmn" | "zh-CN":
-            return Language(name="Mandarin Chinese", iso_639_3="cmn", split="test", num_phonemes=42)
+            return Language(name="Mandarin Chinese", iso_639_3="cmn", split="test", n_phonemes=42)
         case "english" | "eng":
-            return Language(name="English", iso_639_3="eng", split="test", num_phonemes=39)
+            return Language(name="English", iso_639_3="eng", split="test", n_phonemes=39)
         case "basque" | "eus" | "eu":
-            return Language(name="Basque", iso_639_3="eus", split="test", num_phonemes=29)
+            return Language(name="Basque", iso_639_3="eus", split="test", n_phonemes=29)
         case "french" | "fra":
-            return Language(name="French", iso_639_3="fra", split="test", num_phonemes=34)
+            return Language(name="French", iso_639_3="fra", split="test", n_phonemes=34)
         case "japanese" | "jpn" | "ja":
-            return Language(name="Japanese", iso_639_3="jpn", split="test", num_phonemes=42)
+            return Language(name="Japanese", iso_639_3="jpn", split="test", n_phonemes=42)
         case "wolof" | "wol":
-            return Language(name="Wolof", iso_639_3="wol", split="test", num_phonemes=39)
+            return Language(name="Wolof", iso_639_3="wol", split="test", n_phonemes=39)
     raise ValueError(f"Unknown language '{n}'")
 
 
-def dev_languages() -> tuple[Language, Language, Language, Language, Language, Language]:
+type TupleOfSixLanguages = tuple[Language, Language, Language, Language, Language, Language]
+
+
+def dev_languages() -> TupleOfSixLanguages:
     return language("deu"), language("swa"), language("tam"), language("tha"), language("tur"), language("ukr")
 
 
-def test_languages() -> tuple[Language, Language, Language, Language, Language, Language]:
+def test_languages() -> TupleOfSixLanguages:
     return language("cmn"), language("eng"), language("eus"), language("fra"), language("jpn"), language("wol")
+
+
+def languages_in_split(s: Literal["dev", "test"], /) -> TupleOfSixLanguages:
+    match s:
+        case "dev":
+            return dev_languages()
+        case "test":
+            return test_languages()
+    raise ValueError(f"Unknown split '{s}'")

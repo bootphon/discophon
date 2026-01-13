@@ -24,7 +24,7 @@ def phoneme_discovery(
     phones: Phones,
     *,
     n_units: int,
-    n_phones: int,
+    n_phonemes: int,
     step_units: int,
     step_phones: int = 10,
 ) -> PhonemeDiscoveryEvaluation:
@@ -33,7 +33,7 @@ def phoneme_discovery(
         units,
         phones,
         n_units=n_units,
-        n_phones=n_phones,
+        n_phonemes=n_phonemes,
         step_units=step_units,
         step_phones=step_phones,
     )

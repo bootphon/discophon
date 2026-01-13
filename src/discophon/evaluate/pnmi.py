@@ -47,7 +47,7 @@ def contingency_table(
     phones: Phones,
     *,
     n_units: int,
-    n_phones: int,
+    n_phonemes: int,
     step_units: int,
     step_phones: int,
 ) -> DataArray:
@@ -64,16 +64,16 @@ def contingency_table(
             if phone not in phone_to_index:
                 phone_to_index[phone] = index
                 index += 1
-            if phone_to_index[phone] >= n_phones or unit >= n_units:
+            if phone_to_index[phone] >= n_phonemes or unit >= n_units:
                 raise IndexError
             phone_indices.append(phone_to_index[phone])
             unit_indices.append(unit)
-    for missing in range(len(phone_to_index), n_phones):
+    for missing in range(len(phone_to_index), n_phonemes):
         phone_to_index[f"<missing-{missing}>"] = missing
 
     flattened_indices = np.array(phone_indices) * n_units + np.array(unit_indices)
     count = DataArray(
-        np.bincount(flattened_indices, minlength=n_phones * n_units).reshape(n_phones, n_units),
+        np.bincount(flattened_indices, minlength=n_phonemes * n_units).reshape(n_phonemes, n_units),
         dims=["phone", "unit"],
         coords=[list(phone_to_index.keys()), list(range(n_units))],
         name="Contingency Table",
@@ -173,7 +173,7 @@ def compute_pnmi_and_predict(
     phones: Phones,
     *,
     n_units: int,
-    n_phones: int,
+    n_phonemes: int,
     step_units: int,
     step_phones: int,
 ) -> tuple[float, Phones]:
@@ -182,7 +182,7 @@ def compute_pnmi_and_predict(
         units,
         phones,
         n_units=n_units,
-        n_phones=n_phones,
+        n_phonemes=n_phonemes,
         step_units=step_units,
         step_phones=step_phones,
     )

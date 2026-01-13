@@ -1,5 +1,7 @@
 from collections.abc import Callable
 from functools import wraps
+from pathlib import Path
+from typing import Literal
 
 
 class ArgumentsError(ValueError):
@@ -28,3 +30,25 @@ def validate_first_two_arguments_same_keys[R, **P](func: Callable[P, R]) -> Call
         return func(*args, **kwargs)
 
     return wrapper
+
+
+def verify_dataset_structure(path: str | Path) -> None:
+    pass
+
+
+def verify_units_structure(
+    path: str | Path,
+    *,
+    languages: Literal["dev", "test"] | None = None,
+    split: Literal["dev", "test"] | None = None,
+) -> None:
+    pass
+
+
+def verify_features_structure(
+    path: str | Path,
+    *,
+    languages: Literal["dev", "test"] | None = None,
+    split: Literal["dev", "test"] | None = None,
+) -> None:
+    pass

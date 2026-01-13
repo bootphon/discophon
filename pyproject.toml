@@ -6,6 +6,7 @@ requires-python = ">=3.12"
 license = "MIT"
 authors = [{ name = "CoML", email = "dev@cognitive-ml.fr" }]
 dependencies = [
+  "filelock>=3.20.2",
   "httpx>=0.28.1",
   "joblib>=1.5.3",
   "numba>=0.63.1",
@@ -31,6 +32,10 @@ dev = [
   "tombi>=0.7.16",
   "typos>=1.42.0",
 ]
+baselines = [
+  "minimal-hubert>=0.0.1",
+  "spidr[train]>=0.1.3",
+]
 plot = [
   "altair>=6.0.0",
   "matplotlib>=3.10.8",
@@ -39,6 +44,7 @@ plot = [
   "vl-convert-python>=1.9.0",
 ]
 test = [
+  "matplotlib>=3.10.8",
   "pytest>=9.0.2",
 ]
 
@@ -96,6 +102,9 @@ select = [
   "UP",  # pyupgrade
   "W",  # pycodestyle warning
 ]
+
+[tool.ruff.lint.flake8-tidy-imports]
+banned-module-level-imports = ["discophon.evaluate.abx"]
 
 [tool.ruff.lint.pylint]
 allow-magic-value-types = ["int", "str"]
