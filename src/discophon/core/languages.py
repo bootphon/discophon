@@ -10,6 +10,12 @@ def load_phonology() -> dict[str, list[str]]:
     return json.loads((importlib.resources.files("discophon") / path_json).read_text(encoding="utf-8"))
 
 
+@cache
+def load_tipa() -> dict[str, str]:
+    path_json = "core/assets/tipa.json"
+    return json.loads((importlib.resources.files("discophon") / path_json).read_text(encoding="utf-8"))
+
+
 @dataclass(frozen=True)
 class Language:
     name: str
