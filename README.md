@@ -42,48 +42,14 @@ uv sync
 # uv sync --all-extras --all-groups # If you want all dependencies
 ```
 
-## Data preparation
+## Usage
 
-Follow [the instructions](https://github.com/bootphon/phoneme_discovery/tree/main/prepare) to:
+Check out the documentation:
 
-- Download data from Common Voice.
-- Download the benchmark assets, manifests and alignments.
-- Resample and convert Common Voice data to WAV.
-
-## Evaluation
-
-```bash
-pip install discophon.evaluate
-```
-
-[Check out the README](https://github.com/bootphon/phoneme_discovery/tree/main/evaluate) to know how to evaluate
-your model on this benchmark.
-
-## Baseline systems
-
-```bash
-pip install discophon.baselines
-```
-
-[Read the documentation](https://github.com/bootphon/phoneme_discovery/tree/main/baselines) to learn how to load and
-finetune baseline models.
-
-## Submission
-
-```bash
-pip install discophon.submission
-```
-
-COMING SOON: follow [the instructions](https://github.com/bootphon/phoneme_discovery/tree/main/submission) to submit
-your results to the leaderboard.
-
-## Development
-
-For development, create a full environment with:
-
-```bash
-uv sync --all-packages --all-extras
-```
+- [Data preparation](https://github.com/bootphon/phoneme_discovery/blob/main/docs/prepare.md)
+- [Simple evaluation](https://github.com/bootphon/phoneme_discovery/blob/main/docs/evaluate.md)
+- [Run the benchmark](https://github.com/bootphon/phoneme_discovery/blob/main/benchmark.md)
+- [Use the baseline systems](https://github.com/bootphon/phoneme_discovery/blob/main/baselines.md)
 
 ### Citation
 

@@ -1,14 +1,8 @@
 # Data preparation
 
-First, install the `discophon.prepare` package:
+You need the `sox` binary available in your `$PATH` for pre-processing audio files.
 
-```bash
-pip install discophon.prepare
-```
-
-You also need the `sox` binary available in your `$PATH` for pre-processing audio files.
-
-Now let's say you want to install the benchmark data and assets in a directory `$DATA`.
+Let's say you want to install the benchmark data and assets in a directory `$DATA`.
 
 ## Download Common Voice data
 
@@ -78,7 +72,7 @@ This will download:
 Now resample audio files and convert them to WAV with the command:
 
 ```bash
-for code in de en eu fr ja sw ta th tr uk zh-CN; do
+for code in swa tam tha tur ukr cmn eus jpn; do
     python -m discophon.prepare audio $DATA $code
 done
 ```
