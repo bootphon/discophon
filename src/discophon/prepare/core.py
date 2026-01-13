@@ -1,6 +1,6 @@
 import math
 import os
-import zipfile
+import tarfile
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Literal, get_args
@@ -12,29 +12,20 @@ import soxr
 from tqdm import tqdm
 
 from discophon.core import SAMPLE_RATE, language
-
-Splits = Literal["all", "train-10min", "train-1h", "train-10h", "train-100h", "train-all", "dev", "test"]
+from discophon.core.languages import ISO6393_TO_CV, Language
 
 
 def split_for_distributed[T](sequence: Sequence[T]) -> Sequence[T]:
     if "SLURM_NTASKS" not in os.environ:
         return sequence
-    rank, world_size = int(os.environ["SLURM_PROCID"]), int(os.environ["SLURM_NTASKS"])
     array_id, num_arrays = int(os.getenv("SLURM_ARRAY_TASK_ID", "0")), int(os.getenv("SLURM_ARRAY_TASK_COUNT", "1"))
     if "SLURM_ARRAY_TASK_ID" in os.environ:
         assert os.environ["SLURM_ARRAY_TASK_MIN"] == "0"
         assert int(os.environ["SLURM_ARRAY_TASK_MAX"]) == num_arrays - 1
-
-    n_total = len(sequence)  # Split by array first
+    n_total = len(sequence)
     files_per_array = math.ceil(n_total / num_arrays)
     start = array_id * files_per_array
     end = min(start + files_per_array, n_total)
-    sequence = sequence[start:end]
-
-    n_local = len(sequence)  # Then split by rank within each array
-    files_per_rank = math.ceil(n_local / world_size)
-    start = rank * files_per_rank
-    end = min(start + files_per_rank, n_local)
     return sequence[start:end]
 
 
@@ -52,14 +43,15 @@ def download(url: str, dest: str | Path) -> None:
 def download_benchmark(data: str | Path) -> None:
     data = Path(data)
     data.mkdir(exist_ok=True, parents=True)
-    download("https://cognitive-ml.fr/downloads/phoneme-discovery/benchmark-assets.zip", data / "benchmark-assets.zip")
-    with zipfile.ZipFile(data / "benchmark-assets.zip") as myzip:
-        myzip.extractall(data)
-    (data / "benchmark-assets.zip").unlink()
-    download("https://cognitive-ml.fr/downloads/phoneme-discovery/benchmark-audio.zip", data / "benchmark-audio.zip")
-    with zipfile.ZipFile(data / "benchmark-audio.zip") as myzip:
-        myzip.extractall(data)
-    (data / "benchmark-audio.zip").unlink()
+    url = "https://cognitive-ml.fr/downloads/phoneme-discovery/"
+    download(url + "benchmark-assets.tar.gz", data / "benchmark-assets.tar.gz")
+    with tarfile.open(data / "benchmark-assets.tar.gz", "r:gz") as tar:
+        tar.extractall(data)
+    (data / "benchmark-assets.tar.gz").unlink()
+    download(url + "benchmark-audio.tar.gz", data / "benchmark-audio.tar.gz")
+    with tarfile.open(data / "benchmark-audio.tar.gz", "r:gz") as tar:
+        tar.extractall(data)
+    (data / "benchmark-audio.tar.gz").unlink()
 
 
 def resample(
@@ -74,6 +66,9 @@ def resample(
     sf.write(output, resampled, output_sample_rate)
 
 
+Splits = Literal["all", "train-10min", "train-1h", "train-10h", "train-100h", "train-all", "dev", "test"]
+
+
 def get_filenames(manifests: Path, iso_code: str, *, split: Splits) -> list[str]:
     if split not in get_args(Splits):
         raise ValueError(f"Invalid {split=}. Must be in {get_args(Splits)}")
@@ -84,9 +79,8 @@ def get_filenames(manifests: Path, iso_code: str, *, split: Splits) -> list[str]
     return sorted(manifest["fileid"].unique().to_list())
 
 
-def prepare_downloaded_benchmark(data: str | Path, code: str) -> None:
-    iso_code = language(code).iso_639_3
-    src, dest = Path(data) / "raw" / code / "clips", Path(data) / "audio" / iso_code / "all"
+def prepare_downloaded_benchmark(data: str | Path, iso_code: str) -> None:
+    src, dest = (Path(data) / "raw" / ISO6393_TO_CV[iso_code] / "clips", Path(data) / "audio" / iso_code / "all")
     if not src.is_dir():
         raise ValueError(f"Directory {src} does not exist.")
     dest.mkdir(exist_ok=True, parents=True)

@@ -9,14 +9,11 @@ from .evaluate import phoneme_discovery
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="Evaluate predicted units on phoneme discovery",
-        prog="discophon.evaluate",
-    )
+    parser = argparse.ArgumentParser(description="Evaluate predicted units on phoneme discovery")
     parser.add_argument("units", type=Path, help="path to predicted units")
     parser.add_argument("phones", type=Path, help="path to gold alignments")
-    parser.add_argument("--n-phones", type=int, required=True, help="number of phonemes")
-    parser.add_argument("--n-units", type=int, default=256, help="number of units")
+    parser.add_argument("--n-phonemes", type=int, required=True, help="number of phonemes")
+    parser.add_argument("--n-units", type=int, required=True, help="number of units")
     parser.add_argument("--step-units", type=int, default=20, help="step between units (in ms)")
     args = parser.parse_args()
     print(
@@ -24,7 +21,7 @@ if __name__ == "__main__":
             read_submitted_units(args.units),
             read_gold_annotations(args.phones),
             n_units=args.n_units,
-            n_phones=args.n_phones,
+            n_phonemes=args.n_phonemes,
             step_units=args.step_units,
         )
     )

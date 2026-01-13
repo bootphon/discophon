@@ -1,7 +1,10 @@
 from collections.abc import Callable
 from functools import wraps
+from itertools import product
 from pathlib import Path
 from typing import Literal
+
+from .languages import dev_languages, languages_in_split, test_languages
 
 
 class ArgumentsError(ValueError):
@@ -32,23 +35,57 @@ def validate_first_two_arguments_same_keys[R, **P](func: Callable[P, R]) -> Call
     return wrapper
 
 
-def verify_dataset_structure(path: str | Path) -> None:
-    pass
+class DatasetError(ValueError):
+    def __init__(self) -> None:
+        super().__init__("Invalid phoneme_discovery dataset structure. Verify your file structure!")
 
 
-def verify_units_structure(
+def validate_dataset_structure(path: str | Path) -> None:
+    root = Path(path).resolve()
+    languages = dev_languages() + test_languages()
+    if {p.name for p in root.glob("*")} != {"alignment", "audio", "item", "manifest"}:
+        raise DatasetError
+    if {p.name for p in (root / "alignment").glob("*")} != {
+        f"alignment-{lang.iso_639_3}-{split}.txt" for lang, split in product(languages, ["dev", "test"])
+    }:
+        raise DatasetError
+    if {p.name for p in (root / "item").glob("*")} != {
+        f"{kind}-{lang.iso_639_3}-{split}.item"
+        for kind, lang, split in product(["triphone", "phoneme"], languages, ["dev", "test"])
+    }:
+        raise DatasetError
+    if {p.name for p in (root / "manifest").glob("*")} != {
+        f"manifest-{lang.iso_639_3}-{split}.item"
+        for lang, split in product(languages, ["dev", "test", "train-10h", "train-10min", "train-1h"])
+    }:
+        raise DatasetError
+    if {p.name for p in (root / "audio").glob("*")} != {lang.iso_639_3 for lang in languages}:
+        raise DatasetError
+    splits = {"all", "dev", "test", "train-10h", "train-10min", "train-1h"}
+    for lang in languages:
+        if {p.stem for p in (root / "audio" / lang.iso_639_3).glob("*")} != splits:
+            raise DatasetError
+
+
+def validate_units_structure(
     path: str | Path,
     *,
-    languages: Literal["dev", "test"] | None = None,
-    split: Literal["dev", "test"] | None = None,
+    languages: Literal["dev", "test"],
+    split: Literal["dev", "test"],
 ) -> None:
-    pass
+    expected = {f"units-{lang.iso_639_3}-{split}.jsonl" for lang in languages_in_split(languages)}
+    found = {p.name for p in Path(path).glob("*.jsonl")}
+    if not expected.issubset(found):
+        raise ValueError(f"Missing units. Expected in {path}:\n{list(expected)}")
 
 
-def verify_features_structure(
+def validate_features_structure(
     path: str | Path,
     *,
-    languages: Literal["dev", "test"] | None = None,
-    split: Literal["dev", "test"] | None = None,
+    languages: Literal["dev", "test"],
+    split: Literal["dev", "test"],
 ) -> None:
-    pass
+    expected = {f"{lang.iso_639_3}/{split}" for lang in languages_in_split(languages)}
+    found = {str(p.relative_to(path)) for p in Path(path).glob("*/*")}
+    if not expected.issubset(found):
+        raise ValueError(f"Missing directories with features. Expected in {path}:\n{list(expected)}")

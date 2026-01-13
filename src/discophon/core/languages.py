@@ -76,3 +76,28 @@ def languages_in_split(s: Literal["dev", "test"], /) -> TupleOfSixLanguages:
         case "test":
             return test_languages()
     raise ValueError(f"Unknown split '{s}'")
+
+
+def commonvoice_languages() -> tuple[Language, ...]:
+    return (
+        language("swa"),
+        language("tam"),
+        language("tha"),
+        language("tur"),
+        language("ukr"),
+        language("cmn"),
+        language("eus"),
+        language("jpn"),
+    )
+
+
+ISO6393_TO_CV = {
+    "swa": "sw",
+    "tam": "ta",
+    "tha": "th",
+    "tur": "tr",
+    "ukr": "uk",
+    "cmn": "zh-CN",
+    "eus": "eu",
+    "jpn": "jpn",
+}

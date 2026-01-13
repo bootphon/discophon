@@ -36,8 +36,8 @@ def align_units_and_phones(
     for fileid, this_phones in phones.items():
         this_units = list(itertools.chain.from_iterable(itertools.repeat(unit, repeat) for unit in units[fileid]))
         min_len = min(len(this_phones), len(this_units))
-        # if (len(this_phones) - min_len > repeat) or (len(this_units) - min_len > repeat):
-        #     raise ValueError
+        if (len(this_phones) - min_len > repeat) or (len(this_units) - min_len > repeat):
+            raise ValueError(f"More than {repeat} tokens of differences between phones and units.")
         data[fileid] = {"phones": this_phones[:min_len], "units": this_units[:min_len]}
     return data
 

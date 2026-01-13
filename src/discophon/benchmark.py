@@ -5,7 +5,7 @@ import polars as pl
 
 from discophon.core import read_gold_annotations, read_submitted_units
 from discophon.core.languages import languages_in_split
-from discophon.core.validation import verify_dataset_structure, verify_features_structure, verify_units_structure
+from discophon.core.validation import validate_dataset_structure, validate_features_structure, validate_units_structure
 from discophon.evaluate import phoneme_discovery
 
 
@@ -18,8 +18,8 @@ def benchmark_discovery(
     n_units: int,
     step_units: int,
 ) -> pl.DataFrame:
-    verify_dataset_structure(path_dataset)
-    verify_units_structure(path_units, languages=languages, split=split)
+    validate_dataset_structure(path_dataset)
+    validate_units_structure(path_units, languages=languages, split=split)
 
     df = []
     for language in languages_in_split(languages):
@@ -46,8 +46,8 @@ def benchmark_abx_discrete(
 ) -> pl.DataFrame:
     from discophon.evaluate.abx import discrete_abx
 
-    verify_dataset_structure(path_dataset)
-    verify_units_structure(path_units, languages=languages, split=split)
+    validate_dataset_structure(path_dataset)
+    validate_units_structure(path_units, languages=languages, split=split)
 
     df = []
     for language in languages_in_split(languages):
@@ -73,8 +73,8 @@ def benchmark_abx_continuous(
 ) -> pl.DataFrame:
     from discophon.evaluate.abx import continuous_abx
 
-    verify_dataset_structure(path_dataset)
-    verify_features_structure(path_features, languages=languages, split=split)
+    validate_dataset_structure(path_dataset)
+    validate_features_structure(path_features, languages=languages, split=split)
 
     df = []
     for language in languages_in_split(languages):

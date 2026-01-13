@@ -25,11 +25,24 @@ language.
 The Phoneme Discovery benchmark is aimed at building models that discover phoneme inventories across various languages,
 using only small amounts of speech data, and without textual data during training.
 
-## Data preparation
+## Installation
 
 ```bash
-pip install discophon.prepare
+pip install discophon
 ```
+
+To be able to compute ABX discriminabilities: `pip install discophon[abx]`.
+
+If you want to run baselines and have access to the utility scripts, clone this repository:
+
+```bash
+git clone https://github.com/bootphon/phoneme_discovery
+cd phoneme_discovery
+uv sync
+# uv sync --all-extras --all-groups # If you want all dependencies
+```
+
+## Data preparation
 
 Follow [the instructions](https://github.com/bootphon/phoneme_discovery/tree/main/prepare) to:
 
