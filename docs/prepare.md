@@ -13,7 +13,6 @@ Download everything in `$DATA/raw`.
 
 Dev languages:
 
-- [Common Voice Scripted Speech 23.0 - German](https://datacollective.mozillafoundation.org/datasets/cmflnuzw5p0q7ydlq4k8skhqi) (34.41 GB)
 - [Common Voice Scripted Speech 23.0 - Swahili](https://datacollective.mozillafoundation.org/datasets/cmflnuzw7mjcay14kmowc4y96) (21.23 GB)
 - [Common Voice Scripted Speech 23.0 - Tamil](https://datacollective.mozillafoundation.org/datasets/cmflnuzw73r9g1avrbu6bwkfx) (8.56 GB)
 - [Common Voice Scripted Speech 23.0 - Thai](https://datacollective.mozillafoundation.org/datasets/cmflnuzw7fwn4fc969r5owufz) (8.35 GB)
@@ -24,10 +23,9 @@ Test languages:
 
 - [Common Voice Scripted Speech 23.0 - Basque](https://datacollective.mozillafoundation.org/datasets/cmflnuzw5qoauo49kpf8y1gzp) (14.58 GB)
 - [Common Voice Scripted Speech 23.0 - Chinese (China)](https://datacollective.mozillafoundation.org/datasets/cmflnuzw8fvgv2vdgt6f52qvh) (21.26 GB)
-- [Common Voice Scripted Speech 23.0 - English](https://datacollective.mozillafoundation.org/datasets/cmflnuzw52mzok78yz6woemc1) (86.83 GB)
-- [Common Voice Scripted Speech 23.0 - French](https://datacollective.mozillafoundation.org/datasets/cmflnuzw5ahjms0zbrcl0vg4e) (27.87 GB)
 - [Common Voice Scripted Speech 23.0 - Japanese](https://datacollective.mozillafoundation.org/datasets/cmflnuzw5lv4n3cd25tbavjb9) (11.80 GB)
-- Wolof data comes from a different source, and will be downloaded with the other assets in the following section.
+
+German, English, French, and Wolof data do not come from CommonVoice and will be downloaded with the other assets in the following section.
 
 Extract each archive, with `tar --strip-components=1 -xvf ...`.
 
@@ -41,10 +39,7 @@ You can delete the archives afterwards. You should have the following structure:
 ❯ tree -L 2 $DATA
 $DATA
 └── raw
-    ├── de
-    ├── en
     ├── eu
-    ├── fr
     ├── ja
     ├── sw
     ├── ta
