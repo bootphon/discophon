@@ -28,10 +28,13 @@ def _validate_dataset_structure(path: str | Path) -> None:
         for kind, lang, split in product(["triphone", "phoneme"], languages, ["dev", "test"])
     }:
         raise DatasetError
-    if {p.name for p in (root / "manifest").glob("*")} != {
-        f"manifest-{lang.iso_639_3}-{split}.item"
-        for lang, split in product(languages, ["dev", "test", "train-10h", "train-10min", "train-1h"])
-    }:
+    if {p.name for p in (root / "manifest").glob("*")} != (
+        {
+            f"manifest-{lang.iso_639_3}-{split}.csv"
+            for lang, split in product(languages, ["dev", "test", "train-10h", "train-10min", "train-1h"])
+        }
+        | {"speakers.jsonl"}
+    ):
         raise DatasetError
     if {p.name for p in (root / "audio").glob("*")} != {lang.iso_639_3 for lang in languages}:
         raise DatasetError
