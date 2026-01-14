@@ -437,7 +437,7 @@ provides-extras = ["abx"]
 
 [package.metadata.requires-dev]
 baselines = [
-    { name = "minimal-hubert", specifier = ">=0.0.1" },
+    { name = "minimal-hubert", specifier = ">=0.0.2" },
     { name = "spidr", extras = ["train"], specifier = ">=0.1.3" },
 ]
 dev = [
@@ -992,7 +992,7 @@ wheels = [
 
 [[package]]
 name = "minimal-hubert"
-version = "0.0.1"
+version = "0.0.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "fastabx" },
@@ -1004,9 +1004,9 @@ dependencies = [
     { name = "torchaudio" },
     { name = "torchcodec" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/42/7f/f2c6bb6be995da2ad67ea02c216a9cee3d0668492ad5033c00e9daa47aad/minimal_hubert-0.0.1.tar.gz", hash = "sha256:8170b26a698f15b315b055814d398330806a4dbc4fdb8827e32ee169274d2ad5", size = 104776, upload-time = "2026-01-12T14:16:41.425Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3d/6d/ede15a77eb5066afd5710042ada4d82dad0b02c1d3312898d2ec771cc6c5/minimal_hubert-0.0.2.tar.gz", hash = "sha256:51cb6bf44ed64cb12cfd73561e82bd7eba685f79588da868d209465e7f74a4af", size = 119970, upload-time = "2026-01-14T14:01:43.124Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/74/f5/b718656c36d2ff7e969783553db3228439d085299cb8831de6be93167a60/minimal_hubert-0.0.1-py3-none-any.whl", hash = "sha256:0d9635dc7c90e1a8462377f797890f8402d80c37bd22d4f49a40ca2402ebb237", size = 24055, upload-time = "2026-01-12T14:16:42.793Z" },
+    { url = "https://files.pythonhosted.org/packages/9c/2e/fe34dc4c51054fef0e1917f1dd7eb2b873b4fcff1f1e71fa4e3fe225b214/minimal_hubert-0.0.2-py3-none-any.whl", hash = "sha256:afb01596a3ed57142a0ad242b1634412092443044060b96ee4e080a5f16c2e70", size = 22383, upload-time = "2026-01-14T14:01:42.04Z" },
 ]
 
 [[package]]

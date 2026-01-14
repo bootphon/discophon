@@ -12,6 +12,7 @@ test:
 lint:
     uv run --dev ruff check
     uv run --dev ruff format
+    uv run --dev tombi lint
     uv run --dev tombi format
     uv run --dev typos
     uv run --dev ty check ./src ./tests
