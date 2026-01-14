@@ -14,4 +14,4 @@ lint:
     uv run --dev ruff format
     uv run --dev tombi format
     uv run --dev typos
-    uv run --dev ty check src
+    uv run --dev ty check ./src ./tests

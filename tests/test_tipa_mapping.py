@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import rc
 from matplotlib.patches import Rectangle
 
-from discophon.core.languages import load_tipa
+from discophon.languages import load_tipa
 
 logger = logging.getLogger()
 

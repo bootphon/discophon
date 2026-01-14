@@ -2,11 +2,12 @@
 
 from typing import TypedDict
 
-from discophon.core import Phones, Units, validate_first_two_arguments_same_keys
+from discophon.data import Phones, Units
 
 from .boundaries import boundary_evaluation
 from .per import phoneme_error_rate
 from .pnmi import compute_pnmi_and_predict
+from .validate import validate_first_two_arguments_same_keys
 
 
 class PhonemeDiscoveryEvaluation(TypedDict):

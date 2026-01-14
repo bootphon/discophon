@@ -7,7 +7,9 @@ import numba
 import numpy as np
 from joblib import Parallel, delayed
 
-from discophon.core import Phones, validate_first_two_arguments_same_keys
+from discophon.data import Phones
+
+from .validate import validate_first_two_arguments_same_keys
 
 
 def deduplicate[T](seq: Iterable[T]) -> list[T]:

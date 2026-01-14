@@ -48,8 +48,8 @@ Check out the documentation:
 
 - [Data preparation](https://github.com/bootphon/phoneme_discovery/blob/main/docs/prepare.md)
 - [Simple evaluation](https://github.com/bootphon/phoneme_discovery/blob/main/docs/evaluate.md)
-- [Run the benchmark](https://github.com/bootphon/phoneme_discovery/blob/main/benchmark.md)
-- [Use the baseline systems](https://github.com/bootphon/phoneme_discovery/blob/main/baselines.md)
+- [Run the benchmark](https://github.com/bootphon/phoneme_discovery/blob/main/docs/benchmark.md)
+- [Use the baseline systems](https://github.com/bootphon/phoneme_discovery/blob/main/docs/baselines.md)
 
 ### Citation
 

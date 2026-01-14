@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from discophon.core import read_gold_annotations, read_submitted_units
+from discophon.data import read_gold_annotations, read_submitted_units
 
 from .evaluate import phoneme_discovery
 

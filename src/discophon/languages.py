@@ -4,15 +4,31 @@ from functools import cache
 from importlib import resources
 from typing import Literal
 
+type Sonority = Literal[
+    "fricative",
+    "affricate",
+    "plosive",
+    "vibrant",
+    "nasal",
+    "approximant",
+    "monophthong",
+    "diphthong",
+]
+
 
 @cache
-def load_phonology() -> dict[str, list[str]]:
-    return json.loads((resources.files("discophon") / "core/assets/phonology.json").read_text(encoding="utf-8"))
+def load_sonority() -> dict[str, Sonority]:
+    return json.loads((resources.files(__package__) / "assets/sonority.json").read_text(encoding="utf-8"))
 
 
 @cache
 def load_tipa() -> dict[str, str]:
-    return json.loads((resources.files("discophon") / "core/assets/tipa.json").read_text(encoding="utf-8"))
+    return json.loads((resources.files(__package__) / "assets/tipa.json").read_text(encoding="utf-8"))
+
+
+@cache
+def load_phonology() -> dict[str, list[str]]:
+    return json.loads((resources.files(__package__) / "assets/phonology.json").read_text(encoding="utf-8"))
 
 
 @dataclass(frozen=True)

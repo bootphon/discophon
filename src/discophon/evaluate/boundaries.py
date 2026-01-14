@@ -8,7 +8,9 @@ from itertools import groupby
 
 import numpy as np
 
-from discophon.core import Phones, validate_first_two_arguments_same_keys
+from discophon.data import Phones
+
+from .validate import validate_first_two_arguments_same_keys
 
 
 @dataclass(frozen=True)

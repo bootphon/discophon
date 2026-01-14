@@ -9,7 +9,7 @@ units `step_units`.
 Example:
 
 ```python
-from discophon.core import read_gold_annotations, read_submitted_units
+from discophon.data import read_gold_annotations, read_submitted_units
 from discophon.evaluate import phoneme_discovery
 
 phones = read_gold_annotations("/path/to/alignments/dataset.align")

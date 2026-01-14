@@ -8,7 +8,9 @@ import numpy as np
 import polars as pl
 from xarray import DataArray
 
-from discophon.core import Phones, Units, validate_first_two_arguments_same_keys
+from discophon.data import Phones, Units
+
+from .validate import validate_first_two_arguments_same_keys
 
 
 class UnitsAndPhones(TypedDict):

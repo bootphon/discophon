@@ -11,8 +11,10 @@ import soundfile as sf
 import soxr
 from tqdm import tqdm
 
-from discophon.core import SAMPLE_RATE
-from discophon.core.languages import ISO6393_TO_CV
+from .data import SAMPLE_RATE
+from .languages import ISO6393_TO_CV
+
+__all__ = ["download_benchmark", "prepare_downloaded_benchmark", "resample"]
 
 
 def split_for_distributed[T](sequence: Sequence[T]) -> Sequence[T]:
@@ -92,3 +94,33 @@ def prepare_downloaded_benchmark(data: str | Path, iso_code: str) -> None:
             dest / Path(filename).with_suffix(".wav"),
             output_sample_rate=SAMPLE_RATE,
         )
+
+
+if __name__ == "__main__":
+    import argparse
+
+    from .languages import commonvoice_languages
+
+    parser = argparse.ArgumentParser(description="Prepare Phoneme Discovery benchmark")
+    subparsers = parser.add_subparsers(dest="command", required=True, help="command to run")
+    parser_download = subparsers.add_parser(
+        "download",
+        description="Download benchmark data",
+        help="download benchmark data",
+    )
+    parser_download.add_argument("data", help="path to data directory", type=Path)
+    parser_audio = subparsers.add_parser("audio", description="Prepare audio files", help="prepare audio files")
+    parser_audio.add_argument("data", help="path to data directory", type=Path)
+    parser_audio.add_argument(
+        "code",
+        help="CommonVoice language ISO 639-3 code",
+        choices=[lang.iso_639_3 for lang in commonvoice_languages()],
+    )
+    args = parser.parse_args()
+    match args.command:
+        case "download":
+            download_benchmark(args.data)
+        case "audio":
+            prepare_downloaded_benchmark(args.data, args.code)
+        case _:
+            parser.error("Invalid command")
