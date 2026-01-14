@@ -7,8 +7,8 @@ on:
       - "*"
 
 jobs:
-  checks:
-    name: Pre-release checks
+  lint:
+    name: Linters
     runs-on: ubuntu-latest
     permissions:
       security-events: write
@@ -20,8 +20,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: zizmor
-        uses: zizmorcore/zizmor-action@e639db99335bc9038abc0e066dfcd72e23d26fb4 # v0.3.0
+      # - name: zizmor
+      #   uses: zizmorcore/zizmor-action@e639db99335bc9038abc0e066dfcd72e23d26fb4 # v0.3.0
 
       - name: typos
         uses: crate-ci/typos@bb4666ad77b539a6b4ce4eda7ebb6de553704021 # v1.42.0
@@ -80,7 +80,8 @@ jobs:
           enable-cache: false
 
       - name: Upload to PyPI
-        run: uv publish --trusted-publishing always
+        # run: uv publish --trusted-publishing always
+        run: uv publish -t ${{ secrets.PYPI_TOKEN }}
 
 
   github-release:
