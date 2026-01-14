@@ -177,7 +177,7 @@ if __name__ == "__main__":
             fn, kwargs = benchmark_discovery, {"n_units": args.n_units}
         case "abx-discrete":
             fn, kwargs = benchmark_abx_discrete, {}
-        case "abx-discrete":
+        case "abx-continuous":
             fn, kwargs = benchmark_abx_continuous, {}
         case _:
             raise ValueError(args.benchmark)
