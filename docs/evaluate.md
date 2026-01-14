@@ -1,11 +1,5 @@
 # Evaluation
 
-```bash
-pip install discophon.evaluate
-```
-
-This package provides low-level functions to evaluate your model's predictions on phoneme discovery.
-
 ## Phoneme discovery
 
 You can use the `phoneme_discovery` function with `units: dict[str, list[int]]`, and `phones: dict[str, list[str]]`.
@@ -46,10 +40,10 @@ options:
 
 ## ABX
 
-The ABX evaluation is done separately. First, install this package with the `abx` optional dependency group:
+The ABX evaluation is done separately. First, install this package with the `abx` optional dependencies:
 
 ```bash
-pip install discophon.evaluate[abx]
+pip install discophon[abx]
 ```
 
 Then, either run it in Python:
