@@ -80,8 +80,7 @@ jobs:
           enable-cache: false
 
       - name: Upload to PyPI
-        # run: uv publish --trusted-publishing always
-        run: uv publish -t ${{ secrets.PYPI_TOKEN }}
+        run: uv publish --trusted-publishing always
 
 
   github-release:
