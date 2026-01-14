@@ -3,12 +3,14 @@
 import math
 from contextlib import ExitStack
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
+import polars as pl
 import torch
 import wandb
 from spidr.checkpoint import Checkpointer
 from spidr.config import DataConfig, MaskingConfig
-from spidr.data import build_dataloader
+from spidr.data import build_dataloader, read_manifest
 from spidr.environment import set_seed, setup_environment, setup_pytorch
 from spidr.models import build_model
 from spidr.tools import AverageMeters, profiler_context
@@ -46,6 +48,17 @@ def spidr_ft_data_config(manifest: str) -> DataConfig:
     )
 
 
+def patch_manifest_with_paths(src: str | Path, dest: str | Path) -> None:
+    manifest = read_manifest(src)
+    if "path" not in manifest.columns:
+        discophon = Path(src).parent.parent.resolve()
+        _, lang, *split = Path(src).stem.split("-")
+        audios = discophon / "audio" / lang / "-".join(split)
+        assert audios.is_dir()
+        manifest = manifest.with_columns(path=pl.concat_str(pl.lit(str(audios) + "/"), "fileid", pl.lit(".wav")))
+    manifest.write_csv(dest)
+
+
 def finetune_spidr(name: str, project: str, workdir: Path, checkpoint: Path, manifest: str) -> None:
     max_steps, seed = 20_000, 0
     with ExitStack() as stack:
@@ -61,7 +74,9 @@ def finetune_spidr(name: str, project: str, workdir: Path, checkpoint: Path, man
         optimizer = AdamW(model.parameters(), lr=5e-5, weight_decay=0.01, betas=(0.9, 0.95), eps=1e-6, fused=True)
         scaler = GradScaler("cuda")
         scheduler = tristage_scheduler(optimizer, warmup_steps=600, hold_steps=9_400, decay_steps=10_000)
-        loader = build_dataloader(spidr_ft_data_config(manifest), MaskingConfig())
+        tempfile = stack.enter_context(NamedTemporaryFile(suffix=".csv"))
+        patch_manifest_with_paths(manifest, tempfile.name)
+        loader = build_dataloader(spidr_ft_data_config(tempfile.name), MaskingConfig())
         ckpt = Checkpointer(rundir, 1_000)
         ckpt.init_state(model=model, optimizer=optimizer, scheduler=scheduler, scaler=scaler)
         step, epoch = int(ckpt.step), int(ckpt.epoch)
@@ -123,4 +138,4 @@ if __name__ == "__main__":
     parser.add_argument("checkpoint", type=Path)
     parser.add_argument("manifest", type=str)
     args = parser.parse_args()
-    finetune_spidr(args.name, args.workdir, args.checkpoint, args.manifest)
+    finetune_spidr(args.name, args.project, args.workdir, args.checkpoint, args.manifest)
