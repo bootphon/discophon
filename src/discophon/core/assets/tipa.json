@@ -113,6 +113,7 @@
   "ɳ": "\\textipa{\\textrtailn}",
   "ɴ": "\\textipa{\\;N}",
   "ɸ": "\\textipa{F}",
+  "ɹ": "\\textipa{\\textturnr}",
   "ɹ̩": "\\textipa{\\s{\\textturnr}}",
   "ɻ": "\\textipa{\\textturnrrtail}",
   "ɻ̩": "\\textipa{\\s{\\textturnrrtail}}",
