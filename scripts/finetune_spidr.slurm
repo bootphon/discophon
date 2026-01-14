@@ -67,4 +67,4 @@ srun python -m discophon.baselines.finetune_spidr \
     "$PROJECT" \
     "$WORKDIR" \
     "$CHECKPOINT" \
-    "$DATASET/manifests/manifest-$lang-$split.csv"
+    "$DATASET/manifest/manifest-$lang-$split.csv"
