@@ -54,7 +54,7 @@ task=$(( (SLURM_ARRAY_TASK_ID - 1) % 4 ))
 [[ $task -lt 2 ]] && split="dev" || split="test"
 [[ $((task % 2)) -eq 0 ]] && languages="dev" || languages="test"
 
-srun python -m discophon.benchmark \
+srun -u python -m discophon.benchmark \
   "$DATASET" \
   "$predictions" \
   "$OUTPUT" \
