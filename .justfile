@@ -9,16 +9,9 @@ test:
     uv run --group test pytest
 
 # Lint and format
-fmt:
+lint:
     uv run --dev ruff check
     uv run --dev ruff format
     uv run --dev tombi format
     uv run --dev typos
-
-# Build documentation
-docs:
-    echo "TODO"
-
-# Serve live documentation
-serve:
-    echo "TODO"
+    uv run --dev ty check src

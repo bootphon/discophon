@@ -1,6 +1,6 @@
 # The Phoneme Discovery benchmark
 
-[💾 [Website](https://benchmarks.cognitive-ml.fr/phoneme_discovery)] [📜 [Paper]()] [📖 [BibTex]()]
+[💾 [Website](https://benchmarks.cognitive-ml.fr/phoneme_discovery)] [📜 [Paper]()] [📖 [BibTex](https://github.com/bootphon/phoneme_discovery?tab=readme-ov-file#citation)]
 
 ## Introduction
 

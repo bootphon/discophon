@@ -30,6 +30,7 @@ dev = [
   "ipykernel>=7.1.0",
   "ruff>=0.14.10",
   "tombi>=0.7.16",
+  "ty>=0.0.11",
   "typos>=1.42.0",
 ]
 baselines = [
@@ -109,7 +110,7 @@ banned-module-level-imports = ["discophon.evaluate.abx"]
 [tool.ruff.lint.pylint]
 allow-magic-value-types = ["int", "str"]
 max-args = 10
+max-statements = 75
 
 [tool.typos.default.extend-words]
-IY = "IY"
 tha = "tha"

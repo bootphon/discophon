@@ -11,8 +11,8 @@ import soundfile as sf
 import soxr
 from tqdm import tqdm
 
-from discophon.core import SAMPLE_RATE, language
-from discophon.core.languages import ISO6393_TO_CV, Language
+from discophon.core import SAMPLE_RATE
+from discophon.core.languages import ISO6393_TO_CV
 
 
 def split_for_distributed[T](sequence: Sequence[T]) -> Sequence[T]:
