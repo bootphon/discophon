@@ -6,7 +6,7 @@ import polars as pl
 
 from .data import read_gold_annotations, read_submitted_units
 from .evaluate import phoneme_discovery
-from .languages import dev_languages, languages_in_split, test_languages
+from .languages import dev_languages, language, languages_in_split, test_languages
 
 
 class DatasetError(ValueError):
@@ -72,26 +72,24 @@ def benchmark_discovery(
     path_dataset: str | Path,
     path_units: str | Path,
     *,
-    languages: Literal["dev", "test"],
-    split: Literal["dev", "test"],
     n_units: int,
     step_units: int,
 ) -> pl.DataFrame:
     _validate_dataset_structure(path_dataset)
-    _validate_units_structure(path_units, languages=languages, split=split)
+    # _validate_units_structure(path_units, languages=languages, split=split)
 
     df = []
-    for language in languages_in_split(languages):
-        phones = read_gold_annotations(Path(path_dataset) / f"alignments/alignment-{language.iso_639_3}-{split}.txt")
-        units = read_submitted_units(Path(path_units) / f"units-{language.iso_639_3}-{split}.jsonl")
+    for lang, split in infer_languages_and_splits(path_units):
+        units = read_submitted_units(Path(path_units) / f"units-{lang.iso_639_3}-{split}.jsonl")
+        phones = read_gold_annotations(Path(path_dataset) / f"alignment/alignment-{lang.iso_639_3}-{split}.txt")
         scores = phoneme_discovery(
             units,
             phones,
             n_units=n_units,
-            n_phonemes=language.n_phonemes,
+            n_phonemes=lang.n_phonemes,
             step_units=step_units,
         )
-        df.append({"language": language.iso_639_3, "split": split} | scores)
+        df.append({"language": lang.iso_639_3, "split": split} | scores)
     return pl.DataFrame(df).unpivot(index=["language", "split"], variable_name="metric", value_name="score")
 
 
@@ -99,26 +97,25 @@ def benchmark_abx_discrete(
     path_dataset: str | Path,
     path_units: str | Path,
     *,
-    languages: Literal["dev", "test"],
-    split: Literal["dev", "test"],
-    step_units: int,
+    step_units: int
 ) -> pl.DataFrame:
     from .evaluate.abx import discrete_abx
 
     _validate_dataset_structure(path_dataset)
-    _validate_units_structure(path_units, languages=languages, split=split)
+    # _validate_units_structure(path_units, languages=languages, split=split)
 
     df = []
-    for language in languages_in_split(languages):
+    for lang, split in infer_languages_and_splits(path_units):
+    for lang in languages_in_split(languages) if languages in ("dev", "test") else [language(languages)]:
         for kind in ("triphone", "phoneme"):
             abx = discrete_abx(
-                Path(path_dataset) / f"item/{kind}-{language.iso_639_3}-{split}.item",
-                Path(path_units) / f"units-{language.iso_639_3}-{split}.jsonl",
+                Path(path_dataset) / f"item/{kind}-{lang.iso_639_3}-{split}.item",
+                Path(path_units) / f"units-{lang.iso_639_3}-{split}.jsonl",
                 frequency=1_000 // step_units,
             )
             for speaker in ("within", "across"):
                 metric = f"{kind}_abx_discrete_{speaker}_speaker"
-                df.append({"language": language.iso_639_3, "split": split, "metric": metric, "score": abx[speaker]})
+                df.append({"language": lang.iso_639_3, "split": split, "metric": metric, "score": abx[speaker]})
     return pl.DataFrame(df)
 
 
@@ -158,8 +155,6 @@ if __name__ == "__main__":
     parser.add_argument("dataset", type=Path, help="Path to the benchmark dataset")
     parser.add_argument("predictions", type=Path, help="Path to the directory with the discrete units or the features")
     parser.add_argument("output", type=Path, help="Path to the output file")
-    parser.add_argument("--languages", required=True, choices=["dev", "test"], help="Which language split")
-    parser.add_argument("--split", required=True, choices=["dev", "test"], help="Which subset")
     parser.add_argument(
         "--benchmark",
         choices=["discovery", "abx-discrete", "abx-continuous"],

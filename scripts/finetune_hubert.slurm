@@ -66,7 +66,7 @@ split=$(echo "train-10min train-1h train-10h" | cut -d' ' -f$((split + 1)))
 lang=$(( (SLURM_ARRAY_TASK_ID - 1) % 6 ))
 lang=$(echo "$languages" | cut -d' ' -f$((lang + 1)))
 
-srun python -m discophon.baselines.finetune_spidr \
+srun python -m discophon.baselines.finetune_hubert \
     "$COMMON_NAME-$lang-$split" \
     "$PROJECT" \
     "$WORKDIR" \

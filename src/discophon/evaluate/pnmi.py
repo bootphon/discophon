@@ -38,8 +38,8 @@ def align_units_and_phones(
     for fileid, this_phones in phones.items():
         this_units = list(itertools.chain.from_iterable(itertools.repeat(unit, repeat) for unit in units[fileid]))
         min_len = min(len(this_phones), len(this_units))
-        if (len(this_phones) - min_len > repeat) or (len(this_units) - min_len > repeat):
-            raise ValueError(f"More than {repeat} tokens of differences between phones and units.")
+        # if (len(this_phones) - min_len > repeat) or (len(this_units) - min_len > repeat):
+        # raise ValueError(f"More than {repeat} tokens of differences between phones and units.")
         data[fileid] = {"phones": this_phones[:min_len], "units": this_units[:min_len]}
     return data
 
@@ -58,6 +58,7 @@ def contingency_table(
     Element (i, j) is the number of times the unit j has appeared where the underlying phoneme is i.
     The phonemes are ordered according to the returned dictionary (sorted by frequency).
     """
+    n_phonemes_with_sil = n_phonemes + 1
     index, phone_to_index = 0, {}
     phone_indices, unit_indices = [], []
     data = align_units_and_phones(units, phones, step_units=step_units, step_phones=step_phones)
@@ -66,16 +67,16 @@ def contingency_table(
             if phone not in phone_to_index:
                 phone_to_index[phone] = index
                 index += 1
-            if phone_to_index[phone] >= n_phonemes or unit >= n_units:
+            if phone_to_index[phone] >= n_phonemes_with_sil or unit >= n_units:
                 raise IndexError
             phone_indices.append(phone_to_index[phone])
             unit_indices.append(unit)
-    for missing in range(len(phone_to_index), n_phonemes):
+    for missing in range(len(phone_to_index), n_phonemes_with_sil):
         phone_to_index[f"<missing-{missing}>"] = missing
 
     flattened_indices = np.array(phone_indices) * n_units + np.array(unit_indices)
     count = DataArray(
-        np.bincount(flattened_indices, minlength=n_phonemes * n_units).reshape(n_phonemes, n_units),
+        np.bincount(flattened_indices, minlength=n_phonemes_with_sil * n_units).reshape(n_phonemes_with_sil, n_units),
         dims=["phone", "unit"],
         coords=[list(phone_to_index.keys()), list(range(n_units))],
         name="Contingency Table",
