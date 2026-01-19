@@ -6,7 +6,7 @@ import polars as pl
 
 from .data import read_gold_annotations, read_submitted_units
 from .evaluate import phoneme_discovery
-from .languages import dev_languages, language, languages_in_split, test_languages
+from .languages import Language, dev_languages, language, test_languages
 
 
 class DatasetError(ValueError):
@@ -14,7 +14,7 @@ class DatasetError(ValueError):
         super().__init__("Invalid phoneme_discovery dataset structure. Verify your file structure!")
 
 
-def _validate_dataset_structure(path: str | Path) -> None:
+def validate_dataset_structure(path: str | Path) -> None:
     root = Path(path).resolve()
     languages = dev_languages() + test_languages()
     if {p.name for p in root.glob("*")} != {"alignment", "audio", "item", "manifest"}:
@@ -44,28 +44,9 @@ def _validate_dataset_structure(path: str | Path) -> None:
             raise DatasetError
 
 
-def _validate_units_structure(
-    path: str | Path,
-    *,
-    languages: Literal["dev", "test"],
-    split: Literal["dev", "test"],
-) -> None:
-    expected = {f"units-{lang.iso_639_3}-{split}.jsonl" for lang in languages_in_split(languages)}
-    found = {p.name for p in Path(path).glob("*.jsonl")}
-    if not expected.issubset(found):
-        raise ValueError(f"Missing units. Expected in {path}:\n{list(expected)}")
-
-
-def _validate_features_structure(
-    path: str | Path,
-    *,
-    languages: Literal["dev", "test"],
-    split: Literal["dev", "test"],
-) -> None:
-    expected = {f"{lang.iso_639_3}/{split}" for lang in languages_in_split(languages)}
-    found = {str(p.relative_to(path)) for p in Path(path).glob("*/*")}
-    if not expected.issubset(found):
-        raise ValueError(f"Missing directories with features. Expected in {path}:\n{list(expected)}")
+def available_languages_and_splits(path_units: str | Path) -> list[tuple[Language, str]]:
+    found = sorted(p.stem for p in Path(path_units).glob("units-*.jsonl"))
+    return [(language(p), "-".join(q)) for n in found for p, *q in n.split("-")]
 
 
 def benchmark_discovery(
@@ -75,11 +56,9 @@ def benchmark_discovery(
     n_units: int,
     step_units: int,
 ) -> pl.DataFrame:
-    _validate_dataset_structure(path_dataset)
-    # _validate_units_structure(path_units, languages=languages, split=split)
-
+    validate_dataset_structure(path_dataset)
     df = []
-    for lang, split in infer_languages_and_splits(path_units):
+    for lang, split in available_languages_and_splits(path_units):
         units = read_submitted_units(Path(path_units) / f"units-{lang.iso_639_3}-{split}.jsonl")
         phones = read_gold_annotations(Path(path_dataset) / f"alignment/alignment-{lang.iso_639_3}-{split}.txt")
         scores = phoneme_discovery(
@@ -97,25 +76,22 @@ def benchmark_abx_discrete(
     path_dataset: str | Path,
     path_units: str | Path,
     *,
-    step_units: int
+    step_units: int,
+    kind: Literal["triphone", "phoneme"] = "triphone",
 ) -> pl.DataFrame:
     from .evaluate.abx import discrete_abx
 
-    _validate_dataset_structure(path_dataset)
-    # _validate_units_structure(path_units, languages=languages, split=split)
-
+    validate_dataset_structure(path_dataset)
     df = []
-    for lang, split in infer_languages_and_splits(path_units):
-    for lang in languages_in_split(languages) if languages in ("dev", "test") else [language(languages)]:
-        for kind in ("triphone", "phoneme"):
-            abx = discrete_abx(
-                Path(path_dataset) / f"item/{kind}-{lang.iso_639_3}-{split}.item",
-                Path(path_units) / f"units-{lang.iso_639_3}-{split}.jsonl",
-                frequency=1_000 // step_units,
-            )
-            for speaker in ("within", "across"):
-                metric = f"{kind}_abx_discrete_{speaker}_speaker"
-                df.append({"language": lang.iso_639_3, "split": split, "metric": metric, "score": abx[speaker]})
+    for lang, split in available_languages_and_splits(path_units):
+        abx = discrete_abx(
+            Path(path_dataset) / f"item/{kind}-{lang.iso_639_3}-{split}.item",
+            Path(path_units) / f"units-{lang.iso_639_3}-{split}.jsonl",
+            frequency=1_000 // step_units,
+        )
+        for speaker in ("within", "across"):
+            metric = f"{kind}_abx_discrete_{speaker}_speaker"
+            df.append({"language": lang.iso_639_3, "split": split, "metric": metric, "score": abx[speaker]})
     return pl.DataFrame(df)
 
 
@@ -123,26 +99,22 @@ def benchmark_abx_continuous(
     path_dataset: str | Path,
     path_features: str | Path,
     *,
-    languages: Literal["dev", "test"],
-    split: Literal["dev", "test"],
     step_units: int,
+    kind: Literal["triphone", "phoneme"] = "triphone",
 ) -> pl.DataFrame:
     from .evaluate.abx import continuous_abx
 
-    _validate_dataset_structure(path_dataset)
-    _validate_features_structure(path_features, languages=languages, split=split)
-
+    validate_dataset_structure(path_dataset)
     df = []
-    for language in languages_in_split(languages):
-        for kind in ("triphone", "phoneme"):
-            abx = continuous_abx(
-                Path(path_dataset) / f"item/{kind}-{language.iso_639_3}-{split}.item",
-                Path(path_features) / f"{language.iso_639_3}/{split}",
-                frequency=1_000 // step_units,
-            )
-            for speaker in ("within", "across"):
-                metric = f"{kind}_abx_continuous_{speaker}_speaker"
-                df.append({"language": language.iso_639_3, "split": split, "metric": metric, "score": abx[speaker]})
+    for lang, split in available_languages_and_splits(path_features):
+        abx = continuous_abx(
+            Path(path_dataset) / f"item/{kind}-{lang.iso_639_3}-{split}.item",
+            Path(path_features) / f"{lang.iso_639_3}/{split}",
+            frequency=1_000 // step_units,
+        )
+        for speaker in ("within", "across"):
+            metric = f"{kind}_abx_continuous_{speaker}_speaker"
+            df.append({"language": lang.iso_639_3, "split": split, "metric": metric, "score": abx[speaker]})
     return pl.DataFrame(df)
 
 
@@ -157,35 +129,41 @@ if __name__ == "__main__":
     parser.add_argument("output", type=Path, help="Path to the output file")
     parser.add_argument(
         "--benchmark",
+        type=str,
         choices=["discovery", "abx-discrete", "abx-continuous"],
         default="discovery",
         help="Which benchmark (default: discovery)",
     )
-    parser.add_argument("--n-units", type=int, help="Number of discrete units. Required if benchmark is 'discovery'")
+    parser.add_argument(
+        "--n-units",
+        type=int,
+        help="Number of discrete units. Required if benchmark is 'discovery'",
+    )
     parser.add_argument(
         "--step-units",
         type=int,
         default=20,
-        help="Step in ms between units or features (default: 20ms)",
+        help="Step in ms between units or features (default: 20ms). 'frequency' is then set to 1000 // step_units.",
+    )
+    parser.add_argument(
+        "--kind",
+        type=str,
+        choices=["triphone", "phoneme"],
+        default="triphone",
+        help="Use either triphone or phoneme representations for ABX discriminability",
     )
     args = parser.parse_args()
 
     match args.benchmark:
         case "discovery":
-            fn, kwargs = benchmark_discovery, {"n_units": args.n_units}
+            if args.n_units is None:
+                parser.error("--n-units must be set if benchmark is 'discovery'")
+            out = benchmark_discovery(args.dataset, args.predictions, step_units=args.step_units, n_units=args.n_units)
         case "abx-discrete":
-            fn, kwargs = benchmark_abx_discrete, {}
+            out = benchmark_abx_discrete(args.dataset, args.predictions, step_units=args.step_units, kind=args.kind)
         case "abx-continuous":
-            fn, kwargs = benchmark_abx_continuous, {}
+            out = benchmark_abx_continuous(args.dataset, args.predictions, step_units=args.step_units, kind=args.kind)
         case _:
-            raise ValueError(args.benchmark)
-    scores = fn(
-        args.dataset,
-        args.predictions,
-        languages=args.languages,
-        split=args.split,
-        step_units=args.step_units,
-        **kwargs,
-    )
+            parser.error(f"Invalid benchmark: '{args.benchmark}'")
     with FileLock(f"{args.output}.lock"), args.output.open("a") as f:
-        scores.write_ndjson(f)
+        out.write_ndjson(f)
