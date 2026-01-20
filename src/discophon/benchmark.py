@@ -44,9 +44,13 @@ def validate_dataset_structure(path: str | Path) -> None:
             raise DatasetError
 
 
-def available_languages_and_splits(path_units: str | Path) -> list[tuple[Language, str]]:
+def available_languages_and_splits_for_units(path_units: str | Path) -> list[tuple[Language, str]]:
     found = sorted(p.stem for p in Path(path_units).glob("units-*.jsonl"))
     return [(language(p), "-".join(q)) for n in found for p, *q in n.split("-")]
+
+
+def available_languages_and_splits_for_features(path_features: str | Path) -> list[tuple[Language, str]]:
+    return [(language(p.parent.stem), p.stem) for p in sorted(Path(path_features).glob("*/*/"))]
 
 
 def benchmark_discovery(
@@ -58,7 +62,7 @@ def benchmark_discovery(
 ) -> pl.DataFrame:
     validate_dataset_structure(path_dataset)
     df = []
-    for lang, split in available_languages_and_splits(path_units):
+    for lang, split in available_languages_and_splits_for_units(path_units):
         units = read_submitted_units(Path(path_units) / f"units-{lang.iso_639_3}-{split}.jsonl")
         phones = read_gold_annotations(Path(path_dataset) / f"alignment/alignment-{lang.iso_639_3}-{split}.txt")
         scores = phoneme_discovery(
@@ -83,7 +87,7 @@ def benchmark_abx_discrete(
 
     validate_dataset_structure(path_dataset)
     df = []
-    for lang, split in available_languages_and_splits(path_units):
+    for lang, split in available_languages_and_splits_for_units(path_units):
         abx = discrete_abx(
             Path(path_dataset) / f"item/{kind}-{lang.iso_639_3}-{split}.item",
             Path(path_units) / f"units-{lang.iso_639_3}-{split}.jsonl",
@@ -106,7 +110,7 @@ def benchmark_abx_continuous(
 
     validate_dataset_structure(path_dataset)
     df = []
-    for lang, split in available_languages_and_splits(path_features):
+    for lang, split in available_languages_and_splits_for_features(path_features):
         abx = continuous_abx(
             Path(path_dataset) / f"item/{kind}-{lang.iso_639_3}-{split}.item",
             Path(path_features) / f"{lang.iso_639_3}/{split}",
