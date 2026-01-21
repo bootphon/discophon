@@ -6,7 +6,7 @@ import polars as pl
 
 from .data import read_gold_annotations, read_submitted_units
 from .evaluate import phoneme_discovery
-from .languages import Language, dev_languages, language, test_languages
+from .languages import Language, dev_languages, get_language, test_languages
 
 
 class DatasetError(ValueError):
@@ -46,11 +46,11 @@ def validate_dataset_structure(path: str | Path) -> None:
 
 def available_languages_and_splits_for_units(path_units: str | Path) -> list[tuple[Language, str]]:
     found = [n.split("-") for n in sorted(p.stem for p in Path(path_units).glob("units-*.jsonl"))]
-    return [(language(p), "-".join(q)) for _, p, *q in found]
+    return [(get_language(p), "-".join(q)) for _, p, *q in found]
 
 
 def available_languages_and_splits_for_features(path_features: str | Path) -> list[tuple[Language, str]]:
-    return [(language(p.parent.stem), p.stem) for p in sorted(Path(path_features).glob("*/*/"))]
+    return [(get_language(p.parent.stem), p.stem) for p in sorted(Path(path_features).glob("*/*/"))]
 
 
 def benchmark_discovery(
@@ -62,17 +62,17 @@ def benchmark_discovery(
 ) -> pl.DataFrame:
     validate_dataset_structure(path_dataset)
     df = []
-    for lang, split in available_languages_and_splits_for_units(path_units):
-        units = read_submitted_units(Path(path_units) / f"units-{lang.iso_639_3}-{split}.jsonl")
-        phones = read_gold_annotations(Path(path_dataset) / f"alignment/alignment-{lang.iso_639_3}-{split}.txt")
+    for language, split in available_languages_and_splits_for_units(path_units):
+        units = read_submitted_units(Path(path_units) / f"units-{language.iso_639_3}-{split}.jsonl")
+        phones = read_gold_annotations(Path(path_dataset) / f"alignment/alignment-{language.iso_639_3}-{split}.txt")
         scores = phoneme_discovery(
             units,
             phones,
             n_units=n_units,
-            n_phonemes=lang.n_phonemes,
+            n_phonemes=language.n_phonemes,
             step_units=step_units,
         )
-        df.append({"language": lang.iso_639_3, "split": split} | scores)
+        df.append({"language": language.iso_639_3, "split": split} | scores)
     return pl.DataFrame(df).unpivot(index=["language", "split"], variable_name="metric", value_name="score")
 
 
@@ -87,16 +87,16 @@ def benchmark_abx_discrete(
 
     validate_dataset_structure(path_dataset)
     df = []
-    for lang, split in available_languages_and_splits_for_units(path_units):
+    for language, split in available_languages_and_splits_for_units(path_units):
         abx = discrete_abx(
-            Path(path_dataset) / f"item/{kind}-{lang.iso_639_3}-{split}.item",
-            Path(path_units) / f"units-{lang.iso_639_3}-{split}.jsonl",
+            Path(path_dataset) / f"item/{kind}-{language.iso_639_3}-{split}.item",
+            Path(path_units) / f"units-{language.iso_639_3}-{split}.jsonl",
             frequency=1_000 // step_units,
             kind=kind,
         )
         for speaker, score in abx.items():
             metric = f"{kind}_abx_discrete_{speaker}"
-            df.append({"language": lang.iso_639_3, "split": split, "metric": metric, "score": score})
+            df.append({"language": language.iso_639_3, "split": split, "metric": metric, "score": score})
     return pl.DataFrame(df)
 
 
@@ -111,16 +111,16 @@ def benchmark_abx_continuous(
 
     validate_dataset_structure(path_dataset)
     df = []
-    for lang, split in available_languages_and_splits_for_features(path_features):
+    for language, split in available_languages_and_splits_for_features(path_features):
         abx = continuous_abx(
-            Path(path_dataset) / f"item/{kind}-{lang.iso_639_3}-{split}.item",
-            Path(path_features) / f"{lang.iso_639_3}/{split}",
+            Path(path_dataset) / f"item/{kind}-{language.iso_639_3}-{split}.item",
+            Path(path_features) / f"{language.iso_639_3}/{split}",
             frequency=1_000 // step_units,
             kind=kind,
         )
         for speaker_context, score in abx.items():
             metric = f"{kind}_abx_continuous_{speaker_context}"
-            df.append({"language": lang.iso_639_3, "split": split, "metric": metric, "score": score})
+            df.append({"language": language.iso_639_3, "split": split, "metric": metric, "score": score})
     return pl.DataFrame(df)
 
 

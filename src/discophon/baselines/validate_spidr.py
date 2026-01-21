@@ -7,7 +7,7 @@ import torch
 from spidr.config import MaskingConfig
 from spidr.data import build_dataloader
 from spidr.environment import set_seed, setup_environment, setup_pytorch
-from spidr.models import SpidR, build_model
+from spidr.models import DinoSR, build_model
 from spidr.tools import init_logger
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -19,7 +19,7 @@ logger = logging.getLogger()
 
 @torch.no_grad()
 def validate(
-    model: SpidR,
+    model: DinoSR,
     loader: DataLoader,
     device: torch.device,
     dtype: torch.dtype,
@@ -46,7 +46,7 @@ def validate(
 
 def validate_all_checkpoints(
     output: str | Path,
-    manifest: str | Path,
+    manifest: str,
     checkpoints: str | Path,
     *,
     seed: int = 0,
