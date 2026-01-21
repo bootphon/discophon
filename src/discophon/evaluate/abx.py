@@ -9,15 +9,11 @@ from fastabx.zerospeech import InvalidSpeakerOrContextError
 
 
 class TriphoneABX(TypedDict):
-    """Output of ABX evaluation."""
-
     within_speaker: float
     across_speaker: float
 
 
 class PhonemeABX(TypedDict):
-    """Output of ABX evaluation."""
-
     within_speaker_within_context: float
     across_speaker_within_context: float
     within_speaker_any_context: float
