@@ -45,7 +45,7 @@ class Language:
         return phonemes
 
 
-def language(n: str, /) -> Language:  # noqa: C901, PLR0911
+def get_language(n: str, /) -> Language:  # noqa: C901, PLR0911
     match n.lower():
         case "german" | "deu":
             return Language(name="German", iso_639_3="deu", split="dev", n_phonemes=41)
@@ -78,11 +78,25 @@ type TupleOfSixLanguages = tuple[Language, Language, Language, Language, Languag
 
 
 def dev_languages() -> TupleOfSixLanguages:
-    return language("deu"), language("swa"), language("tam"), language("tha"), language("tur"), language("ukr")
+    return (
+        get_language("deu"),
+        get_language("swa"),
+        get_language("tam"),
+        get_language("tha"),
+        get_language("tur"),
+        get_language("ukr"),
+    )
 
 
 def test_languages() -> TupleOfSixLanguages:
-    return language("cmn"), language("eng"), language("eus"), language("fra"), language("jpn"), language("wol")
+    return (
+        get_language("cmn"),
+        get_language("eng"),
+        get_language("eus"),
+        get_language("fra"),
+        get_language("jpn"),
+        get_language("wol"),
+    )
 
 
 def languages_in_split(s: Literal["dev", "test"], /) -> TupleOfSixLanguages:
@@ -96,14 +110,14 @@ def languages_in_split(s: Literal["dev", "test"], /) -> TupleOfSixLanguages:
 
 def commonvoice_languages() -> tuple[Language, ...]:
     return (
-        language("swa"),
-        language("tam"),
-        language("tha"),
-        language("tur"),
-        language("ukr"),
-        language("cmn"),
-        language("eus"),
-        language("jpn"),
+        get_language("swa"),
+        get_language("tam"),
+        get_language("tha"),
+        get_language("tur"),
+        get_language("ukr"),
+        get_language("cmn"),
+        get_language("eus"),
+        get_language("jpn"),
     )
 
 
