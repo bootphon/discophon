@@ -92,10 +92,11 @@ def benchmark_abx_discrete(
             Path(path_dataset) / f"item/{kind}-{lang.iso_639_3}-{split}.item",
             Path(path_units) / f"units-{lang.iso_639_3}-{split}.jsonl",
             frequency=1_000 // step_units,
+            kind=kind,
         )
-        for speaker in ("within", "across"):
-            metric = f"{kind}_abx_discrete_{speaker}_speaker"
-            df.append({"language": lang.iso_639_3, "split": split, "metric": metric, "score": abx[speaker]})
+        for speaker, score in abx.items():
+            metric = f"{kind}_abx_discrete_{speaker}"
+            df.append({"language": lang.iso_639_3, "split": split, "metric": metric, "score": score})
     return pl.DataFrame(df)
 
 
@@ -115,10 +116,11 @@ def benchmark_abx_continuous(
             Path(path_dataset) / f"item/{kind}-{lang.iso_639_3}-{split}.item",
             Path(path_features) / f"{lang.iso_639_3}/{split}",
             frequency=1_000 // step_units,
+            kind=kind,
         )
-        for speaker in ("within", "across"):
-            metric = f"{kind}_abx_continuous_{speaker}_speaker"
-            df.append({"language": lang.iso_639_3, "split": split, "metric": metric, "score": abx[speaker]})
+        for speaker_context, score in abx.items():
+            metric = f"{kind}_abx_continuous_{speaker_context}"
+            df.append({"language": lang.iso_639_3, "split": split, "metric": metric, "score": score})
     return pl.DataFrame(df)
 
 

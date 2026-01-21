@@ -1,7 +1,7 @@
 """ABX discriminability."""
 
 from pathlib import Path
-from typing import Literal, TypedDict
+from typing import Literal, TypedDict, overload
 
 from fastabx import Dataset, Score, Subsampler, Task
 from fastabx.distance import DistanceName
@@ -49,44 +49,96 @@ def abx(
     return Score(task, distance_name).collapse(levels=levels)
 
 
-def discrete_triphone_abx(path_item: str | Path, path_units: str | Path, *, frequency: float) -> TriphoneABX:
+@overload
+def discrete_abx(
+    path_item: str | Path,
+    path_units: str | Path,
+    *,
+    frequency: float,
+    kind: Literal["triphone"],
+) -> TriphoneABX: ...
+
+
+@overload
+def discrete_abx(
+    path_item: str | Path,
+    path_units: str | Path,
+    *,
+    frequency: float,
+    kind: Literal["phoneme"],
+) -> PhonemeABX: ...
+
+
+def discrete_abx(
+    path_item: str | Path,
+    path_units: str | Path,
+    *,
+    frequency: float,
+    kind: Literal["triphone", "phoneme"],
+) -> TriphoneABX | PhonemeABX:
     """Phoneme ABX on discrete units."""
     dataset = Dataset.from_item_and_units(path_item, path_units, frequency, audio_key="file")
-    return {
-        "within_speaker": abx(dataset, "identical", speaker="within", context="within"),
-        "across_speaker": abx(dataset, "identical", speaker="across", context="within"),
-    }
+    match kind:
+        case "triphone":
+            return TriphoneABX(
+                within_speaker=abx(dataset, "identical", speaker="within", context="within"),
+                across_speaker=abx(dataset, "identical", speaker="across", context="within"),
+            )
+        case "phoneme":
+            return PhonemeABX(
+                within_speaker_within_context=abx(dataset, "identical", speaker="within", context="within"),
+                across_speaker_within_context=abx(dataset, "identical", speaker="across", context="within"),
+                within_speaker_any_context=abx(dataset, "identical", speaker="within", context="any"),
+                across_speaker_any_context=abx(dataset, "identical", speaker="across", context="any"),
+            )
+        case _:
+            raise ValueError(kind)
 
 
-def continuous_triphone_abx(path_item: str | Path, path_features: str | Path, *, frequency: float) -> TriphoneABX:
+@overload
+def continuous_abx(
+    path_item: str | Path,
+    path_features: str | Path,
+    *,
+    frequency: float,
+    kind: Literal["triphone"],
+) -> TriphoneABX: ...
+
+
+@overload
+def continuous_abx(
+    path_item: str | Path,
+    path_features: str | Path,
+    *,
+    frequency: float,
+    kind: Literal["phoneme"],
+) -> PhonemeABX: ...
+
+
+def continuous_abx(
+    path_item: str | Path,
+    path_features: str | Path,
+    *,
+    frequency: float,
+    kind: Literal["triphone", "phoneme"],
+) -> TriphoneABX | PhonemeABX:
     """Phoneme ABX on continuous representations."""
     dataset = Dataset.from_item(path_item, path_features, frequency)
-    return {
-        "within_speaker": abx(dataset, "angular", speaker="within", context="within"),
-        "across_speaker": abx(dataset, "angular", speaker="across", context="within"),
-    }
-
-
-def discrete_phoneme_abx(path_item: str | Path, path_units: str | Path, *, frequency: float) -> PhonemeABX:
-    """Phoneme ABX on continuous representations."""
-    dataset = Dataset.from_item_and_units(path_item, path_units, frequency, audio_key="file")
-    return {
-        "within_speaker_within_context": abx(dataset, "identical", speaker="within", context="within"),
-        "across_speaker_within_context": abx(dataset, "identical", speaker="across", context="within"),
-        "within_speaker_any_context": abx(dataset, "identical", speaker="within", context="any"),
-        "across_speaker_any_context": abx(dataset, "identical", speaker="across", context="any"),
-    }
-
-
-def continuous_phoneme_abx(path_item: str | Path, path_features: str | Path, *, frequency: float) -> PhonemeABX:
-    """Phoneme ABX on continuous representations."""
-    dataset = Dataset.from_item(path_item, path_features, frequency)
-    return {
-        "within_speaker_within_context": abx(dataset, "angular", speaker="within", context="within"),
-        "across_speaker_within_context": abx(dataset, "angular", speaker="across", context="within"),
-        "within_speaker_any_context": abx(dataset, "angular", speaker="within", context="any"),
-        "across_speaker_any_context": abx(dataset, "angular", speaker="across", context="any"),
-    }
+    match kind:
+        case "triphone":
+            return TriphoneABX(
+                within_speaker=abx(dataset, "angular", speaker="within", context="within"),
+                across_speaker=abx(dataset, "angular", speaker="across", context="within"),
+            )
+        case "phoneme":
+            return PhonemeABX(
+                within_speaker_within_context=abx(dataset, "angular", speaker="within", context="within"),
+                across_speaker_within_context=abx(dataset, "angular", speaker="across", context="within"),
+                within_speaker_any_context=abx(dataset, "angular", speaker="within", context="any"),
+                across_speaker_any_context=abx(dataset, "angular", speaker="across", context="any"),
+            )
+        case _:
+            raise ValueError(kind)
 
 
 if __name__ == "__main__":
@@ -108,24 +160,10 @@ if __name__ == "__main__":
         help="Triphone- or phoneme-based ABX",
     )
     args = parser.parse_args()
-    if args.kind == "triphone":
-        if args.root.is_dir():
-            score = continuous_triphone_abx(args.item, args.root, frequency=args.frequency)
-        elif args.root.suffix == ".jsonl":
-            score = discrete_triphone_abx(args.item, args.units, frequency=args.frequency)
-        else:
-            raise ValueError(args.root)
-        print(f"Within speaker:\t {score['within_speaker']:.2%}\nAcross speaker:\t {score['across_speaker']:.2%}")
+    if args.root.is_dir():
+        scores = continuous_abx(args.item, args.root, frequency=args.frequency, kind=args.kind)
+    elif args.root.suffix == ".jsonl":
+        scores = discrete_abx(args.item, args.units, frequency=args.frequency, kind=args.kind)
     else:
-        if args.root.is_dir():
-            score = continuous_phoneme_abx(args.item, args.root, frequency=args.frequency)
-        elif args.root.suffix == ".jsonl":
-            score = discrete_phoneme_abx(args.item, args.units, frequency=args.frequency)
-        else:
-            raise ValueError(args.root)
-        print(
-            f"Within speaker, within context:\t {score['within_speaker_within_context']:.2%}\n"
-            f"Across speaker, within context:\t {score['across_speaker_within_context']:.2%}\n"
-            f"Within speaker, any context:\t {score['within_speaker_any_context']:.2%}\n"
-            f"Across speaker, any context:\t {score['across_speaker_any_context']:.2%}\n"
-        )
+        raise ValueError(args.root)
+    print("\n".join(f"{key}:\t{score:.2%}" for key, score in scores.items()))
