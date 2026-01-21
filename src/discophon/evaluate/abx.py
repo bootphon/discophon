@@ -151,7 +151,7 @@ if __name__ == "__main__":
         type=Path,
         help="Path to the JSONL with units or directory with continuous features",
     )
-    parser.add_argument("--frequency", required=True, type=int, help="Units frequency in Hz")
+    parser.add_argument("--frequency", required=True, type=float, help="Units frequency in Hz")
     parser.add_argument(
         "--kind",
         type=str,
