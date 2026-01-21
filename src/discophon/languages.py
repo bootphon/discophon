@@ -38,11 +38,12 @@ class Language:
     split: str
     n_phonemes: int
 
+    def __post_init__(self) -> None:
+        assert self.n_phonemes == len(self.phonology)
+
     @property
     def phonology(self) -> list[str]:
-        phonemes = load_phonology()[self.iso_639_3]
-        assert len(phonemes) == self.n_phonemes
-        return phonemes
+        return load_phonology()[self.iso_639_3]
 
 
 def get_language(n: str, /) -> Language:  # noqa: C901, PLR0911
@@ -97,6 +98,10 @@ def test_languages() -> TupleOfSixLanguages:
         get_language("jpn"),
         get_language("wol"),
     )
+
+
+def all_languages() -> tuple[Language, ...]:
+    return dev_languages() + test_languages()
 
 
 def languages_in_split(s: Literal["dev", "test"], /) -> TupleOfSixLanguages:
