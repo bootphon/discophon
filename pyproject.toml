@@ -59,6 +59,7 @@ source = "vcs"
 [tool.pytest]
 log_cli = true
 log_cli_level = "INFO"
+markers = ["requires_dataset: mark test as requiring a path to the dataset"]
 
 [tool.ruff]
 line-length = 119
