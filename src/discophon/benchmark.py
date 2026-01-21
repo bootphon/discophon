@@ -45,8 +45,8 @@ def validate_dataset_structure(path: str | Path) -> None:
 
 
 def available_languages_and_splits_for_units(path_units: str | Path) -> list[tuple[Language, str]]:
-    found = sorted(p.stem for p in Path(path_units).glob("units-*.jsonl"))
-    return [(language(p), "-".join(q)) for n in found for p, *q in n.split("-")]
+    found = [n.split("-") for n in sorted(p.stem for p in Path(path_units).glob("units-*.jsonl"))]
+    return [(language(p), "-".join(q)) for _, p, *q in found]
 
 
 def available_languages_and_splits_for_features(path_features: str | Path) -> list[tuple[Language, str]]:
