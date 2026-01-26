@@ -59,7 +59,7 @@ def patch_manifest_with_paths(src: str | Path, dest: str | Path) -> None:
     manifest.write_csv(dest)
 
 
-def finetune_spidr(name: str, project: str, workdir: Path, checkpoint: Path, manifest: str) -> None:
+def finetune_spidr(name: str, project: str, workdir: Path, checkpoint: Path, manifest: str) -> None:  # noqa: PLR0914
     max_steps, seed = 20_000, 0
     with ExitStack() as stack:
         set_seed(seed)
@@ -91,7 +91,7 @@ def finetune_spidr(name: str, project: str, workdir: Path, checkpoint: Path, man
             dtype = torch.float16
         while step < max_steps:
             epoch += 1
-            loader.batch_sampler.set_epoch(epoch)
+            loader.batch_sampler.set_epoch(epoch)  # ty: ignore[possibly-missing-attribute]
             for waveforms, attn_mask, mask in loader:
                 if step >= max_steps:
                     break

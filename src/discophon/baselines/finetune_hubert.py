@@ -100,7 +100,7 @@ def fit_kmeans_from_checkpoint(
     return kmeans
 
 
-def finetune_hubert(
+def finetune_hubert(  # noqa: PLR0914
     name: str,
     project: str,
     workdir: Path,
@@ -150,7 +150,7 @@ def finetune_hubert(
         pbar = stack.enter_context(tqdm(total=max_steps, initial=step))
         while step < max_steps:
             epoch += 1
-            loader.batch_sampler.set_epoch(epoch)
+            loader.batch_sampler.set_epoch(epoch)  # ty: ignore[possibly-missing-attribute]
             for waveforms, labels, attn_mask, mask in loader:
                 if step >= max_steps:
                     break

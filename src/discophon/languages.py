@@ -17,18 +17,20 @@ type Sonority = Literal[
 
 
 @cache
+def _load_asset(name: str) -> dict:
+    return json.loads((resources.files(__package__) / f"assets/{name}.json").read_text(encoding="utf-8"))
+
+
 def load_sonority() -> dict[str, Sonority]:
-    return json.loads((resources.files(__package__) / "assets/sonority.json").read_text(encoding="utf-8"))
+    return _load_asset("sonority")
 
 
-@cache
 def load_tipa() -> dict[str, str]:
-    return json.loads((resources.files(__package__) / "assets/tipa.json").read_text(encoding="utf-8"))
+    return _load_asset("tipa")
 
 
-@cache
 def load_phonology() -> dict[str, list[str]]:
-    return json.loads((resources.files(__package__) / "assets/phonology.json").read_text(encoding="utf-8"))
+    return _load_asset("phonology")
 
 
 @dataclass(frozen=True)
@@ -39,7 +41,7 @@ class Language:
     n_phonemes: int
 
     def __post_init__(self) -> None:
-        assert self.n_phonemes == len(self.phonology)
+        assert self.n_phonemes == len(self.phonology), "Internal failure: phonology does not match number of phonemes"
 
     @property
     def phonology(self) -> list[str]:
