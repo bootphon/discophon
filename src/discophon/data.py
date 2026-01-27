@@ -31,6 +31,21 @@ def read_textgrid(path: str | Path) -> dict[str, pl.DataFrame]:
     raise ValueError(path)
 
 
+def write_textgrids(df: pl.DataFrame, outdir: str | Path) -> None:
+    outdir = Path(outdir)
+    outdir.mkdir(parents=True, exist_ok=True)
+    for (file,), subdf in df.group_by(FILE):
+        array = (
+            subdf.rename({ONSET: "begin", OFFSET: "end", PHONE: "label"})
+            .select("begin", "end", "label")
+            .with_columns(pl.col("begin").cast(pl.Float64), pl.col("end").cast(pl.Float64))
+            .to_dicts()
+        )
+        tg = textgrids.TextGrid()
+        tg.interval_tier_from_array("phones", array)
+        tg.write(outdir / f"{file}.TextGrid")
+
+
 def num_invalid_rows(df: pl.DataFrame, *, step_in_ms: int) -> int:
     """For each file, the first entry starts at 0 and each subsequent entry starts where the previous has ended."""
     incorrect_duration = ~(step_in_ms / 1000 <= pl.col(OFFSET) - pl.col(ONSET))

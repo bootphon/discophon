@@ -8,8 +8,6 @@ from discophon.benchmark import validate_dataset_structure
 from discophon.data import read_gold_annotations_as_dataframe
 from discophon.languages import all_languages
 
-read_item = partial(read_labels, file_col="#file", onset_col="onset", offset_col="offset")
-
 
 @pytest.mark.requires_dataset
 def test_validate_dataset_structure(dataset_path: Path) -> None:
@@ -18,6 +16,7 @@ def test_validate_dataset_structure(dataset_path: Path) -> None:
 
 @pytest.mark.requires_dataset
 def test_inventory(dataset_path: Path) -> None:
+    read_item = partial(read_labels, file_col="#file", onset_col="onset", offset_col="offset")
     for language in all_languages():
         for split in ("dev", "test"):
             alignment_path = dataset_path / "alignment" / f"alignment-{language.iso_639_3}-{split}.txt"
