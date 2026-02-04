@@ -1,5 +1,8 @@
+import itertools
+from decimal import Decimal
 from pathlib import Path
 
+import numpy as np
 import polars as pl
 import textgrids
 
@@ -43,6 +46,20 @@ def write_textgrids(df: pl.DataFrame, outdir: str | Path) -> None:
         )
         tg = textgrids.TextGrid()
         tg.interval_tier_from_array("phones", array)
+        tg.write(outdir / f"{file}.TextGrid")
+
+
+def write_units_to_textgrids(units: Units, outdir: str | Path, *, step_units: float = 0.02) -> None:
+    outdir = Path(outdir)
+    outdir.mkdir(parents=True, exist_ok=True)
+    step = Decimal(step_units)
+    for file, those_units in units.items():
+        u, counts = zip(*[(key, len(list(group))) for key, group in itertools.groupby(those_units)], strict=True)
+        ends = np.cumsum(counts)
+        starts = np.concatenate(([0], ends[:-1]))
+        array = [{"begin": starts[i] * step, "end": ends[i] * step, "label": u[i]} for i in range(len(u))]
+        tg = textgrids.TextGrid()
+        tg.interval_tier_from_array("units", array)
         tg.write(outdir / f"{file}.TextGrid")
 
 

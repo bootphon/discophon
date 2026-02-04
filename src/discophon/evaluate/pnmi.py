@@ -81,7 +81,7 @@ def contingency_table(
         coords=[list(phone_to_index.keys()), list(range(n_units))],
         name="Contingency Table",
     )
-    return count.sortby(count.sum(axis=1), ascending=False)
+    return count.sortby(count.sum(dim="unit"), ascending=False)
 
 
 def probability_phone_given_unit(count: DataArray) -> DataArray:
