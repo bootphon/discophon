@@ -1,7 +1,7 @@
 # /// script
 # requires-python = ">=3.12"
 # dependencies = [
-#     "discophon>=0.0.4",
+#     "discophon>=0.0.5",
 # ]
 # ///
 import argparse

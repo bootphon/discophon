@@ -1,7 +1,7 @@
 # /// script
 # requires-python = ">=3.12"
 # dependencies = [
-#     "discophon>=0.0.4",
+#     "discophon>=0.0.5",
 #     "matplotlib>=3.10.8",
 #     "numpy>=2.3.5",
 #     "praat-parselmouth>=0.4.7",
