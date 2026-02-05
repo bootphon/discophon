@@ -6,3 +6,4 @@ dist/
 .venv
 tipa-mapping-*.pdf
 *.out
+/typos

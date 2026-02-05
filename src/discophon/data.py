@@ -1,6 +1,8 @@
 import itertools
+from collections.abc import Iterable
 from decimal import Decimal
 from pathlib import Path
+from typing import TypedDict
 
 import numpy as np
 import polars as pl
@@ -10,6 +12,7 @@ type Units = dict[str, list[int]]
 type Phones = dict[str, list[str]]
 
 SAMPLE_RATE = 16_000
+STEP_PHONES = 10
 FILE, ONSET, OFFSET, PHONE, UNITS = "#file", "onset", "offset", "#phone", "units"
 
 
@@ -34,33 +37,37 @@ def read_textgrid(path: str | Path) -> dict[str, pl.DataFrame]:
     raise ValueError(path)
 
 
-def write_textgrids(df: pl.DataFrame, outdir: str | Path) -> None:
-    outdir = Path(outdir)
-    outdir.mkdir(parents=True, exist_ok=True)
-    for (file,), subdf in df.group_by(FILE):
-        array = (
-            subdf.rename({ONSET: "begin", OFFSET: "end", PHONE: "label"})
-            .select("begin", "end", "label")
-            .with_columns(pl.col("begin").cast(pl.Float64), pl.col("end").cast(pl.Float64))
-            .to_dicts()
-        )
-        tg = textgrids.TextGrid()
-        tg.interval_tier_from_array("phones", array)
-        tg.write(outdir / f"{file}.TextGrid")
+class TextGridEntry(TypedDict):
+    begin: float
+    end: float
+    label: str
 
 
-def write_units_to_textgrids(units: Units, outdir: str | Path, *, step_units: float = 0.02) -> None:
+def textgrid_array_from_sequence(seq: Iterable[str | int], *, step_in_ms: int) -> list[TextGridEntry]:
+    step_in_seconds = Decimal(step_in_ms) / 1000
+    labels, counts = zip(*[(key, len(list(group))) for key, group in itertools.groupby(seq)], strict=True)
+    ends = np.cumsum(counts)
+    starts = np.concatenate(([0], ends[:-1]))
+    return [
+        TextGridEntry(begin=starts[i] * step_in_seconds, end=ends[i] * step_in_seconds, label=str(label))
+        for i, label in enumerate(labels)
+    ]
+
+
+def write_textgrids(
+    phones_or_units: Phones | Units,
+    outdir: str | Path,
+    *,
+    tier_name: str,
+    step_in_ms: int,
+) -> None:
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
-    step = Decimal(step_units)
-    for file, those_units in units.items():
-        u, counts = zip(*[(key, len(list(group))) for key, group in itertools.groupby(those_units)], strict=True)
-        ends = np.cumsum(counts)
-        starts = np.concatenate(([0], ends[:-1]))
-        array = [{"begin": starts[i] * step, "end": ends[i] * step, "label": u[i]} for i in range(len(u))]
-        tg = textgrids.TextGrid()
-        tg.interval_tier_from_array("units", array)
-        tg.write(outdir / f"{file}.TextGrid")
+    for file, sequence in phones_or_units.items():
+        path = outdir / f"{file}.TextGrid"
+        tg = textgrids.TextGrid(path if path.is_file() else None)
+        tg.interval_tier_from_array(tier_name, textgrid_array_from_sequence(sequence, step_in_ms=step_in_ms))
+        tg.write(path)
 
 
 def num_invalid_rows(df: pl.DataFrame, *, step_in_ms: int) -> int:

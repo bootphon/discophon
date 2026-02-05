@@ -9,18 +9,23 @@
 # ]
 # ///
 import argparse
-import itertools
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 from pathlib import Path
-from typing import TypedDict
 
 import matplotlib.pyplot as plt
 import numpy as np
-import parselmouth
+import parselmouth  # ty: ignore[unresolved-import]
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-from discophon.data import Phones, Units, read_gold_annotations, read_submitted_units
+from discophon.data import (
+    Phones,
+    TextGridEntry,
+    Units,
+    read_gold_annotations,
+    read_submitted_units,
+    textgrid_array_from_sequence,
+)
 from discophon.evaluate.pnmi import contingency_table, mapping_many_to_one
 from discophon.languages import Language, get_language
 
@@ -59,26 +64,9 @@ def plot_spectrogram(ax: Axes, snd: parselmouth.Sound, *, dynamic_range: float =
     ax2.tick_params(axis="y", which="major", labelsize=8)
 
 
-class Entry(TypedDict):
-    begin: float
-    end: float
-    label: str
-
-
-def format_to_entries(seq: Iterable[str | int], *, step_in_ms: float) -> list[Entry]:
-    step_in_seconds = step_in_ms / 1000
-    u, counts = zip(*[(key, len(list(group))) for key, group in itertools.groupby(seq)], strict=True)
-    ends = np.cumsum(counts)
-    starts = np.concatenate(([0], ends[:-1]))
-    return [
-        {"begin": starts[i] * step_in_seconds, "end": ends[i] * step_in_seconds, "label": str(u[i])}
-        for i in range(len(u))
-    ]
-
-
 def draw_entries(
     ax: Axes,
-    entries: list[Entry],
+    entries: list[TextGridEntry],
     begin: float,
     end: float,
     *,
@@ -98,14 +86,7 @@ def draw_entries(
             entry_begin, entry_end = entry["begin"], entry["end"]
         rect = plt.Rectangle((entry_begin, 0), entry_end - entry_begin, 1, **rect_kwargs)
         ax.add_patch(rect)
-        ax.text(
-            (entry_begin + entry_end) / 2,
-            1 / 2,
-            entry["label"],
-            ha="center",
-            va="center",
-            **text_kwargs,
-        )
+        ax.text((entry_begin + entry_end) / 2, 1 / 2, entry["label"], ha="center", va="center", **text_kwargs)
     ax.spines[["top", "right", "left"]].set_visible(False)
     ax.set_yticks([])
 
@@ -113,9 +94,9 @@ def draw_entries(
 def plot_streams_on_axis(
     ax: Sequence[Axes],
     snd: parselmouth.Sound,
-    phones: list[Entry],
-    units: list[Entry],
-    predictions: list[Entry],
+    phones: list[TextGridEntry],
+    units: list[TextGridEntry],
+    predictions: list[TextGridEntry],
 ) -> None:
     plot_wav(ax[0], snd)
     plot_spectrogram(ax[1], snd)
@@ -129,7 +110,7 @@ def plot_streams_on_axis(
         text_kwargs={"fontsize": 6, "rotation": 90},
     )
     draw_entries(ax[4], predictions, snd.xmin, snd.xmax, rect_kwargs={"color": "C2", "alpha": 0.4})
-    ax[0].set_xlim([snd.xmin, snd.xmax])
+    ax[0].set_xlim(snd.xmin, snd.xmax)
     ax[2].set_ylabel("gold phones")
     ax[3].set_ylabel("units")
     ax[4].set_ylabel("predictions")
@@ -175,9 +156,9 @@ def plot_streams(
     snd = parselmouth.Sound(str(path_audio))
     if begin_and_end is not None:
         snd = snd.extract_part(*begin_and_end, preserve_times=True)
-    this_units = format_to_entries(units[name], step_in_ms=step_units)
-    this_phones = format_to_entries(phones[name], step_in_ms=step_phones)
-    this_predictions = format_to_entries([mapping[u] for u in units[name]], step_in_ms=step_units)
+    this_units = textgrid_array_from_sequence(units[name], step_in_ms=step_units)
+    this_phones = textgrid_array_from_sequence(phones[name], step_in_ms=step_phones)
+    this_predictions = textgrid_array_from_sequence([mapping[u] for u in units[name]], step_in_ms=step_units)
     figsize_x = 4 * (snd.xmax - snd.xmin)
     fig, ax = plt.subplots(5, 1, figsize=(figsize_x, 6.5), constrained_layout=True, sharex=True)
     plot_streams_on_axis(ax, snd, this_phones, this_units, this_predictions)
