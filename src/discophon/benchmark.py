@@ -63,6 +63,8 @@ def benchmark_discovery(
     validate_dataset_structure(path_dataset)
     df = []
     for language, split in available_languages_and_splits_for_units(path_units):
+        if split not in {"dev", "test"}:
+            continue
         units = read_submitted_units(Path(path_units) / f"units-{language.iso_639_3}-{split}.jsonl")
         phones = read_gold_annotations(Path(path_dataset) / f"alignment/alignment-{language.iso_639_3}-{split}.txt")
         scores = phoneme_discovery(
@@ -88,6 +90,8 @@ def benchmark_abx_discrete(
     validate_dataset_structure(path_dataset)
     df = []
     for language, split in available_languages_and_splits_for_units(path_units):
+        if split not in {"dev", "test"}:
+            continue
         abx = discrete_abx(
             Path(path_dataset) / f"item/{kind}-{language.iso_639_3}-{split}.item",
             Path(path_units) / f"units-{language.iso_639_3}-{split}.jsonl",
@@ -112,6 +116,8 @@ def benchmark_abx_continuous(
     validate_dataset_structure(path_dataset)
     df = []
     for language, split in available_languages_and_splits_for_features(path_features):
+        if split not in {"dev", "test"}:
+            continue
         abx = continuous_abx(
             Path(path_dataset) / f"item/{kind}-{language.iso_639_3}-{split}.item",
             Path(path_features) / f"{language.iso_639_3}/{split}",
