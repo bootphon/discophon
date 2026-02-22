@@ -177,5 +177,6 @@ if __name__ == "__main__":
             out = benchmark_abx_continuous(args.dataset, args.predictions, step_units=args.step_units, kind=args.kind)
         case _:
             parser.error(f"Invalid benchmark: '{args.benchmark}'")
-    with FileLock(f"{args.output}.lock"), args.output.open("a") as f:
+    lock = FileLock(f"{args.output}.lock")
+    with lock, args.output.open("a") as f:
         out.write_ndjson(f)
