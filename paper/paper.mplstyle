@@ -1,0 +1,6 @@
+text.usetex: True
+font.family: serif
+font.size: 9
+text.latex.preamble: "\usepackage{times,amsmath,tipa,bm}"
+hatch.linewidth: 0.3
+hatch.color: gray

@@ -1,0 +1,15 @@
+export SOURCE_DATE_EPOCH := "0" # For reproducible pdf
+
+plot:
+    uv run ./fig_streams.py
+    uv run ./fig_phonemes.py
+    uv run ./fig_details.py
+
+tex:
+    latexmk -cd -f -pdflatex -interaction=nonstopmode -shell-escape -aux-directory=build main.tex
+
+paper: plot tex
+
+clean:
+    rm -rf ./build
+    rm -f main.pdf

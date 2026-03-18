@@ -1,0 +1,19 @@
+\begin{tabular}{lcccccccccc}
+\toprule
+& \multicolumn{5}{c}{\dev languages} & \multicolumn{5}{c}{\test languages} \\
+\cmidrule(lr){2-6} \cmidrule(lr){7-11}
+& \bf PER $\downarrow$  & \bf$\bm R$-value $\uparrow$  & $F_1$ $\uparrow$  & PNMI $\uparrow$  & ABX c. $\downarrow$  & \bf PER $\downarrow$  & \bf$\bm R$-value $\uparrow$  & $F_1$ $\uparrow$  & PNMI $\uparrow$  & ABX c. $\downarrow$ \\
+\midrule
+\textbf{Zero-shot} \\
+HuBERT MMS-ulab (L12) & 115.28 & 18.98 & 58.36 & 47.44 & 11.63 & 123.33 & 9.24 & 58.21 & 50.70 & 8.75 \\
+HuBERT VP-20 (L11) & 119.39 & 18.70 & 58.62 & 46.37 & 10.65 & 127.14 & 9.35 & 58.17 & 49.43 & 7.81 \\
+SpidR MMS-ulab (L5) & 81.42 & 45.29 & $\mathbf{64.50}$ & $\mathbf{55.46}$ & $\mathbf{9.71}$ & 84.86 & 40.94 & $\mathbf{65.63}$ & $\mathbf{58.51}$ & $\mathbf{7.38}$ \\
+SpidR VP-20 (L5) & $\mathbf{70.13}$ & $\mathbf{54.03}$ & 60.33 & 53.42 & 10.03 & $\mathbf{70.66}$ & $\mathbf{50.78}$ & 61.53 & 57.37 & 7.41 \\
+\addlinespace
+\textbf{Finetuned on 10h} \\
+HuBERT MMS-ulab (L10) & 105.91 & 20.66 & 60.03 & 54.82 & 10.17 & 99.63 & 20.86 & 61.57 & 59.90 & 6.60 \\
+HuBERT VP-20 (L10) & 97.07 & 28.84 & 60.74 & 54.96 & 9.20 & 96.69 & 24.39 & 60.63 & 58.78 & 6.64 \\
+SpidR MMS-ulab (L5) & 66.86 & 53.77 & $\mathbf{67.70}$ & 60.98 & 9.08 & 65.50 & 51.54 & $\mathbf{68.89}$ & 64.53 & 6.81 \\
+SpidR VP-20 (L5) & $\mathbf{64.81}$ & $\mathbf{53.84}$ & 64.52 & $\mathbf{61.27}$ & $\mathbf{7.43}$ & $\mathbf{59.73}$ & $\mathbf{54.17}$ & 65.94 & $\mathbf{65.22}$ & $\mathbf{5.58}$ \\
+\bottomrule
+\end{tabular}

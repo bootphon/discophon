@@ -1,0 +1,17 @@
+[project]
+name = "discophon-paper"
+version = "0.1"
+requires-python = ">=3.12"
+dependencies = [
+  "discophon",
+  "jiwer>=4.0.0",
+  "matplotlib>=3.10.8",
+  "praat-parselmouth>=0.4.7",
+  "seaborn>=0.13.2",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"*.interactive" = ["ALL"]
+
+[tool.uv.sources]
+discophon = { workspace = true }

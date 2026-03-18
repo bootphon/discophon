@@ -91,7 +91,7 @@ def finetune_spidr(name: str, project: str, workdir: Path, checkpoint: Path, man
             dtype = torch.float16
         while step < max_steps:
             epoch += 1
-            loader.batch_sampler.set_epoch(epoch)  # ty: ignore[possibly-missing-attribute]
+            loader.batch_sampler.set_epoch(epoch)  # ty: ignore[unresolved-attribute]
             for waveforms, attn_mask, mask in loader:
                 if step >= max_steps:
                     break

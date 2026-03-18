@@ -6,6 +6,7 @@ from typing import TypedDict
 
 import numpy as np
 import polars as pl
+from scipy.optimize import linear_sum_assignment
 from xarray import DataArray
 
 from discophon.data import Phones, Units
@@ -146,28 +147,15 @@ def mapping_many_to_one(contingency: DataArray) -> dict[int, str]:
     )
 
 
-def mapping_one_to_one(
-    count: np.ndarray[tuple[int, int], np.dtype[np.int64]],
-    phone_order: dict[int, str],
-    *,
-    unk_template: str = "<unknown-{index}>",
-) -> dict[int, str]:
-    """Map the most frequent unit to the corresponding phoneme.
-
-    The mapping is one-to-one: each phoneme is assigned to exactly one unit.
-    Units that are not assigned to any phoneme are set to unknown.
-    """
-    most_frequent = count.argmax(axis=0)
-    highest_counts = count[most_frequent, np.arange(count.shape[1])]
-    assignments = {}
-    for phone in np.unique(most_frequent):
-        (assigned_units,) = np.where(most_frequent == phone)
-        best_unit = assigned_units[np.argmax(highest_counts[assigned_units])]
-        assignments[best_unit.item()] = phone_order[phone]
-    for unit in range(count.shape[1]):
-        if unit not in assignments:
-            assignments[unit] = unk_template.format(index=unit)
-    return dict(sorted(assignments.items()))
+def mapping_one_to_one(contingency: DataArray) -> dict[int, str]:
+    phones_idx, units_idx = linear_sum_assignment(contingency.values, maximize=True)
+    return dict(
+        zip(
+            contingency.get_index("unit").values[units_idx].tolist(),
+            contingency.get_index("phone").values[phones_idx].tolist(),
+            strict=True,
+        )
+    )
 
 
 @validate_first_two_arguments_same_keys

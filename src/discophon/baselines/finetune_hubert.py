@@ -120,10 +120,10 @@ def finetune_hubert(  # noqa: PLR0914
         temp_manifest = stack.enter_context(NamedTemporaryFile(suffix=".jsonl"))
         temp_features = stack.enter_context(TemporaryDirectory(prefix="features-", dir=rundir))
         patch_manifest_with_paths(manifest, temp_manifest.name)
-        kmeans = fit_kmeans_from_checkpoint(manifest, checkpoint, temp_features.name, target_layer, n_clusters, seed)
+        kmeans = fit_kmeans_from_checkpoint(manifest, checkpoint, temp_features, target_layer, n_clusters, seed)
         joblib.dump(kmeans, rundir / "kmeans.joblib")
         new_manifest = rundir / "manifest-with-units.jsonl"
-        patch_manifest_with_units(temp_manifest.name, new_manifest, temp_features.name, kmeans)
+        patch_manifest_with_units(temp_manifest.name, new_manifest, temp_features, kmeans)
 
         wandb.init(project=project, name=name, mode="offline", dir=workdir)
         stack.callback(wandb.finish)
@@ -150,7 +150,7 @@ def finetune_hubert(  # noqa: PLR0914
         pbar = stack.enter_context(tqdm(total=max_steps, initial=step))
         while step < max_steps:
             epoch += 1
-            loader.batch_sampler.set_epoch(epoch)  # ty: ignore[possibly-missing-attribute]
+            loader.batch_sampler.set_epoch(epoch)  # ty: ignore[unresolved-attribute]
             for waveforms, labels, attn_mask, mask in loader:
                 if step >= max_steps:
                     break

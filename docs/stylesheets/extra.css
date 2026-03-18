@@ -1,0 +1,86 @@
+.page-subtitle {
+  font-size: 1.25em;
+  font-weight: 300;
+  color: var(--md-primary-fg-color);
+  margin-top: -1rem;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.md-typeset {
+  letter-spacing: 0;
+}
+
+.md-typeset .phoneme-table table {
+  font-size: 0.55rem;
+  line-height: 1;
+}
+
+@font-face {
+  font-family: Chairs;
+  font-weight: 400;
+  src: url("../fonts/Charis-Regular.woff2");
+}
+
+@font-face {
+  font-family: Chairs;
+  font-weight: 500;
+  src: url("../fonts/Charis-Medium.woff2");
+}
+
+@font-face {
+  font-family: Chairs;
+  font-weight: 600;
+  src: url("../fonts/Charis-SemiBold.woff2");
+}
+
+@font-face {
+	font-family: Chairs;
+  font-weight: 700;
+	src: url("../fonts/Charis-Bold.woff2");
+}
+
+@font-face {
+	font-family: Chairs;
+  font-weight: 800;
+	src: url("../fonts/Charis-ExtraBold.woff2");
+}
+
+@font-face {
+  font-family: Chairs;
+  font-weight: 400;
+  font-style: italic;
+  src: url("../fonts/Charis-Italic.woff2");
+}
+
+@font-face {
+  font-family: Chairs;
+  font-weight: 500;
+  font-style: italic;
+  src: url("../fonts/Charis-MediumItalic.woff2");
+}
+
+@font-face {
+  font-family: Chairs;
+  font-weight: 600;
+  font-style: italic;
+  src: url("../fonts/Charis-SemiBoldItalic.woff2");
+}
+
+@font-face {
+	font-family: Chairs;
+  font-weight: 700;
+  font-style: italic;
+	src: url("../fonts/Charis-BoldItalic.woff2");
+}
+
+@font-face {
+	font-family: Chairs;
+  font-weight: 800;
+  font-style: italic;
+	src: url("../fonts/Charis-ExtraBoldItalic.woff2");
+}
+
+:root {
+  --md-text-font: "Chairs";
+}
