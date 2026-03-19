@@ -26,7 +26,7 @@ from discophon.data import (
     read_submitted_units,
     textgrid_array_from_sequence,
 )
-from discophon.evaluate.pnmi import contingency_table, mapping_many_to_one
+from discophon.evaluate.pnmi import coocurrence_matrix, mapping_many_to_one
 from discophon.languages import Language, get_language
 
 
@@ -142,7 +142,7 @@ def plot_streams(
     begin_and_end: tuple[float, float] | None = None,
 ) -> Figure:
     phones, units, language = infer_from_arguments(path_audio, path_units)
-    contingency = contingency_table(
+    contingency = coocurrence_matrix(
         units,
         phones,
         n_units=n_units,

@@ -1,5 +1,3 @@
-"""Segmentation boundaries."""
-
 import math
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -9,8 +7,7 @@ from itertools import groupby
 import numpy as np
 
 from discophon.data import Phones
-
-from .validate import validate_first_two_arguments_same_keys
+from discophon.validate import validate_first_two_arguments_same_keys
 
 
 @dataclass(frozen=True)
@@ -116,7 +113,7 @@ class Boundaries:
         return Boundaries(times)
 
 
-def boundary_detection(gold: Boundaries, prediction: Boundaries, *, margin_in_ms: int) -> DetectionResult:
+def compare_boundaries(gold: Boundaries, prediction: Boundaries, *, margin_in_ms: int) -> DetectionResult:
     """Evaluate the boundary detection of the gold boundaries with the given prediction."""
     windows = gold.tolerance(margin_in_ms)
     starts = windows[:, 0][:, np.newaxis]
@@ -131,7 +128,7 @@ def boundary_detection(gold: Boundaries, prediction: Boundaries, *, margin_in_ms
 
 
 @validate_first_two_arguments_same_keys
-def boundary_evaluation(
+def boundary_detection(
     predicted_phones_from_units: Phones,
     gold_phones: Phones,
     *,
@@ -142,7 +139,7 @@ def boundary_evaluation(
     """Full boundary evaluation."""
     return sum(
         (
-            boundary_detection(
+            compare_boundaries(
                 Boundaries.from_tokens(gold_phones[fileid], step_phones),
                 Boundaries.from_tokens(predicted_phones_from_units[fileid], step_units),
                 margin_in_ms=margin_in_ms,

@@ -1,8 +1,6 @@
-"""Assignment and mutual information."""
-
 import itertools
 from collections.abc import Iterable
-from typing import TypedDict
+from typing import Literal, TypedDict
 
 import numpy as np
 import polars as pl
@@ -10,8 +8,9 @@ from scipy.optimize import linear_sum_assignment
 from xarray import DataArray
 
 from discophon.data import Phones, Units
+from discophon.validate import validate_first_two_arguments_same_keys
 
-from .validate import validate_first_two_arguments_same_keys
+type AssignmentKind = Literal["many-to-one", "one-to-one"]
 
 
 class UnitsAndPhones(TypedDict):
@@ -45,7 +44,8 @@ def align_units_and_phones(
     return data
 
 
-def contingency_table(
+@validate_first_two_arguments_same_keys
+def coocurrence_matrix(
     units: Units,
     phones: Phones,
     *,
@@ -54,7 +54,7 @@ def contingency_table(
     step_units: int,
     step_phones: int,
 ) -> DataArray:
-    """Return a 2D contingency table of shape (n_phones, n_units).
+    """Return a 2D coocurrence matrix of shape (n_phones, n_units).
 
     Element (i, j) is the number of times the unit j has appeared where the underlying phoneme is i.
     The phonemes are ordered according to the returned dictionary (sorted by frequency).
@@ -80,21 +80,9 @@ def contingency_table(
         np.bincount(flattened_indices, minlength=n_phonemes_with_sil * n_units).reshape(n_phonemes_with_sil, n_units),
         dims=["phone", "unit"],
         coords=[list(phone_to_index.keys()), list(range(n_units))],
-        name="Contingency Table",
+        name="Coocurrence Matrix",
     )
     return count.sortby(count.sum(dim="unit"), ascending=False)
-
-
-def probability_phone_given_unit(count: DataArray) -> DataArray:
-    """Return P(phone|unit) as a xarray DataArray."""
-    count = count[:, count.any(dim="phone")]
-    proba = count / count.sum(dim="phone")
-    most_probable_phones = proba.idxmax(dim="phone")
-    units_order = []
-    for phone in proba["phone"]:
-        indices = np.where(most_probable_phones == phone)[0]
-        units_order.extend(indices[np.argsort(proba.sel(phone=phone).values[indices])[::-1]].tolist())
-    return proba[:, units_order].rename("P(phone|unit)")
 
 
 def relabel_assignment(assignment: Iterable[int], proba: DataArray) -> DataArray:
@@ -123,21 +111,12 @@ def relabel_assignment(assignment: Iterable[int], proba: DataArray) -> DataArray
     )
 
 
-def pnmi(contingency: np.ndarray[tuple[int, int], np.dtype[np.int64]], *, eps: float = 1e-10) -> float:
-    """Phone normalized mutual information, as in (Hsu et al., 2021)."""
-    proba = contingency / contingency.sum()
-    px, py = proba.sum(axis=1, keepdims=True), proba.sum(axis=0, keepdims=True)
-    mutual_info = (proba * np.log(proba / (px @ py + eps) + eps)).sum()
-    entropy_x = (-px * np.log(px + eps)).sum()
-    return (mutual_info / entropy_x).item()
-
-
-def mapping_many_to_one(contingency: DataArray) -> dict[int, str]:
+def mapping_many_to_one(coocurrence: DataArray) -> dict[int, str]:
     """Map each unit to the phoneme that it was associated with the most.
 
     Many units can be associated to the same phoneme.
     """
-    most_frequent = contingency.idxmax(dim="phone")
+    most_frequent = coocurrence.idxmax(dim="phone")
     return dict(
         zip(
             most_frequent.get_index("unit").values.tolist(),
@@ -147,36 +126,23 @@ def mapping_many_to_one(contingency: DataArray) -> dict[int, str]:
     )
 
 
-def mapping_one_to_one(contingency: DataArray) -> dict[int, str]:
-    phones_idx, units_idx = linear_sum_assignment(contingency.values, maximize=True)
+def mapping_one_to_one(coocurrence: DataArray) -> dict[int, str]:
+    phones_idx, units_idx = linear_sum_assignment(coocurrence.values, maximize=True)
     return dict(
         zip(
-            contingency.get_index("unit").values[units_idx].tolist(),
-            contingency.get_index("phone").values[phones_idx].tolist(),
+            coocurrence.get_index("unit").values[units_idx].tolist(),
+            coocurrence.get_index("phone").values[phones_idx].tolist(),
             strict=True,
         )
     )
 
 
-@validate_first_two_arguments_same_keys
-def compute_pnmi_and_predict(
-    units: Units,
-    phones: Phones,
-    *,
-    n_units: int,
-    n_phonemes: int,
-    step_units: int,
-    step_phones: int,
-) -> tuple[float, Phones]:
-    """Compute the PNMI and the predicted phoneme transcription using the many-to-one scheme."""
-    contingency = contingency_table(
-        units,
-        phones,
-        n_units=n_units,
-        n_phonemes=n_phonemes,
-        step_units=step_units,
-        step_phones=step_phones,
-    )
-    mapping = mapping_many_to_one(contingency)
-    predictions = {fileid: [mapping[u] for u in this_units] for fileid, this_units in units.items()}
-    return pnmi(contingency.values), predictions
+def get_assignment(units: Units, coocurrence: DataArray, *, kind: AssignmentKind) -> Phones:
+    match kind:
+        case "many-to-one":
+            mapping = mapping_many_to_one(coocurrence)
+        case "one-to-one":
+            mapping = mapping_one_to_one(coocurrence)
+        case _:
+            raise ValueError(f"Unknown kind: {kind}")
+    return {fileid: [mapping[u] for u in this_units] for fileid, this_units in units.items()}

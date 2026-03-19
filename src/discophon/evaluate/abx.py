@@ -3,9 +3,15 @@
 from pathlib import Path
 from typing import Literal, TypedDict, overload
 
-from fastabx import Dataset, Score, Subsampler, Task
-from fastabx.distance import DistanceName
-from fastabx.zerospeech import InvalidSpeakerOrContextError
+try:
+    from fastabx import Dataset, Score, Subsampler, Task
+    from fastabx.distance import DistanceName
+    from fastabx.zerospeech import InvalidSpeakerOrContextError
+except ImportError as error:
+    raise ImportError(
+        "fastabx is required for ABX evaluation. "
+        "Please install it with `pip install discophon[abx]` or `pip install fastabx`."
+    ) from error
 
 
 class TriphoneABX(TypedDict):

@@ -1,4 +1,4 @@
-"""Phoneme recognition."""
+"""Phone recognition."""
 
 from collections.abc import Iterable, Sequence
 from itertools import groupby
@@ -8,8 +8,7 @@ import numpy as np
 from joblib import Parallel, delayed
 
 from discophon.data import Phones
-
-from .validate import validate_first_two_arguments_same_keys
+from discophon.validate import validate_first_two_arguments_same_keys
 
 
 def deduplicate[T](seq: Iterable[T]) -> list[T]:
@@ -41,8 +40,8 @@ def edit_distance[T](hypothesis: Sequence[T], target: Sequence[T]) -> int:
 
 
 @validate_first_two_arguments_same_keys
-def phoneme_error_rate(hypothesis: Phones, target: Phones, *, n_jobs: int = -1) -> float:
-    """Phoneme error rate: total edit distances divided by the length of the target corpus."""
+def phone_error_rate(hypothesis: Phones, target: Phones, *, n_jobs: int = -1) -> float:
+    """Phone error rate: total edit distances divided by the length of the target corpus."""
     results = Parallel(n_jobs=n_jobs)(
         delayed(lambda x, y: (edit_distance(x, y), len(y)))(
             deduplicate(hypothesis[fileid]), deduplicate(target[fileid])

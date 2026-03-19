@@ -8,7 +8,7 @@ import argparse
 from pathlib import Path
 
 from discophon.data import STEP_PHONES, read_gold_annotations, read_submitted_units, write_textgrids
-from discophon.evaluate.pnmi import contingency_table, mapping_many_to_one
+from discophon.evaluate.pnmi import coocurrence_matrix, mapping_many_to_one
 from discophon.languages import get_language
 
 if __name__ == "__main__":
@@ -23,7 +23,7 @@ if __name__ == "__main__":
     language = get_language(args.phones.stem.split("-")[1])
     units = read_submitted_units(args.units)
     phones = read_gold_annotations(args.phones)
-    contingency = contingency_table(
+    contingency = coocurrence_matrix(
         units,
         phones,
         n_units=args.n_units,

@@ -11,10 +11,8 @@ import soundfile as sf
 import soxr
 from tqdm import tqdm
 
-from .data import SAMPLE_RATE
-from .languages import ISO6393_TO_CV
-
-__all__ = ["download_benchmark", "prepare_downloaded_benchmark", "resample"]
+from discophon.data import SAMPLE_RATE
+from discophon.languages import ISO6393_TO_CV, commonvoice_languages, get_language
 
 
 def split_for_distributed[T](sequence: Sequence[T]) -> Sequence[T]:
@@ -31,7 +29,7 @@ def split_for_distributed[T](sequence: Sequence[T]) -> Sequence[T]:
     return sequence[start:end]
 
 
-def download(url: str, dest: str | Path) -> None:
+def download_file(url: str, dest: str | Path) -> None:
     with Path(dest).open("wb") as download_file, httpx.stream("GET", url) as response:
         total, name = int(response.headers["Content-Length"]), Path(response.url.path).name
         with tqdm(desc=f"Downloading {name}", total=total, unit_scale=True, unit_divisor=1024, unit="B") as progress:
@@ -46,11 +44,11 @@ def download_benchmark(data: str | Path) -> None:
     data = Path(data)
     data.mkdir(exist_ok=True, parents=True)
     url = "https://cognitive-ml.fr/downloads/phoneme-discovery/"
-    download(url + "benchmark-assets.tar.gz", data / "benchmark-assets.tar.gz")
+    download_file(url + "benchmark-assets.tar.gz", data / "benchmark-assets.tar.gz")
     with tarfile.open(data / "benchmark-assets.tar.gz", "r:gz") as tar:
         tar.extractall(data)
     (data / "benchmark-assets.tar.gz").unlink()
-    download(url + "benchmark-audio.tar.gz", data / "benchmark-audio.tar.gz")
+    download_file(url + "benchmark-audio.tar.gz", data / "benchmark-audio.tar.gz")
     with tarfile.open(data / "benchmark-audio.tar.gz", "r:gz") as tar:
         tar.extractall(data)
     (data / "benchmark-audio.tar.gz").unlink()
@@ -81,7 +79,8 @@ def get_filenames(manifests: Path, iso_code: str, *, split: Splits) -> list[str]
     return sorted(manifest["fileid"].unique().to_list())
 
 
-def prepare_downloaded_benchmark(data: str | Path, iso_code: str) -> None:
+def prepare_commonvoice_datasets(data: str | Path, lang_name_or_code: str) -> None:
+    iso_code = get_language(lang_name_or_code).iso_639_3
     src, dest = (Path(data) / "raw" / ISO6393_TO_CV[iso_code] / "clips", Path(data) / "audio" / iso_code / "all")
     if not src.is_dir():
         raise ValueError(f"Directory {src} does not exist.")
@@ -98,8 +97,6 @@ def prepare_downloaded_benchmark(data: str | Path, iso_code: str) -> None:
 
 if __name__ == "__main__":
     import argparse
-
-    from .languages import commonvoice_languages
 
     parser = argparse.ArgumentParser(description="Prepare Phoneme Discovery benchmark")
     subparsers = parser.add_subparsers(dest="command", required=True, help="command to run")
@@ -121,6 +118,6 @@ if __name__ == "__main__":
         case "download":
             download_benchmark(args.data)
         case "audio":
-            prepare_downloaded_benchmark(args.data, args.code)
+            prepare_commonvoice_datasets(args.data, args.code)
         case _:
             parser.error("Invalid command")

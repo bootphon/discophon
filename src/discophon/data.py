@@ -13,6 +13,7 @@ type Phones = dict[str, list[str]]
 
 SAMPLE_RATE = 16_000
 STEP_PHONES = 10
+DEFAULT_N_UNITS = 256
 FILE, ONSET, OFFSET, PHONE, UNITS = "#file", "onset", "offset", "#phone", "units"
 
 
@@ -46,24 +47,18 @@ class TextGridEntry(TypedDict):
 def textgrid_array_from_sequence(seq: Iterable[str | int], *, step_in_ms: int) -> list[TextGridEntry]:
     step_in_seconds = Decimal(step_in_ms) / 1000
     labels, counts = zip(*[(key, len(list(group))) for key, group in itertools.groupby(seq)], strict=True)
-    ends = np.cumsum(counts)
+    ends = np.cumsum(counts, dtype=np.int64)
     starts = np.concatenate(([0], ends[:-1]))
     return [
-        TextGridEntry(begin=starts[i] * step_in_seconds, end=ends[i] * step_in_seconds, label=str(label))
+        TextGridEntry(begin=float(starts[i] * step_in_seconds), end=float(ends[i] * step_in_seconds), label=str(label))
         for i, label in enumerate(labels)
     ]
 
 
-def write_textgrids(
-    phones_or_units: Phones | Units,
-    outdir: str | Path,
-    *,
-    tier_name: str,
-    step_in_ms: int,
-) -> None:
+def write_textgrids(seqs: Phones | Units, /, outdir: str | Path, *, tier_name: str, step_in_ms: int) -> None:
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
-    for file, sequence in phones_or_units.items():
+    for file, sequence in seqs.items():
         path = outdir / f"{file}.TextGrid"
         tg = textgrids.TextGrid(path if path.is_file() else None)
         tg.interval_tier_from_array(tier_name, textgrid_array_from_sequence(sequence, step_in_ms=step_in_ms))
@@ -97,7 +92,7 @@ def decimal_series_is_integer(series: pl.Series) -> bool:
     )
 
 
-def read_gold_annotations_as_dataframe(source: str | Path, *, step_in_ms: int = 10) -> pl.DataFrame:
+def read_gold_annotations_as_dataframe(source: str | Path, *, step_in_ms: int = STEP_PHONES) -> pl.DataFrame:
     phones_per_seconds = 1000 // step_in_ms
     assert step_in_ms * phones_per_seconds == 1000
     df = pl.read_csv(source, separator=" ", columns=[FILE, ONSET, OFFSET, PHONE], schema_overrides=[pl.String] * 4)
@@ -111,7 +106,7 @@ def read_gold_annotations_as_dataframe(source: str | Path, *, step_in_ms: int = 
     return df.with_columns(pl.col("num").cast(pl.Int64))
 
 
-def read_gold_annotations(source: str | Path, *, step_in_ms: int = 10) -> Phones:
+def read_gold_annotations(source: str | Path, *, step_in_ms: int = STEP_PHONES) -> Phones:
     """Read the gold annotations and returns a mapping between file names to the list of phonemes.
 
     There will be one phoneme each `step_in_ms` millisecond.
