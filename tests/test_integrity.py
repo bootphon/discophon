@@ -21,9 +21,9 @@ def test_inventory(dataset_path: Path) -> None:
         for split in ("dev", "test"):
             alignment_path = dataset_path / "alignment" / f"alignment-{language.iso_639_3}-{split}.txt"
             alignments = read_gold_annotations_as_dataframe(alignment_path)
-            assert sorted(alignments["#phone"].unique()) == ["SIL", *language.phonology]
+            assert sorted(alignments["#phone"].unique()) == ["SIL", *language.phonemes]
             for kind in ("triphone", "phoneme"):
                 item = read_item(dataset_path / "item" / f"{kind}-{language.iso_639_3}-{split}.item")
-                assert sorted(item["#phone"].unique()) == language.phonology
-                assert sorted(item["next-phone"].unique()) == language.phonology
-                assert sorted(item["prev-phone"].unique()) == language.phonology
+                assert sorted(item["#phone"].unique()) == language.phonemes
+                assert sorted(item["next-phone"].unique()) == language.phonemes
+                assert sorted(item["prev-phone"].unique()) == language.phonemes

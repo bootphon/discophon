@@ -29,8 +29,8 @@ def load_tipa() -> dict[str, str]:
     return _load_asset("tipa")
 
 
-def load_phonology() -> dict[str, list[str]]:
-    return _load_asset("phonology")
+def load_phonemes() -> dict[str, list[str]]:
+    return _load_asset("phonemes")
 
 
 @dataclass(frozen=True)
@@ -41,11 +41,11 @@ class Language:
     n_phonemes: int
 
     def __post_init__(self) -> None:
-        assert self.n_phonemes == len(self.phonology), "Internal failure: phonology does not match number of phonemes"
+        assert self.n_phonemes == len(self.phonemes), "Internal failure: phonology does not match number of phonemes"
 
     @property
-    def phonology(self) -> list[str]:
-        return load_phonology()[self.iso_639_3]
+    def phonemes(self) -> list[str]:
+        return load_phonemes()[self.iso_639_3]
 
 
 def get_language(n: str, /) -> Language:  # noqa: C901, PLR0911

@@ -163,7 +163,7 @@ def count(
             ipa
             for language in languages
             for ipa, forms in reference.items()
-            if any(form in language.phonology for form in forms)
+            if any(form in language.phonemes for form in forms)
         ]
     )
 
@@ -172,8 +172,7 @@ def plot_counts(fig: Figure, colors: list) -> None:
     ax = fig.subplots(nrows=2, ncols=1, sharey=True, gridspec_kw={"hspace": 0.12})
     for k, langs in enumerate([dev_languages(), test_languages()]):
         counts = {
-            lang: Counter([load_sonority()[p] for p in lang.phonology])
-            for lang in langs
+            lang: Counter([load_sonority()[p] for p in lang.phonemes]) for lang in langs
         }
         total = sorted(
             {name: sum(c.values()) for name, c in counts.items()}.items(),
