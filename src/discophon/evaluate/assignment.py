@@ -32,7 +32,7 @@ def align_units_and_phones(
 ) -> dict[str, UnitsAndPhones]:
     """Align units and phones by repeating each unit step_units // step_phones times.
 
-    This assumes that step_units <= step_phones and they step_phones is a multiple of step_units.
+    This assumes that step_units is a multiple of step_phones.
     Allows for a small margin in the end, in case where the final unit is missing.
     """
     repeat = step_units // step_phones
