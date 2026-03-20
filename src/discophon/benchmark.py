@@ -1,3 +1,5 @@
+"""Complete benchmark evaluation."""
+
 from pathlib import Path
 from typing import Literal
 
@@ -10,12 +12,18 @@ from discophon.languages import Language, get_language
 from discophon.validate import validate_dataset_structure
 
 
-def available_languages_and_splits_for_units(path_units: str | Path) -> list[tuple[Language, str]]:
-    found = [n.split("-") for n in sorted(p.stem for p in Path(path_units).glob("units-*.jsonl"))]
+def available_languages_and_splits_for_units(
+    path_units: str | Path,
+    *,
+    prefix: str = "units-",
+) -> list[tuple[Language, str]]:
+    """List of languages and splits for which units are available."""
+    found = [n.split("-") for n in sorted(p.stem for p in Path(path_units).glob(f"{prefix}*.jsonl"))]
     return [(get_language(p), "-".join(q)) for _, p, *q in found]
 
 
 def available_languages_and_splits_for_features(path_features: str | Path) -> list[tuple[Language, str]]:
+    """List of languages and splits for which features are available."""
     return [(get_language(p.parent.stem), p.stem) for p in sorted(Path(path_features).glob("*/*/"))]
 
 
@@ -23,9 +31,14 @@ def benchmark_discovery(
     path_dataset: str | Path,
     path_units: str | Path,
     *,
-    step_units: int,
     kind: AssignmentKind,
+    step_units: int = 20,
 ) -> pl.DataFrame:
+    """Full phoneme discovery benchmark.
+
+    If `kind` is "many-to-one", the number of units is set to the default (256).
+    Otherwise, it is set to the number of phonemes plus one.
+    """
     validate_dataset_structure(path_dataset)
     df = []
     for language, split in available_languages_and_splits_for_units(path_units):
@@ -50,9 +63,10 @@ def benchmark_abx_discrete(
     path_dataset: str | Path,
     path_units: str | Path,
     *,
-    step_units: int,
     kind: Literal["triphone", "phoneme"] = "triphone",
+    step_units: int = 20,
 ) -> pl.DataFrame:
+    """ABX on all discrete units available."""
     from discophon.evaluate.abx import discrete_abx
 
     validate_dataset_structure(path_dataset)
@@ -76,9 +90,10 @@ def benchmark_abx_continuous(
     path_dataset: str | Path,
     path_features: str | Path,
     *,
-    step_units: int,
     kind: Literal["triphone", "phoneme"] = "triphone",
+    step_units: int = 20,
 ) -> pl.DataFrame:
+    """ABX on all continuous features available."""
     from discophon.evaluate.abx import continuous_abx
 
     validate_dataset_structure(path_dataset)

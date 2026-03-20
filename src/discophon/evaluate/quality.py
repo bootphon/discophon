@@ -1,3 +1,5 @@
+"""Units quality."""
+
 import numpy as np
 from xarray import DataArray
 

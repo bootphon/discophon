@@ -41,7 +41,8 @@ class Language:
     n_phonemes: int
 
     def __post_init__(self) -> None:
-        assert self.n_phonemes == len(self.phonemes), "Internal failure: phonology does not match number of phonemes"
+        if self.n_phonemes != len(self.phonemes):
+            raise ValueError(f"Internal failure: {self.n_phonemes=} != {len(self.phonemes)=} for {self.name}.")
 
     @property
     def phonemes(self) -> list[str]:

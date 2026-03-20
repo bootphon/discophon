@@ -1,3 +1,5 @@
+"""Data loading and writing utilities."""
+
 import itertools
 from collections.abc import Iterable
 from decimal import Decimal
@@ -30,6 +32,7 @@ def _read_single_textgrid(path: str | Path) -> dict[str, pl.DataFrame]:
 
 
 def read_textgrid(path: str | Path) -> dict[str, pl.DataFrame]:
+    """Read a TextGrid file or directory of TextGrid files."""
     if Path(path).is_file():
         return _read_single_textgrid(path)
     if Path(path).is_dir():
@@ -45,6 +48,7 @@ class TextGridEntry(TypedDict):
 
 
 def textgrid_array_from_sequence(seq: Iterable[str | int], *, step_in_ms: int) -> list[TextGridEntry]:
+    """Create a list of TextGrid entries from a sequence of tokens."""
     step_in_seconds = Decimal(step_in_ms) / 1000
     labels, counts = zip(*[(key, len(list(group))) for key, group in itertools.groupby(seq)], strict=True)
     ends = np.cumsum(counts, dtype=np.int64)
@@ -56,6 +60,7 @@ def textgrid_array_from_sequence(seq: Iterable[str | int], *, step_in_ms: int) -
 
 
 def write_textgrids(seqs: Phones | Units, /, outdir: str | Path, *, tier_name: str, step_in_ms: int) -> None:
+    """Write the given sequences of tokens as TextGrid files in the given output directory."""
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
     for file, sequence in seqs.items():
@@ -94,15 +99,21 @@ def decimal_series_is_integer(series: pl.Series) -> bool:
 
 def read_gold_annotations_as_dataframe(source: str | Path, *, step_in_ms: int = STEP_PHONES) -> pl.DataFrame:
     phones_per_seconds = 1000 // step_in_ms
-    assert step_in_ms * phones_per_seconds == 1000
+    if step_in_ms * phones_per_seconds != 1000:
+        raise ValueError(f"step_in_ms={step_in_ms} is not valid, it should be a divisor of 1000.")
     df = pl.read_csv(source, separator=" ", columns=[FILE, ONSET, OFFSET, PHONE], schema_overrides=[pl.String] * 4)
     df = df.with_columns(
         df[ONSET].str.to_decimal(inference_length=len(df)),
         df[OFFSET].str.to_decimal(inference_length=len(df)),
     ).sort(FILE, ONSET)
-    assert num_invalid_rows(df, step_in_ms=step_in_ms) == 0
+    if num_invalid_rows(df, step_in_ms=step_in_ms) > 0:
+        raise ValueError(
+            "Invalid annotations: each entry should start where the previous one has ended, "
+            f"and last at least {step_in_ms} ms."
+        )
     df = df.with_columns(num=(pl.col(OFFSET) - pl.col(ONSET)) * phones_per_seconds)
-    assert decimal_series_is_integer(df["num"])
+    if not decimal_series_is_integer(df["num"]):
+        raise ValueError(f"Each phone should last a multiple of {step_in_ms} ms, but found some that don't.")
     return df.with_columns(pl.col("num").cast(pl.Int64))
 
 

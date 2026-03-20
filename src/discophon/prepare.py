@@ -18,10 +18,16 @@ from discophon.languages import ISO6393_TO_CV, commonvoice_languages, get_langua
 def split_for_distributed[T](sequence: Sequence[T]) -> Sequence[T]:
     if "SLURM_NTASKS" not in os.environ:
         return sequence
-    array_id, num_arrays = int(os.getenv("SLURM_ARRAY_TASK_ID", "0")), int(os.getenv("SLURM_ARRAY_TASK_COUNT", "1"))
     if "SLURM_ARRAY_TASK_ID" in os.environ:
-        assert os.environ["SLURM_ARRAY_TASK_MIN"] == "0"
-        assert int(os.environ["SLURM_ARRAY_TASK_MAX"]) == num_arrays - 1
+        array_id, num_arrays = int(os.environ["SLURM_ARRAY_TASK_ID"]), int(os.environ["SLURM_ARRAY_TASK_COUNT"])
+        if os.environ["SLURM_ARRAY_TASK_MIN"] != "0" or int(os.environ["SLURM_ARRAY_TASK_MAX"]) != num_arrays - 1:
+            raise ValueError(
+                f"Inside a SLURM array, but {os.environ['SLURM_ARRAY_TASK_MIN']=} and "
+                f"{os.environ['SLURM_ARRAY_TASK_MAX']=} are not consistent with "
+                f"{os.environ["SLURM_ARRAY_TASK_COUNT"]=}."
+            )
+    else:
+        array_id, num_arrays = 0, 1
     n_total = len(sequence)
     files_per_array = math.ceil(n_total / num_arrays)
     start = array_id * files_per_array
@@ -46,11 +52,11 @@ def download_benchmark(data: str | Path) -> None:
     url = "https://cognitive-ml.fr/downloads/phoneme-discovery/"
     download_file(url + "benchmark-assets.tar.gz", data / "benchmark-assets.tar.gz")
     with tarfile.open(data / "benchmark-assets.tar.gz", "r:gz") as tar:
-        tar.extractall(data)
+        tar.extractall(data, filter="data")
     (data / "benchmark-assets.tar.gz").unlink()
     download_file(url + "benchmark-audio.tar.gz", data / "benchmark-audio.tar.gz")
     with tarfile.open(data / "benchmark-audio.tar.gz", "r:gz") as tar:
-        tar.extractall(data)
+        tar.extractall(data, filter="data")
     (data / "benchmark-audio.tar.gz").unlink()
 
 

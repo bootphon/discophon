@@ -15,6 +15,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import parselmouth  # ty: ignore[unresolved-import]
+from discophon.evaluate.pnmi import coocurrence_matrix, mapping_many_to_one
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
@@ -26,7 +27,6 @@ from discophon.data import (
     read_submitted_units,
     textgrid_array_from_sequence,
 )
-from discophon.evaluate.pnmi import coocurrence_matrix, mapping_many_to_one
 from discophon.languages import Language, get_language
 
 

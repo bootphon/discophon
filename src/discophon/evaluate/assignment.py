@@ -1,3 +1,5 @@
+"""Many-to-one and one-to-one assignments between phones and units."""
+
 import itertools
 from collections.abc import Iterable
 from typing import Literal, TypedDict
@@ -38,8 +40,8 @@ def align_units_and_phones(
     for fileid, this_phones in phones.items():
         this_units = list(itertools.chain.from_iterable(itertools.repeat(unit, repeat) for unit in units[fileid]))
         min_len = min(len(this_phones), len(this_units))
-        # if (len(this_phones) - min_len > repeat) or (len(this_units) - min_len > repeat):
-        # raise ValueError(f"More than {repeat} tokens of differences between phones and units.")
+        if (len(this_phones) - min_len > repeat) or (len(this_units) - min_len > repeat):
+            raise ValueError(f"More than {repeat} tokens of differences between phones and units.")
         data[fileid] = {"phones": this_phones[:min_len], "units": this_units[:min_len]}
     return data
 
@@ -112,21 +114,16 @@ def relabel_assignment(assignment: Iterable[int], proba: DataArray) -> DataArray
 
 
 def mapping_many_to_one(coocurrence: DataArray) -> dict[int, str]:
-    """Map each unit to the phoneme that it was associated with the most.
+    """Many-to-one mapping between each unit to the phoneme that it was associated with the most.
 
     Many units can be associated to the same phoneme.
     """
     most_frequent = coocurrence.idxmax(dim="phone")
-    return dict(
-        zip(
-            most_frequent.get_index("unit").values.tolist(),
-            most_frequent.values.tolist(),
-            strict=True,
-        )
-    )
+    return dict(zip(most_frequent.get_index("unit").values.tolist(), most_frequent.values.tolist(), strict=True))
 
 
 def mapping_one_to_one(coocurrence: DataArray) -> dict[int, str]:
+    """One-to-one mapping between phonemes and the optimal units according to the linear assignment sum problem."""
     phones_idx, units_idx = linear_sum_assignment(coocurrence.values, maximize=True)
     return dict(
         zip(
@@ -138,11 +135,12 @@ def mapping_one_to_one(coocurrence: DataArray) -> dict[int, str]:
 
 
 def get_assignment(units: Units, coocurrence: DataArray, *, kind: AssignmentKind) -> Phones:
+    """Return the assigned sequences of phones from units, coocurrence matrix and the kind of assignment."""
     match kind:
         case "many-to-one":
             mapping = mapping_many_to_one(coocurrence)
         case "one-to-one":
             mapping = mapping_one_to_one(coocurrence)
         case _:
-            raise ValueError(f"Unknown kind: {kind}")
+            raise ValueError(f"Unknown kind of assignment: {kind}")
     return {fileid: [mapping[u] for u in this_units] for fileid, this_units in units.items()}

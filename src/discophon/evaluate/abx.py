@@ -78,7 +78,7 @@ def discrete_abx(
     frequency: float,
     kind: Literal["triphone", "phoneme"],
 ) -> TriphoneABX | PhonemeABX:
-    """Phoneme ABX on discrete units."""
+    """ABX on discrete units."""
     dataset = Dataset.from_item_and_units(path_item, path_units, frequency, audio_key="file")
     match kind:
         case "triphone":
@@ -124,7 +124,7 @@ def continuous_abx(
     frequency: float,
     kind: Literal["triphone", "phoneme"],
 ) -> TriphoneABX | PhonemeABX:
-    """Phoneme ABX on continuous representations."""
+    """ABX on continuous representations."""
     dataset = Dataset.from_item(path_item, path_features, frequency)
     match kind:
         case "triphone":

@@ -7,8 +7,9 @@
 import argparse
 from pathlib import Path
 
-from discophon.data import STEP_PHONES, read_gold_annotations, read_submitted_units, write_textgrids
 from discophon.evaluate.pnmi import coocurrence_matrix, mapping_many_to_one
+
+from discophon.data import STEP_PHONES, read_gold_annotations, read_submitted_units, write_textgrids
 from discophon.languages import get_language
 
 if __name__ == "__main__":
