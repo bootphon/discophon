@@ -11,10 +11,10 @@ from discophon.data import SAMPLE_RATE, read_rttm
 from discophon.prepare import split_across_slurm_array
 
 
-def segment_mmsulab(path_dataset: str, path_rttm: str, output: str, *, num_zeros: int = 5) -> None:
+def segment_dataset(path_dataset: str, path_rttm: str, path_output: str, *, num_zeros: int = 5) -> None:
     disable_progress_bars()
     idx_start, idx_end = split_across_slurm_array(len(load_dataset(path=path_dataset, split="train")))
-    path_output = Path(output)
+    output = Path(path_output)
     print(f"Segment files between indices [{idx_start}, {idx_end}[.")
     dataset = load_dataset(path=path_dataset, split=f"train[{idx_start}:{idx_end}]")
 
@@ -25,7 +25,7 @@ def segment_mmsulab(path_dataset: str, path_rttm: str, output: str, *, num_zeros
         if segments.height == 0:
             unvoiced.append(data["id"])
         for i, (onset, offset) in enumerate(segments.sort("Turn Onset")[["Turn Onset", "Turn Offset"]].iter_rows()):
-            dest = path_output / data["iso3"] / (data["id"] + f"_{i:0{num_zeros}d}.wav")
+            dest = output / data["iso3"] / (data["id"] + f"_{i:0{num_zeros}d}.wav")
             dest.parent.mkdir(parents=True, exist_ok=True)
             samples = data["audio"].get_samples_played_in_range(onset, offset)
             if samples.sample_rate != SAMPLE_RATE:
@@ -36,14 +36,10 @@ def segment_mmsulab(path_dataset: str, path_rttm: str, output: str, *, num_zeros
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Segment espnet/mms_ulab_v2")
-    parser.add_argument("path", help="Path to the espnet/mms_ulab_v2 dataset")
+    parser = argparse.ArgumentParser(description="Segment dataset")
+    parser.add_argument("path", help="Path to the HuggingFace dataset")
+    parser.add_argument("rttm", help="Path to the RTTM file")
     parser.add_argument("output", help="Output path")
-    parser.add_argument(
-        "--rttm",
-        help="Path to the RTTM file",
-        default="https://cognitive-ml.fr/download/discophon/assets/mms_ulab_v2.rttm.zst",
-    )
     parser.add_argument("--num-zeros", type=int, default=5)
     args = parser.parse_args()
-    segment_mmsulab(args.path, args.rttm, args.output, num_zeros=args.num_zeros)
+    segment_dataset(args.path, args.rttm, args.output, num_zeros=args.num_zeros)
