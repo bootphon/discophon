@@ -9,12 +9,12 @@ repos:
   hooks:
     - id: typos
 - repo: https://github.com/tombi-toml/tombi-pre-commit
-  rev: v0.9.6
+  rev: v0.9.9
   hooks:
     - id: tombi-format
     - id: tombi-lint
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.15.6
+  rev: v0.15.7
   hooks:
     - id: ruff-check
       args: [ --fix ]
