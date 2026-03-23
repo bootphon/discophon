@@ -5,11 +5,10 @@ from typing import TypedDict
 import matplotlib.pyplot as plt
 import numpy as np
 import parselmouth
-from matplotlib.axes import Axes
-
 from discophon.data import read_gold_annotations, read_submitted_units
-from discophon.evaluate.pnmi import contingency_table, mapping_many_to_one
+from discophon.evaluate.pnmi import coocurrence_matrix, mapping_many_to_one
 from discophon.languages import get_language, load_tipa
+from matplotlib.axes import Axes
 
 TIPA = load_tipa()
 TIPA["SIL"] = "SIL"
@@ -78,9 +77,11 @@ if __name__ == "__main__":
     snd = parselmouth.Sound(f"./data/{name}.wav").extract_part(
         from_time=start, to_time=end, preserve_times=True
     )
-    all_units = read_submitted_units("./data/units-eng-test.jsonl")
+    all_units = read_submitted_units(
+        "./data/units/spidr-vp20-ft-10h/5/units-eng-test.jsonl"
+    )
     all_phones = read_gold_annotations("./data/alignment-eng-test.txt")
-    contingency = contingency_table(
+    contingency = coocurrence_matrix(
         all_units,
         all_phones,
         n_units=256,
@@ -152,4 +153,5 @@ if __name__ == "__main__":
         )
     fig.get_layout_engine().set(w_pad=0, h_pad=0.03, hspace=0, wspace=0)
     plt.savefig("figures/streams.pdf", dpi=300, bbox_inches="tight", pad_inches=0.02)
+    plt.savefig("figures/streams.svg", dpi=300, bbox_inches="tight", pad_inches=0.02)
     plt.close()
