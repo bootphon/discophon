@@ -1,3 +1,3 @@
-# Leaderboard
+# API
 
 Coming soon!

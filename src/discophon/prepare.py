@@ -5,7 +5,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Literal, get_args
 
-import httpx
+import fsspec
 import polars as pl
 import soundfile as sf
 import soxr
@@ -35,29 +35,24 @@ def split_for_distributed[T](sequence: Sequence[T]) -> Sequence[T]:
     return sequence[start:end]
 
 
-def download_file(url: str, dest: str | Path) -> None:
-    with Path(dest).open("wb") as download_file, httpx.stream("GET", url) as response:
-        total, name = int(response.headers["Content-Length"]), Path(response.url.path).name
-        with tqdm(desc=f"Downloading {name}", total=total, unit_scale=True, unit_divisor=1024, unit="B") as progress:
-            num_bytes_downloaded = response.num_bytes_downloaded
-            for chunk in response.iter_bytes():
-                download_file.write(chunk)
-                progress.update(response.num_bytes_downloaded - num_bytes_downloaded)
-                num_bytes_downloaded = response.num_bytes_downloaded
+def download_file(url: str, dest: str | Path, *, chunk_size: int = 2**20) -> None:
+    with (
+        fsspec.open(url, "rb") as src,
+        Path(dest).open("wb") as dst,
+        tqdm(total=src.size, unit_scale=True, unit_divisor=1024, unit="B") as progress,
+    ):
+        while chunk := src.read(chunk_size):
+            dst.write(chunk)
+            progress.update(len(chunk))
 
 
 def download_benchmark(data: str | Path) -> None:
     data = Path(data)
     data.mkdir(exist_ok=True, parents=True)
-    url = "https://cognitive-ml.fr/downloads/phoneme-discovery/"
-    download_file(url + "benchmark-assets.tar.gz", data / "benchmark-assets.tar.gz")
-    with tarfile.open(data / "benchmark-assets.tar.gz", "r:gz") as tar:
+    download_file("https://cognitive-ml.fr/downloads/discophon/benchmark.tar.gz", data / "benchmark.tar.gz")
+    with tarfile.open(data / "benchmark.tar.gz", "r:gz") as tar:
         tar.extractall(data, filter="data")
-    (data / "benchmark-assets.tar.gz").unlink()
-    download_file(url + "benchmark-audio.tar.gz", data / "benchmark-audio.tar.gz")
-    with tarfile.open(data / "benchmark-audio.tar.gz", "r:gz") as tar:
-        tar.extractall(data, filter="data")
-    (data / "benchmark-audio.tar.gz").unlink()
+    (data / "benchmark.tar.gz").unlink()
 
 
 def resample(

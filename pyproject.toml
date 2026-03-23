@@ -23,7 +23,7 @@ classifiers = [
 ]
 dependencies = [
   "filelock>=3.20.2",
-  "httpx>=0.28.1",
+  "fsspec[http]>=2026.2.0",
   "joblib>=1.5.3",
   "numba>=0.63.1",
   "numpy>=2.3.5",
@@ -54,6 +54,7 @@ dev = [
   "pytest>=9.0.2",
 ]
 docs = [
+  "mkdocstrings-python>=2.0.3",
   "zensical>=0.0.27",
 ]
 

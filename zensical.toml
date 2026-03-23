@@ -16,7 +16,6 @@ nav = [
   ] },
   { "Leaderboard" = [
     "leaderboard/index.md",
-    "leaderboard/results.md",
   ] },
   { "Docs" = [
     "docs/index.md",
@@ -24,6 +23,7 @@ nav = [
     "docs/evaluate.md",
     "docs/submission.md",
     "docs/baselines.md",
+    "docs/api.md",
   ] }
 ]
 extra_javascript = [
@@ -72,3 +72,12 @@ link = "https://arxiv.org/abs/2603.18612"
 [[project.extra.social]]
 icon = "fontawesome/brands/github"
 link = "https://github.com/bootphon/discophon"
+
+[project.plugins.mkdocstrings.handlers.python]
+inventories = ["https://docs.python.org/3/objects.inv"]
+paths = ["src"]
+
+[project.plugins.mkdocstrings.handlers.python.options]
+docstring_style = "google"
+inherited_members = true
+show_source = false

@@ -1,18 +1,21 @@
 """CLI entry-point for phoneme discovery evaluation."""
 
+import argparse
 from pathlib import Path
 
 from discophon.data import read_gold_annotations, read_submitted_units
 from discophon.evaluate.discovery import phoneme_discovery
 
 if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Evaluate predicted units on phoneme discovery")
+    parser = argparse.ArgumentParser(
+        prog="discophon.evaluate",
+        description="Evaluate predicted units on phoneme discovery",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
     parser.add_argument("units", type=Path, help="Path to predicted units")
     parser.add_argument("phones", type=Path, help="Path to gold alignments")
-    parser.add_argument("--n-phonemes", type=int, required=True, help="Number of phonemes")
-    parser.add_argument("--n-units", type=int, required=True, help="Number of units")
+    parser.add_argument("--n-phonemes", type=int, required=True, help="Required. Number of phonemes")
+    parser.add_argument("--n-units", type=int, required=True, help="Required. Number of units")
     parser.add_argument(
         "--kind",
         type=str,

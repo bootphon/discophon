@@ -76,7 +76,7 @@ def discrete_abx(
     path_units: str | Path,
     *,
     frequency: float,
-    kind: Literal["triphone", "phoneme"],
+    kind: Literal["triphone", "phoneme"] = "triphone",
 ) -> TriphoneABX | PhonemeABX:
     """ABX on discrete units."""
     dataset = Dataset.from_item_and_units(path_item, path_units, frequency, audio_key="file")
@@ -122,7 +122,7 @@ def continuous_abx(
     path_features: str | Path,
     *,
     frequency: float,
-    kind: Literal["triphone", "phoneme"],
+    kind: Literal["triphone", "phoneme"] = "triphone",
 ) -> TriphoneABX | PhonemeABX:
     """ABX on continuous representations."""
     dataset = Dataset.from_item(path_item, path_features, frequency)
@@ -146,14 +146,18 @@ def continuous_abx(
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Continuous or discrete ABX")
+    parser = argparse.ArgumentParser(
+        prog="discophon.evaluate.abx",
+        description="Continuous or discrete ABX",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
     parser.add_argument("item", type=Path, help="Path to the item file")
     parser.add_argument(
         "root",
         type=Path,
         help="Path to the JSONL with units or directory with continuous features",
     )
-    parser.add_argument("--frequency", required=True, type=float, help="Units frequency in Hz")
+    parser.add_argument("--frequency", required=True, type=float, help="Required. Units frequency in Hz")
     parser.add_argument(
         "--kind",
         type=str,

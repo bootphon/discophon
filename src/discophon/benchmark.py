@@ -118,7 +118,11 @@ if __name__ == "__main__":
 
     from filelock import FileLock
 
-    parser = argparse.ArgumentParser(description="Phoneme Discovery benchmark")
+    parser = argparse.ArgumentParser(
+        prog="discophon.benchmark",
+        description="Phoneme Discovery benchmark",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
     parser.add_argument("dataset", type=Path, help="Path to the benchmark dataset")
     parser.add_argument("predictions", type=Path, help="Path to the directory with the discrete units or the features")
     parser.add_argument("output", type=Path, help="Path to the output file")
@@ -127,7 +131,7 @@ if __name__ == "__main__":
         type=str,
         choices=["discovery", "abx-discrete", "abx-continuous"],
         default="discovery",
-        help="Which benchmark (default: discovery)",
+        help="Which benchmark",
     )
     parser.add_argument(
         "--kind",
@@ -140,7 +144,7 @@ if __name__ == "__main__":
         "--step-units",
         type=int,
         default=20,
-        help="Step in ms between units or features (default: 20ms). 'frequency' is then set to 1000 // step_units.",
+        help="Step in ms between units or features. 'frequency' is then set to 1000 // step_units.",
     )
     args = parser.parse_args()
 

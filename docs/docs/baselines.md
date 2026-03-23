@@ -2,9 +2,9 @@
 
 ## Usage
 
-The pretrained baselines and datasets are available on Hugging Face.
+The baselines and pretraining datasets are available on Hugging Face.
 
-Models[^1]:
+Baselines[^1]:
 
 - SpidR MMS-ulab: https://huggingface.co/coml/spidr-mmsulab
 - SpidR VP-20: https://huggingface.co/coml/spidr-vp20
@@ -15,7 +15,7 @@ Models[^1]:
 
 Datasets:
 
-- MMS-ulab pre-segmented dataset: https://huggingface.co/coml/mmsulab
+- MMS-ulab segmented dataset: https://huggingface.co/coml/mmsulab
 - VP-20 dataset: https://huggingface.co/coml/vp20
 
 ### Models
