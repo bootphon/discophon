@@ -38,8 +38,12 @@ def segment_mmsulab(path_dataset: str, path_rttm: str, output: str, *, num_zeros
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Segment espnet/mms_ulab_v2")
     parser.add_argument("path", help="Path to the espnet/mms_ulab_v2 dataset")
-    parser.add_argument("rttm", help="Path to the RTTM file")
     parser.add_argument("output", help="Output path")
+    parser.add_argument(
+        "--rttm",
+        help="Path to the RTTM file",
+        default="https://cognitive-ml.fr/download/discophon/assets/mms_ulab_v2.rttm.zst",
+    )
     parser.add_argument("--num-zeros", type=int, default=5)
     args = parser.parse_args()
     segment_mmsulab(args.path, args.rttm, args.output, num_zeros=args.num_zeros)
