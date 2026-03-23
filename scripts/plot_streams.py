@@ -15,7 +15,6 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import parselmouth  # ty: ignore[unresolved-import]
-from discophon.evaluate.pnmi import coocurrence_matrix, mapping_many_to_one
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
@@ -27,6 +26,7 @@ from discophon.data import (
     read_submitted_units,
     textgrid_array_from_sequence,
 )
+from discophon.evaluate import coocurrence_matrix, get_assignment
 from discophon.languages import Language, get_language
 
 
@@ -119,14 +119,18 @@ def plot_streams_on_axis(
 
 def infer_from_arguments(path_audio: Path, path_units: Path) -> tuple[Phones, Units, Language]:
     path_audio = path_audio.resolve()
-    assert path_audio.parent.stem in {"dev", "test", "all"}, "Audio should be in a split folder"
-    assert path_audio.parents[2].stem == "audio", "Audio should be in the 'audio' folder of the dataset."
+    if path_audio.parent.stem not in {"dev", "test", "all"}:
+        raise ValueError("Audio should be in a split folder")
+    if path_audio.parents[2].stem != "audio":
+        raise ValueError("Audio should be in the 'audio' folder of the dataset.")
     language, split, dataset = get_language(path_audio.parents[1].stem), path_audio.parent.stem, path_audio.parents[3]
     if split == "all":
         split = path_units.stem.split("-")[-1]
-        assert split in {"dev", "test"}, (
-            "When the audio file is in the 'all' folder, the units file should be named 'units-<lang>-<split>.jsonl'"
-        )
+        if split not in {"dev", "test"}:
+            raise ValueError(
+                "When the audio file is in the 'all' folder, "
+                "the units file should be named 'units-<lang>-<split>.jsonl'"
+            )
     units = read_submitted_units(path_units)
     phones = read_gold_annotations(dataset / f"alignment/alignment-{language.iso_639_3}-{split}.txt")
     return phones, units, language
@@ -142,7 +146,7 @@ def plot_streams(
     begin_and_end: tuple[float, float] | None = None,
 ) -> Figure:
     phones, units, language = infer_from_arguments(path_audio, path_units)
-    contingency = coocurrence_matrix(
+    coocurrence = coocurrence_matrix(
         units,
         phones,
         n_units=n_units,
@@ -150,7 +154,7 @@ def plot_streams(
         step_units=step_units,
         step_phones=step_phones,
     )
-    mapping = mapping_many_to_one(contingency)
+    predictions = get_assignment(units, coocurrence, kind="many-to-one")
 
     name = path_audio.stem
     snd = parselmouth.Sound(str(path_audio))
@@ -158,7 +162,7 @@ def plot_streams(
         snd = snd.extract_part(*begin_and_end, preserve_times=True)
     this_units = textgrid_array_from_sequence(units[name], step_in_ms=step_units)
     this_phones = textgrid_array_from_sequence(phones[name], step_in_ms=step_phones)
-    this_predictions = textgrid_array_from_sequence([mapping[u] for u in units[name]], step_in_ms=step_units)
+    this_predictions = textgrid_array_from_sequence(predictions[name], step_in_ms=step_units)
     figsize_x = 4 * (snd.xmax - snd.xmin)
     fig, ax = plt.subplots(5, 1, figsize=(figsize_x, 6.5), constrained_layout=True, sharex=True)
     plot_streams_on_axis(ax, snd, this_phones, this_units, this_predictions)

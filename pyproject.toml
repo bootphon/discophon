@@ -4,7 +4,23 @@ description = "The Phoneme Discovery Benchmark"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
-authors = [{ name = "CoML", email = "dev@cognitive-ml.fr" }]
+authors = [
+  { name = "Maxime Poli" },
+  { name = "CoML", email = "dev@cognitive-ml.fr" }
+]
+keywords = ["machine learning", "speech"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "Operating System :: OS Independent",
+  "Programming Language :: C++",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
   "filelock>=3.20.2",
   "httpx>=0.28.1",
@@ -24,11 +40,6 @@ dynamic = ["version"]
 [project.optional-dependencies]
 abx = [
   "fastabx>=0.7.0",
-]
-analysis = [
-  "jiwer>=4.0.0",
-  "matplotlib>=3.10.8",
-  "praat-parselmouth>=0.4.7",
 ]
 baselines = [
   "minimal-hubert>=0.0.2",
@@ -103,6 +114,9 @@ select = [
   "UP",  # pyupgrade
   "W",  # pycodestyle warning
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["S101"]
 
 [tool.ruff.lint.flake8-tidy-imports]
 banned-module-level-imports = ["discophon.evaluate.abx"]

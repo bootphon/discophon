@@ -21,9 +21,9 @@ nav = [
   { "Docs" = [
     "docs/index.md",
     "docs/prepare.md",
-    "docs/baselines.md",
     "docs/evaluate.md",
     "docs/submission.md",
+    "docs/baselines.md",
   ] }
 ]
 extra_javascript = [
@@ -67,7 +67,7 @@ toggle.name = "Switch to light mode"
 
 [[project.extra.social]]
 icon = "fontawesome/regular/file-lines"
-link = "https://arxiv.org"
+link = "https://arxiv.org/abs/2603.18612"
 
 [[project.extra.social]]
 icon = "fontawesome/brands/github"

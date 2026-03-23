@@ -62,7 +62,8 @@ def patch_manifest_with_paths(src: str | Path, dest: str | Path) -> None:
         discophon = Path(src).parent.parent.resolve()
         _, lang, *split = Path(src).stem.split("-")
         audios = discophon / "audio" / lang / "-".join(split)
-        assert audios.is_dir()
+        if not audios.is_dir():
+            raise ValueError(audios)
         manifest = manifest.with_columns(path=pl.concat_str(pl.lit(str(audios) + "/"), "fileid", pl.lit(".wav")))
     manifest.write_csv(dest)
 
