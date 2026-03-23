@@ -132,6 +132,6 @@ tha = "tha"
 
 [tool.uv.workspace]
 members = [
-    "paper",
-    "scripts/replication",
+  "paper",
+  "scripts/replication",
 ]

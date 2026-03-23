@@ -2,13 +2,12 @@
 name = "discophon-replication"
 version = "0.1.0"
 dependencies = [
-    "datasets>=4.8.3",
-    "discophon",
-    "pyannote-audio>=4.0.4",
-    "pyannote-core>=6.0.1",
-    "torchcodec>=0.10.0",
+  "datasets>=4.8.3",
+  "discophon",
+  "pyannote-audio>=4.0.4",
+  "pyannote-core>=6.0.1",
+  "torchcodec>=0.10.0",
 ]
 
 [tool.uv.sources]
 discophon = { workspace = true }
-
