@@ -19,6 +19,34 @@ DEFAULT_N_UNITS = 256
 FILE, ONSET, OFFSET, PHONE, UNITS = "#file", "onset", "offset", "#phone", "units"
 
 
+def read_rttm(source: str | Path) -> pl.DataFrame:
+    return pl.read_csv(
+        source,
+        has_header=False,
+        new_columns=[
+            "Type",
+            "File ID",
+            "Channel ID",
+            "Turn Onset",
+            "Turn Duration",
+            "Orthography Field",
+            "Speaker Type",
+            "Speaker Name",
+            "Confidence Score",
+            "Signal Lookahead Time",
+        ],
+        separator=" ",
+        schema_overrides={
+            "Type": pl.String,
+            "File ID": pl.String,
+            "Turn Onset": pl.Float64,
+            "Turn Duration": pl.Float64,
+            "Speaker Name": pl.String,
+        },
+        null_values="<NA>",
+    )
+
+
 def _read_single_textgrid(path: str | Path) -> dict[str, pl.DataFrame]:
     grid = textgrids.TextGrid(path)
     tiers = {}

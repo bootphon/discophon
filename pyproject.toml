@@ -131,4 +131,7 @@ max-statements = 75
 tha = "tha"
 
 [tool.uv.workspace]
-members = ["paper"]
+members = [
+    "paper",
+    "scripts/replication",
+]

@@ -1,7 +1,6 @@
 import math
 import os
 import tarfile
-from collections.abc import Sequence
 from pathlib import Path
 from typing import Literal, get_args
 
@@ -15,9 +14,9 @@ from discophon.data import SAMPLE_RATE
 from discophon.languages import ISO6393_TO_CV, commonvoice_languages, get_language
 
 
-def split_for_distributed[T](sequence: Sequence[T]) -> Sequence[T]:
+def split_across_slurm_array(n_total: int) -> tuple[int, int]:
     if "SLURM_NTASKS" not in os.environ:
-        return sequence
+        return 0, n_total
     if "SLURM_ARRAY_TASK_ID" in os.environ:
         array_id, num_arrays = int(os.environ["SLURM_ARRAY_TASK_ID"]), int(os.environ["SLURM_ARRAY_TASK_COUNT"])
         if os.environ["SLURM_ARRAY_TASK_MIN"] != "0" or int(os.environ["SLURM_ARRAY_TASK_MAX"]) != num_arrays - 1:
@@ -28,11 +27,10 @@ def split_for_distributed[T](sequence: Sequence[T]) -> Sequence[T]:
             )
     else:
         array_id, num_arrays = 0, 1
-    n_total = len(sequence)
-    files_per_array = math.ceil(n_total / num_arrays)
-    start = array_id * files_per_array
-    end = min(start + files_per_array, n_total)
-    return sequence[start:end]
+    n_per_array = math.ceil(n_total / num_arrays)
+    start = array_id * n_per_array
+    end = min(start + n_per_array, n_total)
+    return start, end
 
 
 def download_file(url: str, dest: str | Path, *, chunk_size: int = 2**20) -> None:
@@ -87,7 +85,7 @@ def prepare_commonvoice_datasets(data: str | Path, lang_name_or_code: str) -> No
         raise ValueError(f"Directory {src} does not exist.")
     dest.mkdir(exist_ok=True, parents=True)
     filenames = get_filenames(Path(data) / "manifest", iso_code, split="all")
-    filenames = split_for_distributed(filenames)
+    filenames = filenames[slice(split_across_slurm_array(len(filenames)))]
     for filename in tqdm(filenames, desc="Resampling and converting to WAV"):
         resample(
             src / Path(filename).with_suffix(".mp3"),
