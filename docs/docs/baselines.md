@@ -84,10 +84,12 @@ This will install the `spidr` and [`minimal_hubert`](https://github.com/mxmpl/mi
 
 #### HuBERT
 
+Coming soon!
+
 ### Finetuning
 
-Work-in-progress!
+Coming soon!
 
 ### Discrete units
 
-Work-in-progress!
+Coming soon!
