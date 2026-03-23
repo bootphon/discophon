@@ -1,0 +1,12 @@
+__pycache__
+*.py[oc]
+build/
+dist/
+*.egg-info
+.venv
+tipa-mapping-*.pdf
+*.out
+/typos
+/site
+/paper/data
+/wip

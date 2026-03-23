@@ -1,0 +1,18 @@
+Docs:
+  - benchmark
+    - index
+    - datasets/statistics
+    - phonemes/details
+  - leaderboard
+    - generation
+    - html
+    - more results
+  - docs
+    - index
+    - submission
+    - baselines
+      - models
+      - datasets
+      - pretraining/hubert
+      - finetuning
+      - discrete units
