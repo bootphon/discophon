@@ -1,0 +1,23 @@
+image: ubuntu:22.04
+
+variables:
+  GIT_STRATEGY: clone
+  GIT_SUBMODULE_STRATEGY: normal
+
+before_script:
+  - apt-get update || true
+  - apt-get -y install curl git
+  - curl -LsSf https://astral.sh/uv/install.sh | sh
+  - source $HOME/.local/bin/env
+
+deploy:
+  stage: deploy
+  tags:
+    - flores.docs@docker
+  only:
+    - main
+  script:
+    - UV_CACHE_DIR=".uv-cache" uv run --group docs zensical build --clean
+    - mkdir -p $DOCS
+    - rm -rf $DOCS/*
+    - cp -R site/* $DOCS/

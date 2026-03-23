@@ -1,0 +1,31 @@
+name: Push to Gitlab Workflow
+permissions: {}
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  push:
+    name: Push to Gitlab
+    runs-on: ubuntu-latest
+    environment:
+      name: coml-gitlab
+    env:
+      GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+      GITLAB_REPO: gitlab.cognitive-ml.fr/mpoli/discophon.git
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Push
+        shell: bash
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git remote add gitlab https://oauth2:${GITLAB_TOKEN}@${GITLAB_REPO}
+          git push gitlab HEAD:main --force
+          git push gitlab --tags
