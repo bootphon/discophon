@@ -25,7 +25,7 @@ will download:
 
 ## Download and process Common Voice data
 
-Download the following dataset from [Common Voice Scripted](https://datacollective.mozillafoundation.org/organization/cmfh0j9o10006ns07jq45h7xk):
+Download the following datasets from [Common Voice Scripted](https://datacollective.mozillafoundation.org/organization/cmfh0j9o10006ns07jq45h7xk):
 
 - Dev languages: *Swahili* (22 GB), *Tamil* (9 GB), *Thai* (9 GB), *Turkish* (3 GB), *Ukrainian* (3 GB)
 - Test languages: *Basque* (15 GB), *Chinese (China)* (12 GB), *Japanese* (22 GB)

@@ -56,14 +56,21 @@ features = [
 ]
 
 [[project.theme.palette]]
+media = "(prefers-color-scheme)"
+toggle.icon = "lucide/sun-moon"
+toggle.name = "Switch to light mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
 scheme = "default"
 toggle.icon = "lucide/sun"
 toggle.name = "Switch to dark mode"
 
 [[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
 scheme = "slate"
 toggle.icon = "lucide/moon"
-toggle.name = "Switch to light mode"
+toggle.name = "Switch to system preference"
 
 [[project.extra.social]]
 icon = "fontawesome/regular/file-lines"
@@ -74,10 +81,29 @@ icon = "fontawesome/brands/github"
 link = "https://github.com/bootphon/discophon"
 
 [project.plugins.mkdocstrings.handlers.python]
-inventories = ["https://docs.python.org/3/objects.inv"]
+inventories = [
+  "https://docs.python.org/3/objects.inv",
+  "https://docs.xarray.dev/en/stable/objects.inv",
+]
 paths = ["src"]
 
 [project.plugins.mkdocstrings.handlers.python.options]
-docstring_style = "google"
-inherited_members = true
+backlinks = "tree"
+heading_level = 4
+separate_signature = true
+show_bases = false
 show_source = false
+parameter_headings = true
+show_root_heading = true
+show_signature_annotations = true
+docstring_options = { "ignore_init_summary" = true }
+docstring_section_style = "list"
+# filters = "public"
+inherited_members = true
+merge_init_into_class = true
+show_root_full_path = false
+show_symbol_type_heading = true
+show_symbol_type_toc = true
+signature_crossrefs = true
+summary = true
+unwrap_annotated = true

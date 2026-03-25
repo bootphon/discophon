@@ -24,7 +24,8 @@ df = benchmark_discovery("./dataset", "./units", kind="many-to-one")
 print(df) # pl.DataFrame with the results for each language and split
 ```
 
-Use the functions `benchmark_abx_continuous` or `benchmark_abx_discrete` for ABX evaluation.
+Use the functions [`benchmark_abx_continuous`][discophon.benchmark.benchmark_abx_continuous] or
+[`benchmark_abx_discrete`][discophon.benchmark.benchmark_abx_discrete] for ABX evaluation.
 
 Via the CLI:
 
@@ -53,7 +54,7 @@ options:
 
 ### Phoneme discovery
 
-You can use the `phoneme_discovery` function with `units: dict[str, list[int]]`, and `phones: dict[str, list[str]]`.
+You can use the [`phoneme_discovery`][discophon.evaluate.phoneme_discovery] function with `units: dict[str, list[int]]`, and `phones: dict[str, list[str]]`.
 You also need to set the number of units `n_units`, of phonemes `n_phones`, and the step (in ms) between consecutive
 units `step_units`.
 

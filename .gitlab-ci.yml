@@ -17,7 +17,7 @@ deploy:
   only:
     - main
   script:
-    - UV_CACHE_DIR=".uv-cache" uv run --group docs zensical build --clean
+    - UV_CACHE_DIR=".uv-cache" uv run --only-group docs zensical build --clean
     - mkdir -p $DOCS
     - rm -rf $DOCS/*
     - cp -R site/* $DOCS/
