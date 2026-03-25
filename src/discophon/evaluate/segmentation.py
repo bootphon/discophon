@@ -8,12 +8,12 @@ from itertools import groupby
 
 import numpy as np
 
-from discophon.data import Phones
+from discophon.data import STEP_PHONES, STEP_UNITS, Phones
 from discophon.validate import validate_first_two_arguments_same_keys
 
 
 @dataclass(frozen=True)
-class DetectionResult:
+class SegmentationEvaluation:
     """Container for segmentation results. Target metrics are available as properties."""
 
     true_positives: int
@@ -62,10 +62,10 @@ class DetectionResult:
             ]
         )
 
-    def __add__(self, other: object) -> "DetectionResult":
-        if not isinstance(other, DetectionResult):
+    def __add__(self, other: object) -> "SegmentationEvaluation":
+        if not isinstance(other, SegmentationEvaluation):
             raise NotImplementedError
-        return DetectionResult(
+        return SegmentationEvaluation(
             true_positives=self.true_positives + other.true_positives,
             false_positives=self.false_positives + other.false_positives,
             false_negatives=self.false_negatives + other.false_negatives,
@@ -115,14 +115,14 @@ class Boundaries:
         return Boundaries(times)
 
 
-def compare_boundaries(gold: Boundaries, prediction: Boundaries, *, margin_in_ms: int) -> DetectionResult:
+def compare_boundaries(gold: Boundaries, prediction: Boundaries, *, margin_in_ms: int) -> SegmentationEvaluation:
     """Evaluate the boundary detection of the gold boundaries with the given prediction."""
     windows = gold.tolerance(margin_in_ms)
     starts = windows[:, 0][:, np.newaxis]
     ends = windows[:, 1][:, np.newaxis]
     detected = ((prediction.times >= starts) & (prediction.times <= ends)).any(axis=1)  # Broadcast and then reduce
     true_positives = detected.sum().item()
-    return DetectionResult(
+    return SegmentationEvaluation(
         true_positives=true_positives,
         false_positives=len(prediction.times) - true_positives,
         false_negatives=len(gold.times) - true_positives,
@@ -130,15 +130,29 @@ def compare_boundaries(gold: Boundaries, prediction: Boundaries, *, margin_in_ms
 
 
 @validate_first_two_arguments_same_keys
-def boundary_detection(
+def phone_segmentation(
     predicted_phones_from_units: Phones,
     gold_phones: Phones,
     *,
-    step_units: int,
-    step_phones: int,
     margin_in_ms: int = 20,
-) -> DetectionResult:
-    """Full boundary evaluation."""
+    step_units: int = STEP_UNITS,
+    step_phones: int = STEP_PHONES,
+) -> SegmentationEvaluation:
+    """Phone segmentation evaluation.
+
+    Arguments:
+        predicted_phones_from_units: Predicted phones obtained with [`phone_assignments`][]
+        gold_phones: Gold phone annotations
+        margin_in_ms: Left and right margin around each gold boundaries (in ms).
+            Predicted boundaries that fall in the resulting windows are considered correct.
+            If two windows overlap, they are cut to the midpoint.
+        step_units: Step between consecutive units (in ms)
+        step_phones: Step between consecutive phones (in ms)
+
+    Returns:
+        Instance of a dataclass containing the segmentation results in attributes `recall`, `precision`, `f1`,
+            `os`, and `r_val`. Use its `describe` method to get a summary of the segmentation evaluation.
+    """
     return sum(
         (
             compare_boundaries(
@@ -148,5 +162,5 @@ def boundary_detection(
             )
             for fileid in gold_phones
         ),
-        DetectionResult(0, 0, 0),
+        SegmentationEvaluation(0, 0, 0),
     )

@@ -1,15 +1,19 @@
-"""Complete benchmark evaluation."""
+"""Run the DiscoPhon benchmark on your predictions.
+
+Compute the scores for all languages and splits for which units or features have been extracted.
+"""
 
 from pathlib import Path
 from typing import Literal
 
 import polars as pl
 
-from discophon.data import DEFAULT_N_UNITS, read_gold_annotations, read_submitted_units
+from discophon.data import DEFAULT_N_UNITS, STEP_UNITS, read_gold_annotations, read_submitted_units
 from discophon.evaluate import phoneme_discovery
-from discophon.evaluate.assignment import AssignmentKind
 from discophon.languages import Language, get_language
 from discophon.validate import validate_dataset_structure
+
+__all__ = ["benchmark_abx_continuous", "benchmark_abx_discrete", "benchmark_discovery"]
 
 
 def available_languages_and_splits_for_units(
@@ -31,13 +35,23 @@ def benchmark_discovery(
     path_dataset: str | Path,
     path_units: str | Path,
     *,
-    kind: AssignmentKind,
-    step_units: int = 20,
+    kind: Literal["many-to-one", "one-to-one"],
+    step_units: int = STEP_UNITS,
 ) -> pl.DataFrame:
-    """Full phoneme discovery benchmark.
+    """Benchmark phoneme discovery. Evaluate all languages and splits with available units.
 
-    If `kind` is "many-to-one", the number of units is set to the default (256).
-    Otherwise, it is set to the number of phonemes plus one.
+    The units should be saved in the directory `path_units`, in JSONL files
+    named `units-{code}-{split}.jsonl` with keys `file` ([`str`][]) and `units` (`list[int]`).
+
+    Args:
+        path_dataset: Path to the DiscoPhon dataset
+        path_units: Path to the directory with the predicted units
+        kind: Kind of assignment. If it is `many-to-one`, the number of units is set to the default (256).
+              Otherwise, it is set to the number of phonemes plus one.
+        step_units: Step between consecutive units (in ms).
+
+    Returns:
+        DataFrame with the results
     """
     validate_dataset_structure(path_dataset)
     df = []
@@ -64,10 +78,23 @@ def benchmark_abx_discrete(
     path_units: str | Path,
     *,
     kind: Literal["triphone", "phoneme"] = "triphone",
-    step_units: int = 20,
+    step_units: int = STEP_UNITS,
 ) -> pl.DataFrame:
-    """ABX on all discrete units available."""
-    from discophon.evaluate.abx import discrete_abx
+    """ABX on all discrete units available.
+
+    The units should be saved in the directory `path_units`, in JSONL files
+    named `units-{code}-{split}.jsonl` with keys `file` ([`str`][]) and `units` (`list[int]`).
+
+    Args:
+        path_dataset: Path to the DiscoPhon dataset
+        path_units: Path to the directory with the predicted units
+        kind: Kind of representations to use for ABX computation.
+        step_units: Step between consecutive units (in ms).
+
+    Returns:
+        DataFrame with the results
+    """
+    from discophon.abx import discrete_abx
 
     validate_dataset_structure(path_dataset)
     df = []
@@ -91,10 +118,23 @@ def benchmark_abx_continuous(
     path_features: str | Path,
     *,
     kind: Literal["triphone", "phoneme"] = "triphone",
-    step_units: int = 20,
+    step_units: int = STEP_UNITS,
 ) -> pl.DataFrame:
-    """ABX on all continuous features available."""
-    from discophon.evaluate.abx import continuous_abx
+    """ABX on all continuous features available.
+
+    The features should be saved in the directory `path_features`, in subfolders `path_features/{code}/{split}`.
+
+    Args:
+        path_dataset: Path to the DiscoPhon dataset
+        path_units: Path to the directory with the extracted features
+        kind: Kind of representations to use for ABX computation.
+        step_units: Step between consecutive features (in ms).
+            The feature frequency will be set to `1_000 // step_units`
+
+    Returns:
+        DataFrame with the results
+    """
+    from discophon.abx import continuous_abx
 
     validate_dataset_structure(path_dataset)
     df = []
@@ -143,7 +183,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--step-units",
         type=int,
-        default=20,
+        default=STEP_UNITS,
         help="Step in ms between units or features. 'frequency' is then set to 1000 // step_units.",
     )
     args = parser.parse_args()

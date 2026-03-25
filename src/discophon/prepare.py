@@ -1,3 +1,5 @@
+"""Download and prepare the DiscoPhon benchmark dataset."""
+
 import math
 import os
 import tarfile
@@ -10,8 +12,10 @@ import soundfile as sf
 import soxr
 from tqdm import tqdm
 
-from discophon.data import SAMPLE_RATE
+from discophon.data import SAMPLE_RATE, Splits
 from discophon.languages import ISO6393_TO_CV, commonvoice_languages, get_language
+
+__all__ = ["download_benchmark", "prepare_commonvoice_datasets"]
 
 
 def split_across_slurm_array(n_total: int) -> tuple[int, int]:
@@ -44,13 +48,18 @@ def download_file(url: str, dest: str | Path, *, chunk_size: int = 2**20) -> Non
             progress.update(len(chunk))
 
 
-def download_benchmark(data: str | Path) -> None:
-    data = Path(data)
-    data.mkdir(exist_ok=True, parents=True)
-    download_file("https://cognitive-ml.fr/downloads/discophon/benchmark.tar.gz", data / "benchmark.tar.gz")
-    with tarfile.open(data / "benchmark.tar.gz", "r:gz") as tar:
-        tar.extractall(data, filter="data")
-    (data / "benchmark.tar.gz").unlink()
+def download_benchmark(path_dataset: str | Path) -> None:
+    """Download and extract the DiscoPhon dataset.
+
+    Arguments:
+        path_dataset: Target path to the DiscoPhon dataset.
+    """
+    path_dataset = Path(path_dataset)
+    path_dataset.mkdir(exist_ok=True, parents=True)
+    download_file("https://cognitive-ml.fr/downloads/discophon/benchmark.tar.gz", path_dataset / "benchmark.tar.gz")
+    with tarfile.open(path_dataset / "benchmark.tar.gz", "r:gz") as tar:
+        tar.extractall(path_dataset, filter="data")
+    (path_dataset / "benchmark.tar.gz").unlink()
 
 
 def resample(
@@ -65,9 +74,6 @@ def resample(
     sf.write(output, resampled, output_sample_rate)
 
 
-Splits = Literal["all", "train-10min", "train-1h", "train-10h", "train-100h", "train-all", "dev", "test"]
-
-
 def get_filenames(manifests: Path, iso_code: str, *, split: Splits) -> list[str]:
     if split not in get_args(Splits):
         raise ValueError(f"Invalid {split=}. Must be in {get_args(Splits)}")
@@ -78,13 +84,24 @@ def get_filenames(manifests: Path, iso_code: str, *, split: Splits) -> list[str]
     return sorted(manifest["fileid"].unique().to_list())
 
 
-def prepare_commonvoice_datasets(data: str | Path, lang_name_or_code: str) -> None:
-    iso_code = get_language(lang_name_or_code).iso_639_3
-    src, dest = (Path(data) / "raw" / ISO6393_TO_CV[iso_code] / "clips", Path(data) / "audio" / iso_code / "all")
+def prepare_commonvoice_datasets(path_dataset: str | Path, language: str) -> None:
+    """Prepare the Common Voice datasets needed for DiscoPhon by resampling and copying the audio files.
+
+    The specific Common Voice data should exist in `path_dataset/raw`: the audio files are expected to be
+    in `path_dataset/raw/${cv_code}/clips` where `cv_code` is the Common Voice specific language code of `language`.
+
+    Arguments:
+        path_dataset: Path to the DiscoPhon dataset.
+        language: Name of the language of the Common Voice dataset under consideration.
+                  Also works with ISO-639-3 code or Common Voice code.
+    """
+    iso_code = get_language(language).iso_639_3
+    src = Path(path_dataset) / "raw" / ISO6393_TO_CV[iso_code] / "clips"
+    dest = Path(path_dataset) / "audio" / iso_code / "all"
     if not src.is_dir():
         raise ValueError(f"Directory {src} does not exist.")
     dest.mkdir(exist_ok=True, parents=True)
-    filenames = get_filenames(Path(data) / "manifest", iso_code, split="all")
+    filenames = get_filenames(Path(path_dataset) / "manifest", iso_code, split="all")
     filenames = filenames[slice(split_across_slurm_array(len(filenames)))]
     for filename in tqdm(filenames, desc="Resampling and converting to WAV"):
         resample(

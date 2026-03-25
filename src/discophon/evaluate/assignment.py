@@ -9,10 +9,8 @@ import polars as pl
 from scipy.optimize import linear_sum_assignment
 from xarray import DataArray
 
-from discophon.data import Phones, Units
+from discophon.data import STEP_PHONES, STEP_UNITS, Phones, Units
 from discophon.validate import validate_first_two_arguments_same_keys
-
-type AssignmentKind = Literal["many-to-one", "one-to-one"]
 
 
 class UnitsAndPhones(TypedDict):
@@ -53,13 +51,22 @@ def coocurrence_matrix(
     *,
     n_units: int,
     n_phonemes: int,
-    step_units: int,
-    step_phones: int,
+    step_units: int = STEP_UNITS,
+    step_phones: int = STEP_PHONES,
 ) -> DataArray:
-    """Return a 2D coocurrence matrix of shape (n_phones, n_units).
+    """Build the 2D coocurrence matrix of shape (`n_phonemes`, `n_units`) as a [`DataArray`][xarray.DataArray].
 
-    Element (i, j) is the number of times the unit j has appeared where the underlying phoneme is i.
-    The phonemes are ordered according to the returned dictionary (sorted by frequency).
+    Arguments:
+        units: Predicted discrete units
+        phones: Gold phone annotations
+        n_units: Number of distinct discrete units in the evaluated system
+        n_phonemes: Number of phonemes in the language under consideration
+        step_units: Step between consecutive units (in ms)
+        step_phones: Step between consecutive phones (in ms)
+
+    Returns:
+        2D array for which the element (`i`, `j`) is the number of times the unit `j` has appeared where the
+            underlying phoneme is `i`. The phonemes are sorted by frequency.
     """
     n_phonemes_with_sil = n_phonemes + 1
     index, phone_to_index = 0, {}
@@ -134,8 +141,18 @@ def mapping_one_to_one(coocurrence: DataArray) -> dict[int, str]:
     )
 
 
-def get_assignment(units: Units, coocurrence: DataArray, *, kind: AssignmentKind) -> Phones:
-    """Return the assigned sequences of phones from units, coocurrence matrix and the kind of assignment."""
+def phone_assignments(units: Units, coocurrence: DataArray, *, kind: Literal["many-to-one", "one-to-one"]) -> Phones:
+    """Compute the assigned sequences of phones from units, the coocurrence matrix, and the kind of assignment.
+
+    Arguments:
+        units: Predicted discrete units
+        coocurrence: Coocurrence matrix between `units` and the underlying phones, computed with
+            [`coocurrence_matrix`][]
+        kind: Kind of assignment.
+
+    Returns:
+        Assigned phones with this `kind` of mapping
+    """
     match kind:
         case "many-to-one":
             mapping = mapping_many_to_one(coocurrence)

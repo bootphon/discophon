@@ -54,9 +54,9 @@ options:
 
 ### Phoneme discovery
 
-You can use the [`phoneme_discovery`][discophon.evaluate.phoneme_discovery] function with `units: dict[str, list[int]]`, and `phones: dict[str, list[str]]`.
-You also need to set the number of units `n_units`, of phonemes `n_phones`, and the step (in ms) between consecutive
-units `step_units`.
+You can use the [`phoneme_discovery`][discophon.evaluate.phoneme_discovery] function with `units` of type [`Units`][discophon.data.Units], and `phones` of type
+[`Phones`][discophon.data.Phones]. You also need to set the number of units `n_units`, of phonemes `n_phones`, and the step (in ms)
+between consecutive units `step_units`.
 
 Example:
 
@@ -131,8 +131,4 @@ options:
                         Required. Units frequency in Hz (default: None)
   --kind {triphone,phoneme}
                         Triphone- or phoneme-based ABX (default: triphone)
-```
-
-```
-
 ```

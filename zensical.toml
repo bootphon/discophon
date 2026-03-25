@@ -84,26 +84,20 @@ link = "https://github.com/bootphon/discophon"
 inventories = [
   "https://docs.python.org/3/objects.inv",
   "https://docs.xarray.dev/en/stable/objects.inv",
+  "https://joblib.readthedocs.io/en/stable/objects.inv",
 ]
-paths = ["src"]
 
 [project.plugins.mkdocstrings.handlers.python.options]
-backlinks = "tree"
-heading_level = 4
+docstring_section_style = "list"
+filters = "public"
+line_length = 88
+members_order = "source"
+merge_init_into_class = true
 separate_signature = true
-show_bases = false
-show_source = false
-parameter_headings = true
+show_overloads = false
 show_root_heading = true
 show_signature_annotations = true
-docstring_options = { "ignore_init_summary" = true }
-docstring_section_style = "list"
-# filters = "public"
-inherited_members = true
-merge_init_into_class = true
-show_root_full_path = false
+show_source = false
 show_symbol_type_heading = true
 show_symbol_type_toc = true
 signature_crossrefs = true
-summary = true
-unwrap_annotated = true

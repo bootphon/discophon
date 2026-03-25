@@ -1,4 +1,9 @@
-"""ABX discriminability."""
+"""ABX discriminability.
+
+We split this part of the evaluation in a separate module because it's optional
+and takes more time to compute. If you want to use it, install `fastabx` either
+with `pip install discophon[abx]` or `pip install fastabx`.
+"""
 
 from pathlib import Path
 from typing import Literal, TypedDict, overload
@@ -12,6 +17,8 @@ except ImportError as error:
         "fastabx is required for ABX evaluation. "
         "Please install it with `pip install discophon[abx]` or `pip install fastabx`."
     ) from error
+
+__all__ = ["continuous_abx", "discrete_abx"]
 
 
 class TriphoneABX(TypedDict):
@@ -78,7 +85,20 @@ def discrete_abx(
     frequency: float,
     kind: Literal["triphone", "phoneme"] = "triphone",
 ) -> TriphoneABX | PhonemeABX:
-    """ABX on discrete units."""
+    """ABX on discrete units.
+
+    Arguments:
+        path_item: Path to the ABX item file
+        path_units: Path to the predicted units: JSONL file with keys `file` ([`str`][]) and `units` (`list[int]`).
+        frequency: Feature frequency in Hz. It is the inverse of the `step_units` parameter used in other functions.
+        kind: Kind of representations to consider. If `phoneme`, we also compute the ABX in the "any" context
+              condition, if addition of "within" context.
+
+    Returns:
+        Dictionary of ABX discriminabilities with keys `"within_speaker"` and `"across_speaker"` if `kind` is
+            `"phoneme"`, and with keys `"within_speaker_within_context"`, `"across_speaker_within_context"`,
+            `"within_speaker_any_context"`, and `"across_speaker_any_context"` otherwise.
+    """
     dataset = Dataset.from_item_and_units(path_item, path_units, frequency, audio_key="file")
     match kind:
         case "triphone":
@@ -124,7 +144,20 @@ def continuous_abx(
     frequency: float,
     kind: Literal["triphone", "phoneme"] = "triphone",
 ) -> TriphoneABX | PhonemeABX:
-    """ABX on continuous representations."""
+    """ABX on continuous representations.
+
+    Arguments:
+        path_item: Path to the ABX item file
+        path_features: Path to the extracted features: folder of `.pt` files with names corresponding to the file ids.
+        frequency: Feature frequency in Hz. It is the inverse of the `step_units` parameter used in other functions.
+        kind: Kind of representations to consider. If `phoneme`, we also compute the ABX in the "any" context
+              condition, if addition of "within" context.
+
+    Returns:
+        Dictionary of ABX discriminabilities with keys `"within_speaker"` and `"across_speaker"` if `kind` is
+            `"phoneme"`, and with keys `"within_speaker_within_context"`, `"across_speaker_within_context"`,
+            `"within_speaker_any_context"`, and `"across_speaker_any_context"` otherwise.
+    """
     dataset = Dataset.from_item(path_item, path_features, frequency)
     match kind:
         case "triphone":

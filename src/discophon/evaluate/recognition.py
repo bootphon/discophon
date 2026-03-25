@@ -40,13 +40,24 @@ def edit_distance[T](hypothesis: Sequence[T], target: Sequence[T]) -> int:
 
 
 @validate_first_two_arguments_same_keys
-def phone_error_rate(hypothesis: Phones, target: Phones, *, n_jobs: int = -1) -> float:
-    """Phone error rate: total edit distances divided by the length of the target corpus."""
+def phone_error_rate(predicted_phones_from_units: Phones, gold_phones: Phones, *, n_jobs: int = -1) -> float:
+    """Phone error rate.
+
+    Total edit distances divided by the total length of the target annotations.
+
+    Arguments:
+        predicted_phones_from_units: Predicted phones obtained with [`phone_assignments`][]
+        gold_phones: Gold phone annotations
+        n_jobs: The maximum number of concurrently runnings jobs to be passed to [`joblib.Parallel`][]
+
+    Returns:
+        Phone error rate. Multiply it by 100 to get a percentage.
+    """
     results = Parallel(n_jobs=n_jobs)(
         delayed(lambda x, y: (edit_distance(x, y), len(y)))(
-            deduplicate(hypothesis[fileid]), deduplicate(target[fileid])
+            deduplicate(predicted_phones_from_units[fileid]), deduplicate(gold_phones[fileid])
         )
-        for fileid in hypothesis
+        for fileid in predicted_phones_from_units
     )
     edit_distances, lengths = zip(*results, strict=True)
     return sum(edit_distances) / sum(lengths)

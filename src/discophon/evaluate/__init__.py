@@ -1,18 +1,16 @@
-"""Evaluation package for the Phoneme Discovery benchmark."""
+"""DiscoPhon evaluation module."""
 
-from discophon.evaluate.assignment import coocurrence_matrix, get_assignment, relabel_assignment
+from discophon.evaluate.assignment import coocurrence_matrix, phone_assignments
 from discophon.evaluate.discovery import phoneme_discovery
-from discophon.evaluate.quality import pnmi, probability_phone_given_unit
+from discophon.evaluate.quality import pnmi
 from discophon.evaluate.recognition import phone_error_rate
-from discophon.evaluate.segmentation import boundary_detection
+from discophon.evaluate.segmentation import phone_segmentation
 
 __all__ = [
-    "boundary_detection",
     "coocurrence_matrix",
-    "get_assignment",
+    "phone_assignments",
     "phone_error_rate",
+    "phone_segmentation",
     "phoneme_discovery",
     "pnmi",
-    "probability_phone_given_unit",
-    "relabel_assignment",
 ]

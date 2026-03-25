@@ -4,17 +4,30 @@ import itertools
 from collections.abc import Iterable
 from decimal import Decimal
 from pathlib import Path
-from typing import TypedDict
+from typing import Literal, TypedDict
 
 import numpy as np
 import polars as pl
 import textgrids
 
+__all__ = ["STEP_PHONES", "STEP_UNITS", "Phones", "Units", "read_gold_annotations", "read_submitted_units"]
+
+Splits = Literal["all", "train-10min", "train-1h", "train-10h", "train-100h", "train-all", "dev", "test"]
+
 type Units = dict[str, list[int]]
+"""Type of the discrete units: dictionary mapping file identifiers to lists of integers."""
+
 type Phones = dict[str, list[str]]
+"""Type of the gold or predicted phones: dictionary mapping file identifiers to list of strings."""
+
+STEP_PHONES = 10
+"""Constant step in ms between consecutive phone annotations. Override it in function parameters only if you
+use new annotations built differently."""
+
+STEP_UNITS = 20
+"""Default step in ms between consecutive units. Corresponds to 50 Hz model. Can be overridden easily."""
 
 SAMPLE_RATE = 16_000
-STEP_PHONES = 10
 DEFAULT_N_UNITS = 256
 FILE, ONSET, OFFSET, PHONE, UNITS = "#file", "onset", "offset", "#phone", "units"
 
@@ -125,7 +138,7 @@ def decimal_series_is_integer(series: pl.Series) -> bool:
     )
 
 
-def read_gold_annotations_as_dataframe(source: str | Path, *, step_in_ms: int = STEP_PHONES) -> pl.DataFrame:
+def read_gold_annotations_as_dataframe(source: str | Path, *, step_in_ms: int) -> pl.DataFrame:
     phones_per_seconds = 1000 // step_in_ms
     if step_in_ms * phones_per_seconds != 1000:
         raise ValueError(f"step_in_ms={step_in_ms} is not valid, it should be a divisor of 1000.")
@@ -145,15 +158,21 @@ def read_gold_annotations_as_dataframe(source: str | Path, *, step_in_ms: int = 
     return df.with_columns(pl.col("num").cast(pl.Int64))
 
 
-def read_gold_annotations(source: str | Path, *, step_in_ms: int = STEP_PHONES) -> Phones:
-    """Read the gold annotations and returns a mapping between file names to the list of phonemes.
+def read_gold_annotations(source: str | Path) -> Phones:
+    """Read the gold annotations and return a mapping between file names to the list of phonemes.
 
-    There will be one phoneme each `step_in_ms` millisecond.
+    There will be one phone every 10 ms.
+
+    Arguments:
+        source: Path to the annotations file
+
+    Returns:
+        Mapping between file ids and phones
     """
     return {
         audio: row[PHONE]
         for audio, row in (
-            read_gold_annotations_as_dataframe(source, step_in_ms=step_in_ms)
+            read_gold_annotations_as_dataframe(source, step_in_ms=STEP_PHONES)
             .with_columns(pl.col(PHONE).repeat_by("num"))
             .group_by(FILE, maintain_order=True)
             .agg(pl.col(PHONE).explode())
@@ -164,7 +183,14 @@ def read_gold_annotations(source: str | Path, *, step_in_ms: int = STEP_PHONES) 
 
 
 def read_submitted_units(source: str | Path) -> Units:
-    """Read the units from a JSONL file. Must only have fields named 'file' (str) and 'units' (list[int])."""
+    """Read the units from a JSONL file. Must only have fields named `file` ([`str`][]) and `units` (`list[int]`).
+
+    Arguments:
+        source: Path to the units file
+
+    Returns:
+        Mapping between file ids and units
+    """
     return {
         audio: row[UNITS]
         for audio, row in (

@@ -26,7 +26,7 @@ First install
 pip install discophon[baselines]
 ```
 
-This will install the `spidr` and [`minimal_hubert`](https://github.com/mxmpl/minimal_hubert) libraries.
+This will install the [`spidr`](https://github.com/facebookresearch/spidr) and [`minimal_hubert`](https://github.com/mxmpl/minimal_hubert) libraries.
 
 ### Datasets
 

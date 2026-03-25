@@ -55,6 +55,7 @@ dev = [
 ]
 docs = [
   "mkdocstrings-python>=2.0.3",
+  "ruff>=0.15.7",
   "zensical>=0.0.29",
 ]
 
@@ -120,7 +121,7 @@ select = [
 "tests/*.py" = ["S101"]
 
 [tool.ruff.lint.flake8-tidy-imports]
-banned-module-level-imports = ["discophon.evaluate.abx"]
+banned-module-level-imports = ["discophon.abx"]
 
 [tool.ruff.lint.pylint]
 allow-magic-value-types = ["int", "str"]

@@ -13,12 +13,7 @@
     line-height: 1.5;
 }
 
-.md-typeset {
-    letter-spacing: 0;
-}
-
 .md-typeset .phoneme-table table {
     font-family: "Charis";
-    font-size: 0.55rem;
-    line-height: 1;
+    line-height: 1.2;
 }

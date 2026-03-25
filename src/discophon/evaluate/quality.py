@@ -16,9 +16,18 @@ def probability_phone_given_unit(coocurrence: DataArray) -> DataArray:
     return proba[:, units_order].rename("P(phone|unit)")
 
 
-def pnmi(coocurrence: DataArray, *, eps: float = 1e-10) -> float:
-    """Phone normalized mutual information."""
+def pnmi(coocurrence: DataArray) -> float:
+    """Compute PNMI.
+
+    Args:
+        coocurrence: Coocurrence matrix between `units` and the underlying phones, computed with
+            [`coocurrence_matrix`][]
+
+    Returns:
+        Phone-normalized mutual information (between 0 and 1)
+    """
     count = coocurrence.values
+    eps = 1e-10
     proba = count / count.sum()
     px, py = proba.sum(axis=1, keepdims=True), proba.sum(axis=0, keepdims=True)
     mutual_info = (proba * np.log(proba / (px @ py + eps) + eps)).sum()
