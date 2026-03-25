@@ -46,7 +46,8 @@ def phone_error_rate(predicted_phones_from_units: Phones, gold_phones: Phones, *
     Total edit distances divided by the total length of the target annotations.
 
     Arguments:
-        predicted_phones_from_units: Predicted phones obtained with [`phone_assignments`][]
+        predicted_phones_from_units: Predicted phones obtained with
+            [`phone_assignments`][discophon.evaluate.phone_assignments]
         gold_phones: Gold phone annotations
         n_jobs: The maximum number of concurrently runnings jobs to be passed to [`joblib.Parallel`][]
 

@@ -141,7 +141,8 @@ def phone_segmentation(
     """Phone segmentation evaluation.
 
     Arguments:
-        predicted_phones_from_units: Predicted phones obtained with [`phone_assignments`][]
+        predicted_phones_from_units: Predicted phones obtained with
+            [`phone_assignments`][discophon.evaluate.phone_assignments]
         gold_phones: Gold phone annotations
         margin_in_ms: Left and right margin around each gold boundaries (in ms).
             Predicted boundaries that fall in the resulting windows are considered correct.

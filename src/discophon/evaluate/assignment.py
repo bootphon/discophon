@@ -147,7 +147,7 @@ def phone_assignments(units: Units, coocurrence: DataArray, *, kind: Literal["ma
     Arguments:
         units: Predicted discrete units
         coocurrence: Coocurrence matrix between `units` and the underlying phones, computed with
-            [`coocurrence_matrix`][]
+            [`coocurrence_matrix`][discophon.evaluate.coocurrence_matrix]
         kind: Kind of assignment.
 
     Returns:

@@ -21,7 +21,7 @@ def pnmi(coocurrence: DataArray) -> float:
 
     Args:
         coocurrence: Coocurrence matrix between `units` and the underlying phones, computed with
-            [`coocurrence_matrix`][]
+            [`coocurrence_matrix`][discophon.evaluate.coocurrence_matrix]
 
     Returns:
         Phone-normalized mutual information (between 0 and 1)
