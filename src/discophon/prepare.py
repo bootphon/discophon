@@ -122,7 +122,11 @@ if __name__ == "__main__":
         help="download benchmark data",
     )
     parser_download.add_argument("data", help="path to data directory", type=Path)
-    parser_audio = subparsers.add_parser("audio", description="Prepare audio files", help="prepare audio files")
+    parser_audio = subparsers.add_parser(
+        "commonvoice",
+        description="Prepare Common Voice data",
+        help="prepare Common Voice data",
+    )
     parser_audio.add_argument("data", help="path to data directory", type=Path)
     parser_audio.add_argument(
         "code",

@@ -17,14 +17,14 @@ nav = [
   { "Leaderboard" = [
     "leaderboard/index.md",
   ] },
-  { "Docs" = [
-    "docs/index.md",
-    "docs/prepare.md",
-    "docs/evaluate.md",
-    "docs/submission.md",
-    "docs/baselines.md",
-    "docs/api.md",
-  ] }
+  { "User guide" = [
+    "guide/index.md",
+    "guide/prepare.md",
+    "guide/evaluate.md",
+    "guide/submission.md",
+    "guide/baselines.md",
+  ] },
+  { "API reference" = ["api/index.md"]}
 ]
 extra_javascript = [
   "javascripts/katex.js",
@@ -79,6 +79,10 @@ link = "https://arxiv.org/abs/2603.18612"
 [[project.extra.social]]
 icon = "fontawesome/brands/github"
 link = "https://github.com/bootphon/discophon"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/python"
+link = "https://pypi.org/project/discophon"
 
 [project.plugins.mkdocstrings.handlers.python]
 inventories = [

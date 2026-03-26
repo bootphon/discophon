@@ -1,27 +1,42 @@
 # Evaluation
 
+Their are two interfaces to evaluate your predicted units:
+
+- High level with [`discophon.benchmark`][discophon.benchmark], which will run the complete evaluation suite on
+  all available units.
+- Low level with [`discophon.evaluate`][discophon.evaluate], where you have fine-grain control over the metrics.
+
 ## High level
 
 To run the complete benchmark evaluation, you first need to save your predicted units to JSONL files organized like this:
 
 ```console
 units/
-├── units-deu-test.jsonl
-├── units-swa-test.jsonl
-├── units-tam-test.jsonl
-└── ...
+├── units-cmn-dev.jsonl
+├── units-cmn-test.jsonl
+├── units-deu-dev.jsonl
+├── ...
+├── units-wol-dev.jsonl
+└── units-wol-test.jsonl
 ```
 
-The filenames should be in the format `units-{language}-{split}.jsonl`, where `language` is the language code, and `split` is the dataset split (e.g., `test` or `dev`).
+The filenames should be in the format `units-{language}-{split}.jsonl`, where `language` is the language code[^1],
+and `split` is the dataset split (`test` or `dev`).
+
+[^1]:
+    dev languages: `deu`, `swa`, `tam`, `tha`, `tur`, `ukr`.
+
+    test languages: `cmn`, `eng`, `eus`, `fra`, `jpn`, `wol`. 
 
 Let's say you have saved the benchmark data in `./dataset`.
-Then, for example, you can run the benchmark evaluation on phoneme discovery with a many-to-one mapping on all available languages and splits like this:
+Then, for example, you can run the benchmark evaluation on phoneme discovery with a many-to-one mapping on all
+available languages and splits like this:
 
 ```python
 from discophon.benchmark import benchmark_discovery
 
 df = benchmark_discovery("./dataset", "./units", kind="many-to-one")
-print(df) # pl.DataFrame with the results for each language and split
+print(df)  # pl.DataFrame with the results for each language and split
 ```
 
 Use the functions [`benchmark_abx_continuous`][discophon.benchmark.benchmark_abx_continuous] or

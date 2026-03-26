@@ -21,7 +21,7 @@ will download:
 - Audio data for English, French, German, and Wolof [^1]
 - Symlinks to audio files for each split (train-10h, train-1h, train-10min, dev, test)
 
-[^1]: Audio data for the other languages is from CommonVoice and cannot be redistributed. See the following section.
+[^1]: Audio data for the other languages is from Common Voice and cannot be redistributed. See the following section.
 
 ## Download and process Common Voice data
 
@@ -54,7 +54,7 @@ Now resample audio files and convert them to WAV with the command:
 
 ```bash
 for code in swa tam tha tur ukr cmn eus jpn; do
-    python -m discophon.prepare audio $DATA $code
+    python -m discophon.prepare commonvoice $DATA $code
 done
 ```
 

@@ -46,8 +46,9 @@ def benchmark_discovery(
     Args:
         path_dataset: Path to the DiscoPhon dataset
         path_units: Path to the directory with the predicted units
-        kind: Kind of assignment. If it is `many-to-one`, the number of units is set to the default (256).
-              Otherwise, it is set to the number of phonemes plus one.
+        kind: Kind of assignment. If it is `many-to-one`, the number of units is set to the default
+            ([`DEFAULT_N_UNITS`][discophon.data.DEFAULT_N_UNITS]).
+            Otherwise, it is set to the number of phonemes plus one.
         step_units: Step between consecutive units (in ms).
 
     Returns:
@@ -126,7 +127,7 @@ def benchmark_abx_continuous(
 
     Args:
         path_dataset: Path to the DiscoPhon dataset
-        path_units: Path to the directory with the extracted features
+        path_features: Path to the directory with the extracted features
         kind: Kind of representations to use for ABX computation.
         step_units: Step between consecutive features (in ms).
             The feature frequency will be set to `1_000 // step_units`

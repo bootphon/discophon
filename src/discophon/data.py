@@ -10,7 +10,15 @@ import numpy as np
 import polars as pl
 import textgrids
 
-__all__ = ["STEP_PHONES", "STEP_UNITS", "Phones", "Units", "read_gold_annotations", "read_submitted_units"]
+__all__ = [
+    "DEFAULT_N_UNITS",
+    "STEP_PHONES",
+    "STEP_UNITS",
+    "Phones",
+    "Units",
+    "read_gold_annotations",
+    "read_submitted_units",
+]
 
 Splits = Literal["all", "train-10min", "train-1h", "train-10h", "train-100h", "train-all", "dev", "test"]
 
@@ -27,8 +35,10 @@ use new annotations built differently."""
 STEP_UNITS = 20
 """Default step in ms between consecutive units. Corresponds to 50 Hz model. Can be overridden easily."""
 
-SAMPLE_RATE = 16_000
 DEFAULT_N_UNITS = 256
+"""Default number of distinct units in the many-to-one evaluation."""
+
+SAMPLE_RATE = 16_000
 FILE, ONSET, OFFSET, PHONE, UNITS = "#file", "onset", "offset", "#phone", "units"
 
 
