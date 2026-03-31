@@ -20,7 +20,7 @@ The remaining languages are sourced from Common Voice, using alignments from the
 some specific phonetic notations by folding them back to a single IPA symbol representing
 the underlying constrastive category.
 
-See [this page](../docs/prepare.md) to download and pre-process data.
+See [this page](../guide/prepare.md) to download and pre-process data.
 
 ## Statistics
 

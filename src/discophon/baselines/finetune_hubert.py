@@ -111,6 +111,17 @@ def finetune_hubert(  # noqa: PLR0914
     n_clusters: int,
     target_layer: int,
 ) -> None:
+    """Finetune HuBERT on DiscoPhon data with the default configuration.
+
+    Args:
+        name: Name of the run
+        project: Wandb project
+        workdir: Path to workdir
+        checkpoint: Path to pretrained checkpoint
+        manifest: Path to the manifest
+        n_clusters: Number of clusters
+        target_layer: Target layer
+    """
     max_steps, seed = 20_000, 0
     with ExitStack() as stack:
         set_seed(seed)

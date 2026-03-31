@@ -15,8 +15,8 @@ Baselines[^1]:
 
 Datasets:
 
-- MMS-ulab segmented dataset: https://huggingface.co/coml/mmsulab
-- VP-20 dataset: https://huggingface.co/coml/vp20
+- MMS-ulab segmented dataset: https://huggingface.co/datasets/coml/mmsulab
+- VP-20 dataset: https://huggingface.co/datasets/coml/vp20
 
 ### Models
 
@@ -29,10 +29,6 @@ pip install discophon[baselines]
 ```
 
 #### SpidR checkpoints
-
-!!! warning
-
-    Some APIs may not be implemented yet
 
 ```python
 import joblib
@@ -172,7 +168,17 @@ Coming soon! For now, check out
 
 ### Finetuning
 
-Coming soon!
+```bash
+python -m discophon.baselines.finetune_spidr \
+    spidr-ft \
+    discophon-ft \
+    ./workdir \
+    ./path/to/spidr/pretrained/checkpoint.pt \
+    ./path/to/manifest.csv
+```
+
+or use the [`finetune_spidr`][discophon.baselines.finetune_spidr]
+or [`finetune_hubert`][discophon.baselines.finetune_spidr].
 
 ### Discrete units
 

@@ -13,7 +13,7 @@ Given only 10 hours of speech in an unseen language, models must produce discret
   ```bash
   pip install discophon
   ```
-- [Follow the tutorials](./docs/index.md) to download data, evaluate models, and prepare your submission.
+- [Follow the tutorials](./guide/index.md) to download data, evaluate models, and prepare your submission.
 - [Current leaderboard](./leaderboard/index.md).
 
 ## References
