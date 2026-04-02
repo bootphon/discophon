@@ -1,5 +1,7 @@
 """CLI entry-point for phoneme discovery evaluation."""
 
+from discophon.languages import get_language
+
 import argparse
 from pathlib import Path
 
@@ -14,7 +16,8 @@ if __name__ == "__main__":
     )
     parser.add_argument("units", type=Path, help="Path to predicted units")
     parser.add_argument("phones", type=Path, help="Path to gold alignments")
-    parser.add_argument("--n-phonemes", type=int, required=True, help="Required. Number of phonemes")
+    parser.add_argument("--language", type=str, help="Evaluated language. Either use this or `--n-phonemes`")
+    parser.add_argument("--n-phonemes", type=int, help="Number of phonemes. Either use this or `--language`")
     parser.add_argument("--n-units", type=int, required=True, help="Required. Number of units")
     parser.add_argument(
         "--kind",
@@ -25,12 +28,18 @@ if __name__ == "__main__":
     )
     parser.add_argument("--step-units", type=int, default=20, help="Step between units (in ms)")
     args = parser.parse_args()
+    if args.n_phonemes is not None:
+        n_phonemes = args.n_phonemes
+    elif args.language is not None:
+        n_phonemes = get_language(args.language).n_phonemes
+    else:
+        parser.error("Either specify `--language` or `--n-phonemes` in order to specify the number of target phonemes")
     print(
         phoneme_discovery(
             read_submitted_units(args.units),
             read_gold_annotations(args.phones),
             n_units=args.n_units,
-            n_phonemes=args.n_phonemes,
+            n_phonemes=n_phonemes,
             step_units=args.step_units,
             kind=args.kind,
         )
