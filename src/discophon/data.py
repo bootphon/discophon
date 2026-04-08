@@ -148,27 +148,23 @@ def decimal_series_is_integer(series: pl.Series) -> bool:
     )
 
 
-def read_gold_annotations_as_dataframe(source: str | Path, *, step_in_ms: int) -> pl.DataFrame:
-    phones_per_seconds = 1000 // step_in_ms
-    if step_in_ms * phones_per_seconds != 1000:
-        raise ValueError(f"step_in_ms={step_in_ms} is not valid, it should be a divisor of 1000.")
+def read_gold_annotations_as_dataframe(source: str | Path) -> pl.DataFrame:
     df = pl.read_csv(source, separator=" ", columns=[FILE, ONSET, OFFSET, PHONE], schema_overrides=[pl.String] * 4)
-    df = df.with_columns(
+    return df.with_columns(
         df[ONSET].str.to_decimal(inference_length=len(df)),
         df[OFFSET].str.to_decimal(inference_length=len(df)),
     ).sort(FILE, ONSET)
-    if num_invalid_rows(df, step_in_ms=step_in_ms) > 0:
-        raise ValueError(
+
+
+class AnnotationsError(ValueError):
+    def __init__(self, step_in_ms: int) -> None:
+        super().__init__(
             "Invalid annotations: each entry should start where the previous one has ended, "
             f"and last at least {step_in_ms} ms."
         )
-    df = df.with_columns(num=(pl.col(OFFSET) - pl.col(ONSET)) * phones_per_seconds)
-    if not decimal_series_is_integer(df["num"]):
-        raise ValueError(f"Each phone should last a multiple of {step_in_ms} ms, but found some that don't.")
-    return df.with_columns(pl.col("num").cast(pl.Int64))
 
 
-def read_gold_annotations(source: str | Path) -> Phones:
+def read_gold_annotations(source: str | Path, *, step_in_ms: int = STEP_PHONES) -> Phones:
     """Read the gold annotations and return a mapping between file names to the list of phonemes.
 
     There will be one phone every 10 ms.
@@ -179,10 +175,19 @@ def read_gold_annotations(source: str | Path) -> Phones:
     Returns:
         Mapping between file ids and phones
     """
+    phones_per_seconds = 1000 // step_in_ms
+    if step_in_ms * phones_per_seconds != 1000:
+        raise ValueError(f"step_in_ms={step_in_ms} is not valid, it should be a divisor of 1000.")
+    df = read_gold_annotations_as_dataframe(source)
+    if num_invalid_rows(df, step_in_ms=step_in_ms) > 0:
+        raise AnnotationsError(step_in_ms)
+    df = df.with_columns(num=(pl.col(OFFSET) - pl.col(ONSET)) * phones_per_seconds)
+    if not decimal_series_is_integer(df["num"]):
+        raise ValueError(f"Each phone should last a multiple of {step_in_ms} ms, but found some that don't.")
     return {
         audio: row[PHONE]
         for audio, row in (
-            read_gold_annotations_as_dataframe(source, step_in_ms=STEP_PHONES)
+            df.with_columns(pl.col("num").cast(pl.Int64))
             .with_columns(pl.col(PHONE).repeat_by("num"))
             .group_by(FILE, maintain_order=True)
             .agg(pl.col(PHONE).explode())
