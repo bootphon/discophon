@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>TextGrid Browser</title>
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                background: #1a1a2e;
+                color: #e0e0e0;
+                height: 100vh;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+            
+            /* Viewer */
+            #viewer {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+            
+            /* Hidden file inputs */
+            .hidden-input { display: none; }
+            
+            /* Toolbar */
+            #toolbar {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 8px 16px;
+                background: #16213e;
+                border-bottom: 1px solid #2a2a4a;
+                flex-shrink: 0;
+            }
+            #toolbar button {
+                padding: 4px 10px;
+                background: #2a2a4a;
+                color: #e0e0e0;
+                border: 1px solid #3a3a5a;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 12px;
+            }
+            #toolbar button:hover { background: #3a3a5a; }
+            #toolbar button.active { background: #7b7bff; border-color: #7b7bff; }
+            #time-display {
+                margin-left: auto;
+                font-size: 13px;
+                font-family: monospace;
+                color: #aaa;
+            }
+            
+            /* Canvas area */
+            #canvas-container {
+                flex: 1;
+                overflow-y: auto;
+                overflow-x: hidden;
+                position: relative;
+            }
+            canvas {
+                display: block;
+                width: 100%;
+            }
+        </style>
+    </head>
+    <body>
+
+        <input type="file" id="audio-input" class="hidden-input" accept="audio/*">
+        <input type="file" id="textgrid-input" class="hidden-input" accept=".TextGrid,.textgrid">
+
+        <div id="viewer">
+            <div id="toolbar">
+                <button id="play-btn" title="Shortcut: Space / Tab">&#9654; Play</button>
+                <button id="zoom-in-btn" title="Shortcut: +">+ Zoom In</button>
+                <button id="zoom-out-btn" title="Shortcut: -">- Zoom Out</button>
+                <button id="fit-btn">Fit All</button>
+                <button id="focus-btn" title="Shortcut: =">Focus</button>
+                <span id="time-display">0:00.000 / 0:00.000</span>
+                <span style="width:1px;background:#3a3a5a;height:20px;"></span>
+                <button id="load-audio-btn">Load Audio</button>
+                <button id="load-textgrid-btn">Load TextGrid</button>
+            </div>
+            <div id="canvas-container">
+                <canvas id="main-canvas"></canvas>
+            </div>
+        </div>
+
+        <script src="javascripts/textgrid.js"></script>
+    </body>
+</html>
