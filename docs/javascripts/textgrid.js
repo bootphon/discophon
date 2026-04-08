@@ -140,8 +140,8 @@ document.body.addEventListener('drop', e => {
 
 // ── Viewer ───────────────────────────────────────────────────────
 const RULER_HEIGHT = 28;
-const WAVEFORM_HEIGHT = 160;
-const TIER_HEIGHT = 64;
+const WAVEFORM_HEIGHT = 200;
+const TIER_HEIGHT = 100;
 const TIER_GAP = 2;
 
 let canvas, ctx, dpr, canvasW, canvasH;
