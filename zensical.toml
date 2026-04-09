@@ -24,7 +24,7 @@ nav = [
     "guide/submission.md",
     "guide/baselines.md",
   ] },
-  { "API reference" = ["api/index.md"]}
+  { "API reference" = ["api/index.md"] }
 ]
 extra_javascript = [
   "javascripts/katex.js",

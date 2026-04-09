@@ -128,6 +128,7 @@ max-args = 10
 max-statements = 75
 
 [tool.typos.default.extend-words]
+interm = "interm"
 tha = "tha"
 Charis = "Charis"
 

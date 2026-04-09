@@ -1,12 +1,11 @@
 """CLI entry-point for phoneme discovery evaluation."""
 
-from discophon.languages import get_language
-
 import argparse
 from pathlib import Path
 
 from discophon.data import read_gold_annotations, read_submitted_units
 from discophon.evaluate.discovery import phoneme_discovery
+from discophon.languages import get_language
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
