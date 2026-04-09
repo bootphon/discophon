@@ -31,6 +31,44 @@ def read_textgrid(path: str | Path) -> dict[str, pl.DataFrame]:
     raise ValueError(path)
 
 
+def write_textgrid(df: pl.DataFrame, path: str | Path, *, tier_name: str = "phones") -> None:
+    interval_array = (
+        df.select(pl.col("phone").alias("label"), pl.col(ONSET).alias("begin"), pl.col(OFFSET).alias("end"))
+        .sort("begin")
+        .to_dicts()
+    )
+    tg = textgrids.TextGrid()
+    tg.interval_tier_from_array(tier_name, interval_array)
+    tg.write(path)
+
+
+def read_rttm(source: str | Path) -> pl.DataFrame:
+    return pl.read_csv(
+        source,
+        has_header=False,
+        new_columns=[
+            "Type",
+            "File ID",
+            "Channel ID",
+            "Turn Onset",
+            "Turn Duration",
+            "Orthography Field",
+            "Speaker Type",
+            "Speaker Name",
+            "Confidence Score",
+            "Signal Lookahead Time",
+        ],
+        separator=" ",
+        schema_overrides={
+            "Type": pl.String,
+            "File ID": pl.String,
+            "Turn Onset": pl.Float64,
+            "Turn Duration": pl.Float64,
+        },
+        null_values="<NA>",
+    )
+
+
 def num_invalid_rows(df: pl.DataFrame, *, step_in_ms: int) -> int:
     """For each file, the first entry starts at 0 and each subsequent entry starts where the previous has ended."""
     incorrect_duration = ~(step_in_ms / 1000 <= pl.col(OFFSET) - pl.col(ONSET))
@@ -62,14 +100,14 @@ def read_gold_annotations_as_dataframe(source: str | Path, *, step_in_ms: int = 
     phones_per_seconds = 1000 // step_in_ms
     assert step_in_ms * phones_per_seconds == 1000
     df = pl.read_csv(source, separator=" ", columns=[FILE, ONSET, OFFSET, PHONE], schema_overrides=[pl.String] * 4)
-    df = df.with_columns(
+    return df.with_columns(
         df[ONSET].str.to_decimal(inference_length=len(df)),
         df[OFFSET].str.to_decimal(inference_length=len(df)),
     ).sort(FILE, ONSET)
     # assert num_invalid_rows(df, step_in_ms=step_in_ms) == 0
-    df = df.with_columns(num=(pl.col(OFFSET) - pl.col(ONSET)) * phones_per_seconds)
-    assert decimal_series_is_integer(df["num"])
-    return df.with_columns(pl.col("num").cast(pl.Int64))
+    # df = df.with_columns(num=(pl.col(OFFSET) - pl.col(ONSET)) * phones_per_seconds)
+    # assert decimal_series_is_integer(df["num"])
+    # return df.with_columns(pl.col("num").cast(pl.Int64))
 
 
 def read_gold_annotations(source: str | Path, *, step_in_ms: int = 10) -> Phones:

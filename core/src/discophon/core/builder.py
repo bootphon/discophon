@@ -154,6 +154,19 @@ def build_items(df: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFrame]:
     return phoneme, triphone
 
 
+def remove_last_entry_from_item(df: pl.DataFrame) -> pl.DataFrame:
+    return (
+        df.with_columns(
+            pl.when(pl.col("#file") == pl.col("#file").shift(-1))
+            .then(pl.lit(True))
+            .otherwise(pl.lit(False))
+            .alias("not_last")
+        )
+        .filter(pl.col("not_last"))
+        .drop("not_last")
+    )
+
+
 def phone_index() -> pl.Expr:
     return (
         pl.when(pl.col("phone") == "SIL")

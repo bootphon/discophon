@@ -6,7 +6,7 @@ import httpx
 import polars as pl
 import soundfile as sf
 import soxr
-from discophon.core import COMMONVOICE_TO_ISO6393, SAMPLE_RATE, split_for_distributed
+from discophon.core import SAMPLE_RATE, split_for_distributed
 from tqdm import tqdm
 
 Splits = Literal["all", "train-10min", "train-1h", "train-10h", "train-100h", "train-all", "dev", "test"]
@@ -41,7 +41,7 @@ def resample(
     output: str | Path,
     *,
     output_sample_rate: int,
-    quality: Literal["vhq", "hq", "mq", "lq"] = "hq",
+    quality: Literal["vhq", "hq", "mq", "lq"] = "vhq",
 ) -> None:
     audio, input_sample_rate = sf.read(inp)
     resampled = soxr.resample(audio, input_sample_rate, output_sample_rate, quality)
