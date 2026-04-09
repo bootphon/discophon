@@ -111,7 +111,7 @@ def prepare_commonvoice_datasets(path_dataset: str | Path, language: str) -> Non
         raise ValueError(f"Directory {src} does not exist.")
     dest.mkdir(exist_ok=True, parents=True)
     filenames = get_filenames(Path(path_dataset) / "manifest", iso_code, split="all")
-    filenames = filenames[slice(split_across_slurm_array(len(filenames)))]
+    filenames = filenames[slice(*split_across_slurm_array(len(filenames)))]
     for filename in tqdm(filenames, desc="Resampling and converting to WAV"):
         resample(
             src / Path(filename).with_suffix(".mp3"),
