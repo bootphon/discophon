@@ -37,11 +37,11 @@ def split_across_slurm_array(n_total: int) -> tuple[int, int]:
     return start, end
 
 
-def download_file(url: str, dest: str | Path, *, chunk_size: int = 2**20) -> None:
+def download_file(url: str, dest: str | Path, *, chunk_size: int = 2**20, byte_size: int | None = None) -> None:
     with (
-        fsspec.open(url, "rb") as src,
+        fsspec.open(url, "rb", block_size=0) as src,
         Path(dest).open("wb") as dst,
-        tqdm(total=src.size, unit_scale=True, unit_divisor=1024, unit="B") as progress,
+        tqdm(total=byte_size, unit_scale=True, unit_divisor=1024, unit="B") as progress,
     ):
         while chunk := src.read(chunk_size):
             dst.write(chunk)
@@ -56,10 +56,19 @@ def download_benchmark(path_dataset: str | Path) -> None:
     """
     path_dataset = Path(path_dataset)
     path_dataset.mkdir(exist_ok=True, parents=True)
-    download_file("https://cognitive-ml.fr/downloads/discophon/benchmark.tar.gz", path_dataset / "benchmark.tar.gz")
-    with tarfile.open(path_dataset / "benchmark.tar.gz", "r:gz") as tar:
-        tar.extractall(path_dataset, filter="data")
-    (path_dataset / "benchmark.tar.gz").unlink()
+    download_file(
+        "https://cognitive-ml.fr/downloads/phoneme-discovery/discophon_data.tar.gz",
+        path_dataset / "discophon_data.tar.gz",
+        byte_size=5374865887,
+    )
+    with tarfile.open(path_dataset / "discophon_data.tar.gz", "r:gz") as tar:
+        for member in tar:
+            root, parts = member.path.split("/", 1)
+            if root != "discophon_data":
+                raise ValueError(f"Unexpected tarfile: root is {root} but should be 'discophon_data'")
+            member.path = parts
+            tar.extract(member, path=path_dataset, filter="data")
+    (path_dataset / "discophon_data.tar.gz").unlink()
 
 
 def resample(
