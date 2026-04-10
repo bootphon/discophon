@@ -3,21 +3,17 @@
 import logging
 import math
 from contextlib import ExitStack
-from os.path import commonpath
 from pathlib import Path
-from tempfile import NamedTemporaryFile, TemporaryDirectory
+from tempfile import NamedTemporaryFile
 
-import joblib
 import polars as pl
 import torch
 import wandb
 from minimal_hubert import HuBERTPretrain
 from minimal_hubert.data import build_dataloader_with_labels
-from minimal_hubert.kmeans import build_kmeans
-from sklearn.cluster import MiniBatchKMeans
 from spidr.checkpoint import Checkpointer
 from spidr.config import DataConfig, MaskingConfig
-from spidr.data import read_manifest, speech_dataset
+from spidr.data import read_manifest
 from spidr.environment import set_seed, setup_environment, setup_pytorch
 from spidr.tools import AverageMeters, profiler_context
 from torch import GradScaler
@@ -62,73 +58,23 @@ def patch_manifest_with_paths(src: str | Path, dest: str | Path) -> None:
         discophon = Path(src).parent.parent.resolve()
         _, lang, *split = Path(src).stem.split("-")
         audios = discophon / "audio" / lang / "-".join(split)
-        if not audios.is_dir():
-            raise ValueError(audios)
+        assert audios.is_dir()
         manifest = manifest.with_columns(path=pl.concat_str(pl.lit(str(audios) + "/"), "fileid", pl.lit(".wav")))
     manifest.write_ndjson(dest)
 
 
-@torch.no_grad()
-def compute_and_save_hubert_features(
-    path_manifest: str | Path,
-    root_features: str | Path,
-    checkpoint: str | Path,
-    layer: int,
-) -> None:
-    dataset = speech_dataset(path_manifest, normalize=True)
-    root = commonpath(dataset.manifest["path"].to_list())
-    dest = Path(root_features)
-    model = HuBERTPretrain.from_pretrained(checkpoint).cuda()
-    for i in tqdm(range(len(dataset))):
-        name = Path(dataset.manifest[i, "path"]).relative_to(root).with_suffix(".pt")
-        waveform = dataset[i].unsqueeze(0).cuda()
-        features = model.get_intermediate_outputs(waveform, num_layers=layer)[-1].squeeze().cpu()
-        (dest / name.parent).mkdir(exist_ok=True, parents=True)
-        torch.save(features, dest / name)
+def patch_manifest_with_existing_units(src: str | Path, dest: str | Path, units: str | Path) -> None:
+    pl.read_ndjson(src).join(pl.read_ndjson(units), left_on="fileid", right_on="file").write_ndjson(dest)
 
 
-def patch_manifest_with_units(
-    src: str | Path,
-    dest: str | Path,
-    root_features: str | Path,
-    kmeans: MiniBatchKMeans,
-) -> None:
-    root = Path(root_features)
-    manifest = read_manifest(src)
-    new_manifest = []
-    for row in tqdm(manifest.iter_rows(named=True), total=manifest.height):
-        features = torch.load(root / f"{row['fileid']}.pt")
-        units = kmeans.predict(features).tolist()
-        new_manifest.append(row | {"units": units})
-    pl.DataFrame(new_manifest).write_ndjson(dest)
-
-
-def fit_kmeans_from_checkpoint(
-    manifest: str,
-    checkpoint: str | Path,
-    root_features: str | Path,
-    layer: int,
-    n_clusters: int,
-    seed: int,
-) -> MiniBatchKMeans:
-    compute_and_save_hubert_features(manifest, root_features, checkpoint, layer)
-    kmeans = build_kmeans(n_clusters, seed=seed)
-    features = torch.concat([torch.load(p) for p in Path(root_features).rglob("*.pt")])
-    kmeans.fit(features)
-    inertia = -kmeans.score(features) / len(features)
-    logger.info("K-means inertia: %s", inertia)
-    return kmeans
-
-
-def finetune_hubert(  # noqa: PLR0914
+def finetune_hubert(
     name: str,
     project: str,
     workdir: Path,
     checkpoint: Path,
     manifest: str,
     *,
-    n_clusters: int,
-    layer: int,
+    units: Path,
 ) -> None:
     max_steps, seed = 20_000, 0
     with ExitStack() as stack:
@@ -138,12 +84,9 @@ def finetune_hubert(  # noqa: PLR0914
         rundir = workdir / project / name
         rundir.mkdir(parents=True, exist_ok=True)
         temp_manifest = stack.enter_context(NamedTemporaryFile(suffix=".jsonl"))
-        temp_features = stack.enter_context(TemporaryDirectory(prefix="features-", dir=rundir))
         patch_manifest_with_paths(manifest, temp_manifest.name)
-        kmeans = fit_kmeans_from_checkpoint(temp_manifest.name, checkpoint, temp_features, layer, n_clusters, seed)
-        joblib.dump(kmeans, rundir / "kmeans.joblib")
         new_manifest = rundir / "manifest-with-units.jsonl"
-        patch_manifest_with_units(temp_manifest.name, new_manifest, temp_features, kmeans)
+        patch_manifest_with_existing_units(temp_manifest.name, new_manifest, units)
 
         wandb.init(project=project, name=name, mode="offline", dir=workdir)
         stack.callback(wandb.finish)
@@ -216,8 +159,7 @@ if __name__ == "__main__":
     parser.add_argument("workdir", type=Path)
     parser.add_argument("checkpoint", type=Path)
     parser.add_argument("manifest", type=str)
-    parser.add_argument("--n-clusters", type=int, required=True)
-    parser.add_argument("--layer", type=int, required=True)
+    parser.add_argument("--units", type=Path, required=True)
     args = parser.parse_args()
 
     finetune_hubert(
@@ -226,6 +168,5 @@ if __name__ == "__main__":
         args.workdir,
         args.checkpoint,
         args.manifest,
-        n_clusters=args.n_clusters,
-        layer=args.layer,
+        units=args.units,
     )
