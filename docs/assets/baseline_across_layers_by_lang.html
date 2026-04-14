@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    #vis.vega-embed {
+      width: 100%;
+      display: flex;
+    }
+
+    #vis.vega-embed details,
+    #vis.vega-embed details summary {
+      position: relative;
+    }
+  </style>
+  <link rel="stylesheet" href="../stylesheets/vega.css">
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vega@6"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vega-lite@6.1.0"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vega-embed@7"></script>
+</head>
+<body>
+  <div id="vis"></div>
+  <script>
+    (function(vegaEmbed) {
+      var spec = {"config": {"view": {"continuousWidth": 300, "continuousHeight": 300}}, "layer": [{"mark": {"type": "point", "opacity": 0, "size": 0}, "encoding": {"y": {"field": "score", "scale": {"zero": false}, "type": "quantitative"}}, "name": "view_d17ef688b2e76a6a_0", "transform": [{"filter": {"param": "metric_sel"}}, {"filter": "share_y"}]}, {"mark": {"type": "point", "opacity": 0, "size": 0}, "encoding": {"y": {"field": "score", "scale": {"zero": false}, "type": "quantitative"}}, "transform": [{"filter": {"param": "metric_sel"}}, {"filter": {"param": "lang_sel"}}, {"filter": "!share_y"}]}, {"mark": {"type": "line", "point": {"size": 50}}, "encoding": {"color": {"field": "model", "legend": {"columns": 2, "direction": "horizontal", "orient": "top", "titleAnchor": "middle"}, "sort": ["SpidR MMS-ulab", "SpidR VP-20", "HuBERT MMS-ulab", "HuBERT VP-20"], "title": "Model", "type": "nominal"}, "opacity": {"condition": {"param": "param_00338077fd2fb22f", "value": 1}, "value": 0.1}, "strokeWidth": {"condition": {"param": "param_00338077fd2fb22f", "value": 2.5}, "value": 2}, "x": {"axis": {"format": "d", "grid": false}, "field": "layer", "title": "Layer", "type": "quantitative"}, "y": {"field": "score", "scale": {"zero": false}, "title": "Score", "type": "quantitative"}}, "name": "view_50ace78e51b7916e_2", "transform": [{"filter": {"param": "metric_sel"}}, {"filter": {"param": "ft_sel"}}, {"filter": {"param": "lang_sel"}}, {"filter": {"param": "split_sel"}}]}, {"mark": {"type": "point", "filled": true, "size": 100}, "encoding": {"color": {"field": "model", "legend": {"columns": 2, "direction": "horizontal", "orient": "top", "titleAnchor": "middle"}, "sort": ["SpidR MMS-ulab", "SpidR VP-20", "HuBERT MMS-ulab", "HuBERT VP-20"], "title": "Model", "type": "nominal"}, "opacity": {"condition": [{"param": "param_6470dd643994b5a0", "value": 1, "empty": false}], "value": 0}, "strokeWidth": {"condition": {"param": "param_00338077fd2fb22f", "value": 2.5}, "value": 2}, "x": {"axis": {"format": "d", "grid": false}, "field": "layer", "title": "Layer", "type": "quantitative"}, "y": {"field": "score", "scale": {"zero": false}, "title": "Score", "type": "quantitative"}}, "transform": [{"filter": {"param": "metric_sel"}}, {"filter": {"param": "ft_sel"}}, {"filter": {"param": "lang_sel"}}, {"filter": {"param": "split_sel"}}, {"filter": {"param": "param_00338077fd2fb22f"}}]}, {"mark": {"type": "rule", "color": "gray", "tooltip": {"content": "data"}}, "encoding": {"opacity": {"condition": [{"param": "param_6470dd643994b5a0", "value": 0.3, "empty": false}], "value": 0}, "x": {"field": "layer", "type": "quantitative"}}, "name": "view_094211ebd806f2fd_4", "transform": [{"filter": {"param": "metric_sel"}}, {"filter": {"param": "ft_sel"}}, {"filter": {"param": "lang_sel"}}, {"filter": {"param": "split_sel"}}, {"filter": {"param": "param_00338077fd2fb22f"}}, {"pivot": "model", "value": "score", "groupby": ["layer"]}]}], "data": {"url": "scores_by_lang.csv", "format": {}}, "height": 300, "params": [{"name": "param_00338077fd2fb22f", "select": {"type": "point", "fields": ["model"], "toggle": "true"}, "bind": "legend", "views": ["view_50ace78e51b7916e_2"]}, {"name": "param_6470dd643994b5a0", "select": {"type": "point", "fields": ["layer"], "nearest": true, "on": "pointerover"}, "views": ["view_094211ebd806f2fd_4"]}, {"name": "metric_sel", "select": {"type": "point", "fields": ["metric"]}, "bind": {"input": "radio", "options": ["per", "pnmi", "f1", "r_val", "triphone_abx_continuous", "triphone_abx_discrete"], "labels": ["PER", "PNMI", "F1", "R-val", "ABX c.", "ABX d."], "name": "Metric: "}, "value": "per", "views": ["view_d17ef688b2e76a6a_0"]}, {"name": "share_y", "bind": {"input": "checkbox", "name": "y-axis shared: "}, "value": false}, {"name": "lang_sel", "select": {"type": "point", "fields": ["language"]}, "bind": {"input": "radio", "options": ["deu", "swa", "tam", "tha", "tur", "ukr", "cmn", "eng", "eus", "fra", "jpn", "wol"], "name": "Language: "}, "value": "deu", "views": ["view_d17ef688b2e76a6a_0"]}, {"name": "ft_sel", "select": {"type": "point", "fields": ["duration"]}, "bind": {"input": "radio", "options": ["0", "10min", "1h", "10h"], "name": "Finetuning: "}, "value": "10h", "views": ["view_d17ef688b2e76a6a_0"]}, {"name": "split_sel", "select": {"type": "point", "fields": ["split"]}, "bind": {"input": "radio", "options": ["dev", "test"], "name": "Split: "}, "value": "test", "views": ["view_d17ef688b2e76a6a_0"]}], "title": {"text": {"expr": "(metric_sel.metric == 'per' ? 'PER' : metric_sel.metric == 'pnmi' ? 'PNMI' : metric_sel.metric == 'f1' ? 'F1' : metric_sel.metric == 'r_val' ? 'R-val' : metric_sel.metric == 'triphone_abx_continuous' ? 'ABX c.' : metric_sel.metric == 'triphone_abx_discrete' ? 'ABX d.' : metric_sel.metric) + ' \u2014 ' + (lang_sel.language == 'deu' ? 'German' : lang_sel.language == 'swa' ? 'Swahili' : lang_sel.language == 'tam' ? 'Tamil' : lang_sel.language == 'tha' ? 'Thai' : lang_sel.language == 'tur' ? 'Turkish' : lang_sel.language == 'ukr' ? 'Ukrainian' : lang_sel.language == 'cmn' ? 'Mandarin Chinese' : lang_sel.language == 'eng' ? 'English' : lang_sel.language == 'eus' ? 'Basque' : lang_sel.language == 'fra' ? 'French' : lang_sel.language == 'jpn' ? 'Japanese' : lang_sel.language == 'wol' ? 'Wolof' : lang_sel.language) + ' \u2014 ' + split_sel.split + ' split \u2014 ' + (ft_sel.duration == '0' ? 'pretrained' : ft_sel.duration + ' finetuning')"}}, "width": "container", "$schema": "https://vega.github.io/schema/vega-lite/v6.1.0.json"};
+      var embedOpt = {"actions": false, "mode": "vega-lite"};
+
+      function showError(el, error){
+          el.innerHTML = ('<div style="color:red;">'
+                          + '<p>JavaScript Error: ' + error.message + '</p>'
+                          + "<p>This usually means there's a typo in your chart specification. "
+                          + "See the javascript console for the full traceback.</p>"
+                          + '</div>');
+          throw error;
+      }
+      const el = document.getElementById('vis');
+      vegaEmbed("#vis", spec, embedOpt)
+        .catch(error => showError(el, error));
+    })(vegaEmbed);
+
+  </script>
+</body>
+</html>
