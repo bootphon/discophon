@@ -1,0 +1,140 @@
+/* ── Page ── */
+body {
+  font-family: "Roboto", "Segoe UI", system-ui, -apple-system, sans-serif;
+  background: transparent;
+  color: #1e1e2e;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+}
+
+/* ── Vega container ── */
+#vis.vega-embed {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+/* ── Binding panel (all controls) ── */
+.vega-bindings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+  padding: 0.75rem 0;
+  margin-bottom: 0.5rem;
+}
+
+/* DOM order: 1=Finetuning, 2=Language, 3=Split, 4=Metric, 5=Share Y */
+/* Row 1: Finetuning + Metric */
+.vega-bind:nth-child(1) {
+  order: 1;
+}
+
+.vega-bind:nth-child(4) {
+  order: 2;
+}
+
+/* Row 2: Language + Share Y */
+.vega-bind:nth-child(2) {
+  order: 4;
+}
+
+.vega-bind:nth-child(5) {
+  order: 5;
+}
+
+/* Row 3: Split */
+.vega-bind:nth-child(3) {
+  order: 7;
+}
+
+/* Invisible line breaks between rows */
+.vega-bindings::before {
+  content: "";
+  flex-basis: 100%;
+  height: 0;
+  order: 3;
+}
+
+.vega-bindings::after {
+  content: "";
+  flex-basis: 100%;
+  height: 0;
+  order: 6;
+}
+
+/* Each binding row */
+.vega-bind {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* ── Labels ── */
+.vega-bind-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #666;
+  margin-right: 0.1rem;
+  white-space: nowrap;
+}
+
+/* ── Radio buttons ── */
+.vega-bind input[type="radio"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  position: absolute;
+  opacity: 0;
+}
+
+.vega-bind label:has(input[type="radio"]) {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.8rem;
+  color: #888;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: color 0.15s ease, background 0.15s ease;
+  user-select: none;
+}
+
+.vega-bind label:has(input[type="radio"]):hover {
+  color: #333;
+  background: #f0f0f0;
+}
+
+.vega-bind label:has(input[type="radio"]:checked) {
+  color: #fff;
+  background: var(--md-typeset-a-color, #4051b5);
+  font-weight: 500;
+}
+
+/* ── Checkbox ── */
+.vega-bind:has(input[type="checkbox"]) {
+  align-items: center;
+}
+
+.vega-bind input[type="checkbox"] {
+  accent-color: var(--md-typeset-a-color, #4051b5);
+  cursor: pointer;
+  margin: 0;
+}
+
+/* ── Legend ── */
+.vega-legend {
+  cursor: pointer;
+}
+
+.vega-legend-title {
+  font-size: 0.82rem;
+  font-weight: 500;
+  fill: #424242;
+}

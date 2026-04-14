@@ -16,6 +16,7 @@ nav = [
   ] },
   { "Leaderboard" = [
     "leaderboard/index.md",
+    "leaderboard/results.md",
   ] },
   { "User guide" = [
     "guide/index.md",
