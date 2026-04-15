@@ -49,7 +49,8 @@ def merge_metrics(df: pl.DataFrame, metrics: list[str]) -> pl.DataFrame:
             .with_columns(score=(pl.col("score") + pl.col("score_y")) / 2, metric=pl.lit(metric))
             .drop("score_y", "metric_y")
         )
-        assert len(pair) > 0
+        if len(pair) == 0:
+            raise ValueError
         df = pl.concat([df, pair])
     return df
 

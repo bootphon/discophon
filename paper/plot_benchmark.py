@@ -48,7 +48,7 @@ def common_selectors() -> tuple[alt.Selection, alt.Selection, alt.Selection, alt
     return metric_select, split_select, finetuning_select, legend_select
 
 
-def plot_by_lang(data_url: str) -> alt.LayerChart:
+def plot_by_lang(data_url: str) -> alt.LayerChart:  # noqa: PLR0914
     metric_select, split_select, finetuning_select, legend_select = common_selectors()
     language_select = alt.selection_point(
         name="lang_sel",
