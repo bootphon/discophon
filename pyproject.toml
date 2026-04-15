@@ -38,7 +38,7 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 abx = [
-  "fastabx>=0.7.0",
+  "fastabx>=0.7.2",
 ]
 baselines = [
   "minimal-hubert>=0.0.2",
