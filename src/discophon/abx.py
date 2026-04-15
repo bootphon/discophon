@@ -63,7 +63,7 @@ def discrete_abx(
     path_item: str | Path,
     path_units: str | Path,
     *,
-    frequency: float,
+    frequency: int,
     kind: Literal["triphone"],
 ) -> TriphoneABX: ...
 
@@ -73,7 +73,7 @@ def discrete_abx(
     path_item: str | Path,
     path_units: str | Path,
     *,
-    frequency: float,
+    frequency: int,
     kind: Literal["phoneme"],
 ) -> PhonemeABX: ...
 
@@ -82,7 +82,7 @@ def discrete_abx(
     path_item: str | Path,
     path_units: str | Path,
     *,
-    frequency: float,
+    frequency: int,
     kind: Literal["triphone", "phoneme"] = "triphone",
 ) -> TriphoneABX | PhonemeABX:
     """ABX on discrete units.
@@ -122,7 +122,7 @@ def continuous_abx(
     path_item: str | Path,
     path_features: str | Path,
     *,
-    frequency: float,
+    frequency: int,
     kind: Literal["triphone"],
 ) -> TriphoneABX: ...
 
@@ -132,7 +132,7 @@ def continuous_abx(
     path_item: str | Path,
     path_features: str | Path,
     *,
-    frequency: float,
+    frequency: int,
     kind: Literal["phoneme"],
 ) -> PhonemeABX: ...
 
@@ -141,7 +141,7 @@ def continuous_abx(
     path_item: str | Path,
     path_features: str | Path,
     *,
-    frequency: float,
+    frequency: int,
     kind: Literal["triphone", "phoneme"] = "triphone",
 ) -> TriphoneABX | PhonemeABX:
     """ABX on continuous representations.
@@ -190,7 +190,7 @@ if __name__ == "__main__":
         type=Path,
         help="Path to the JSONL with units or directory with continuous features",
     )
-    parser.add_argument("--frequency", required=True, type=float, help="Required. Units frequency in Hz")
+    parser.add_argument("--frequency", required=True, type=int, help="Required. Units frequency in Hz")
     parser.add_argument(
         "--kind",
         type=str,
@@ -202,7 +202,7 @@ if __name__ == "__main__":
     if args.root.is_dir():
         scores = continuous_abx(args.item, args.root, frequency=args.frequency, kind=args.kind)
     elif args.root.suffix == ".jsonl":
-        scores = discrete_abx(args.item, args.units, frequency=args.frequency, kind=args.kind)
+        scores = discrete_abx(args.item, args.root, frequency=args.frequency, kind=args.kind)
     else:
         raise ValueError(args.root)
     print("\n".join(f"{key}:\t{score:.2%}" for key, score in scores.items()))
