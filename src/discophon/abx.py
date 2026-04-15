@@ -52,7 +52,7 @@ def abx(
             by, across = None, ["speaker"]
         case _:
             raise InvalidSpeakerOrContextError
-    subsampler = Subsampler(max_size_group=None, max_x_across=5, seed=seed)
+    subsampler = Subsampler(max_size_group=500 if context == "any" else None, max_x_across=5, seed=seed)
     task = Task(dataset, on="#phone", by=by, across=across, subsampler=subsampler)
     levels = ([("next-phone", "prev-phone")] if context == "within" else []) + ["speaker"]
     return Score(task, distance_name).collapse(levels=levels)
