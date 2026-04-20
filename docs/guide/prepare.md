@@ -21,6 +21,8 @@ will download:
 - Audio data for English, French, German, and Wolof [^1]
 - Symlinks to audio files for each split (train-10h, train-1h, train-10min, dev, test)
 
+If you prefer, you can manually download the data from: https://cognitive-ml.fr/downloads/phoneme-discovery/discophon_data.tar.gz.
+
 [^1]: Audio data for the other languages is from Common Voice and cannot be redistributed. See the following section.
 
 ## Download and process Common Voice data

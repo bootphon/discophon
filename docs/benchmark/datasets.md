@@ -20,7 +20,11 @@ The remaining languages are sourced from Common Voice, using alignments from the
 some specific phonetic notations by folding them back to a single IPA symbol representing
 the underlying constrastive category.
 
-See [this page](../guide/prepare.md) to download and pre-process data.
+See [this page](../guide/prepare.md) to download and pre-process data. You will:
+
+- Download the benchmark assets, and the audio files for English, French, German, and Wolof.
+- Download Common Voice datasets from their website for the other languages.
+- Pre-process Common Voice data.
 
 ## Statistics
 

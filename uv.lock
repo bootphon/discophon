@@ -706,7 +706,7 @@ dev = [
 docs = [
     { name = "mkdocstrings-python", specifier = ">=2.0.3" },
     { name = "ruff", specifier = ">=0.15.7" },
-    { name = "zensical", specifier = ">=0.0.29" },
+    { name = "zensical", specifier = ">=0.0.33" },
 ]
 
 [[package]]

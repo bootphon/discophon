@@ -1,6 +1,6 @@
 # User guide
 
-This guide explains the important steps to go through the benchmark
+This guide walks you through participating in the benchmark, from downloading the data to submitting results to the leaderboard.
 
 1. [Download the benchmark data and assets](./prepare.md)
 2. [Evaluate your discrete units](./evaluate.md)

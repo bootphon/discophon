@@ -1,7 +1,7 @@
 # Benchmark
 
 <figure markdown="span" style="width: 90%">
-  ![ok](../assets/streams.svg){ width=100% }<figcaption style="text-align: justify;">
+  ![Streams in the evaluation pipeline](../assets/streams.svg){ width=100% }<figcaption style="text-align: justify;">
   **Overview of the streams in the evaluation pipeline**. The model maps a waveform to units $\bm{u}$,
   evaluated against the gold phones $\bm{p}$ via $\textnormal{PNMI}(\bm{p}, \bm{u})$.
   The assignment $\bm{a}$ is assessed for recognition with $\textnormal{PER}(\bm{p}, \bm{a})$ and
@@ -9,7 +9,12 @@
   </figcaption>
 </figure>
 
-- **Languages under consideration**:
+The benchmark covers 12 languages chosen to span a wide range of phonemic contrasts, split into dev languages for
+tuning and test languages for final evaluation. Systems are given 10 hours of unannotated speech and must produce
+discrete units that can be mapped to the language's phoneme inventory, either many-to-one (with 256 units), or one-to-one
+(with as many units as phonemes).
+
+- **Languages**:
     - dev languages: German, Swahili, Tamil, Thai, Turkish, Ukrainian
     - test languages: Basque, English, French, Japanese, Mandarin Chinese, Wolof
 - **Evaluation metrics**:
