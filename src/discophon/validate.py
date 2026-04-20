@@ -3,7 +3,7 @@ from functools import wraps
 from itertools import product
 from pathlib import Path
 
-from discophon.languages import all_languages, get_language, Language
+from discophon.languages import Language, all_languages, get_language
 
 
 class ArgumentsError(ValueError):

@@ -4,6 +4,8 @@ from functools import cache
 from importlib import resources
 from typing import Literal
 
+__all__ = ["Language", "get_language"]
+
 type Sonority = Literal[
     "fricative",
     "affricate",
@@ -35,9 +37,18 @@ def load_phonemes() -> dict[str, list[str]]:
 
 @dataclass(frozen=True)
 class Language:
+    """The underlying representation of a language.
+
+    Parameters:
+        name: Name of the language.
+        iso_639_3: Its ISO 639-3 code.
+        split: Which split it belongs to in the benchmark.
+        n_phonemes: The number of phoneme categories considered.
+    """
+
     name: str
     iso_639_3: str
-    split: str
+    split: Literal["dev", "test"]
     n_phonemes: int
 
     def __post_init__(self) -> None:
@@ -46,10 +57,12 @@ class Language:
 
     @property
     def phonemes(self) -> list[str]:
+        """The phonemes of this language."""
         return load_phonemes()[self.iso_639_3]
 
 
 def get_language(n: str | Language, /) -> Language:  # noqa: C901, PLR0911, PLR0912
+    """Return the language corresponding to this string."""
     if isinstance(n, Language):
         return n
     match n.lower():
