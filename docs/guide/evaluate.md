@@ -28,8 +28,7 @@ and `split` is the dataset split (`test` or `dev`).
 
     test languages: `cmn`, `eng`, `eus`, `fra`, `jpn`, `wol`. 
 
-Let's say you have saved the benchmark data in `./dataset`.
-Then, for example, you can run the benchmark evaluation on phoneme discovery with a many-to-one mapping on all
+You can run the benchmark evaluation on phoneme discovery with a many-to-one mapping on all
 available languages and splits like this:
 
 ```python
