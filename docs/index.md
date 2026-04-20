@@ -1,4 +1,9 @@
-# DiscoPhon
+---
+title: DiscoPhon
+template: main.html
+---
+
+![DiscoPhon](https://raw.githubusercontent.com/bootphon/discophon/refs/heads/main/docs/assets/logo-full.svg)
 
 <div class="page-subtitle">Benchmarking the Unsupervised Discovery of Phoneme Inventories With Discrete Speech Units</div>
 

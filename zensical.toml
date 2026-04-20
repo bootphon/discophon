@@ -38,8 +38,9 @@ extra_css = [
 ]
 
 [project.theme]
-# favicon = "assets/favicon.png"
-# logo = "assets/logo.png"
+favicon = "assets/logo.svg"
+logo = "assets/logo.svg"
+custom_dir = "docs/overrides"
 language = "en"
 features = [
   "content.code.annotate",
