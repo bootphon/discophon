@@ -35,7 +35,7 @@ available languages and splits like this:
 ```python
 from discophon.benchmark import benchmark_discovery
 
-df = benchmark_discovery("./dataset", "./units", kind="many-to-one")
+df = benchmark_discovery("/path/to/discophon_data", "/path/to/units", kind="many-to-one")
 print(df)  # pl.DataFrame with the results for each language and split
 ```
 
@@ -45,6 +45,7 @@ Use the functions [`benchmark_abx_continuous`][discophon.benchmark.benchmark_abx
 Via the CLI:
 
 ```console
+❯ python -m discophon.benchmark --help
 usage: discophon.benchmark [-h] [--benchmark {discovery,abx-discrete,abx-continuous}] [--kind {many-to-one,one-to-one}] [--step-units STEP_UNITS]
                            dataset predictions output
 
@@ -70,8 +71,8 @@ options:
 ### Phoneme discovery
 
 You can use the [`phoneme_discovery`][discophon.evaluate.phoneme_discovery] function with `units` of type [`Units`][discophon.data.Units], and `phones` of type
-[`Phones`][discophon.data.Phones]. You also need to set the number of units `n_units`, of phonemes `n_phones`, and the step (in ms)
-between consecutive units `step_units`.
+[`Phones`][discophon.data.Phones]. You also need to set the kind of evaluation `kind`, the number of units `n_units`, and the `language` or number of phonemes
+`n_phonemes`.
 
 Example:
 
@@ -79,9 +80,9 @@ Example:
 from discophon.data import read_gold_annotations, read_submitted_units
 from discophon.evaluate import phoneme_discovery
 
-phones = read_gold_annotations("/path/to/alignments/dataset.txt")
-units = read_submitted_units("/path/to/predictions/units.jsonl")
-result = phoneme_discovery(units, phones, n_units=256, n_phonemes=40, step_units=20)
+phones = read_gold_annotations("/path/to/discophon_data/alignment/alignment-eng-test.txt")
+units = read_submitted_units("/path/to/units/units-eng-test.jsonl")
+result = phoneme_discovery(units, phones, kind="many-to-one", n_units=256, language="eng")
 print(result)
 ```
 
@@ -89,7 +90,9 @@ Or via the CLI:
 
 ```console
 ❯ python -m discophon.evaluate --help
-usage: discophon.evaluate [-h] --n-phonemes N_PHONEMES --n-units N_UNITS [--kind {many-to-one,one-to-one}] [--step-units STEP_UNITS] units phones
+usage: discophon.evaluate [-h] [--language LANGUAGE] [--n-phonemes N_PHONEMES] --n-units N_UNITS
+                          [--kind {many-to-one,one-to-one}] [--step-units STEP_UNITS]
+                          units phones
 
 Evaluate predicted units on phoneme discovery
 
@@ -99,11 +102,13 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
+  --language LANGUAGE   Evaluated language. Either use this or `--n-phonemes` (default: None)
   --n-phonemes N_PHONEMES
-                        Required. Number of phonemes (default: None)
+                        Number of phonemes. Either use this or `--language` (default: None)
   --n-units N_UNITS     Required. Number of units (default: None)
   --kind {many-to-one,one-to-one}
-                        Kind of assignment (either many-to-one, or one-to-one) (default: many-to-one)
+                        Kind of assignment (either many-to-one, or one-to-one) (default: many-to-
+                        one)
   --step-units STEP_UNITS
                         Step between units (in ms) (default: 20)
 ```
@@ -119,19 +124,19 @@ pip install discophon[abx]
 Then, either run it in Python:
 
 ```python
-from discophon.evaluate.abx import discrete_abx, continuous_abx
+from discophon.abx import discrete_abx, continuous_abx
 
-result_discrete = discrete_abx("/path/to/item/dataset.item", "/path/to/predictions/units.jsonl", frequency=50)
+result_discrete = discrete_abx("/path/to/discophon_data/item/triphone-eng-test.item", "/path/to/units/units-eng-test.jsonl", frequency=50)
 print("Discrete: ", result_discrete)
 
-result_continuous = continuous_abx("/path/to/item/dataset.item", "/path/to/features", frequency=50)
+result_continuous = continuous_abx("/path/to/discophon_data/item/triphone-eng-test.item", "/path/to/units/units-eng-test.jsonl", frequency=50)
 print("Continuous: ", result_discrete)
 ```
 
 Or via the CLI:
 
 ```console
-❯ python -m discophon.evaluate.abx --help
+❯ python -m discophon.abx --help
 usage: discophon.evaluate.abx [-h] --frequency FREQUENCY [--kind {triphone,phoneme}] item root
 
 Continuous or discrete ABX
