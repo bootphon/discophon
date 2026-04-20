@@ -5,4 +5,5 @@
 ::: discophon.abx
 ::: discophon.prepare
 ::: discophon.data
+::: discophon.languages
 ::: discophon.baselines

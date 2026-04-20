@@ -10,7 +10,8 @@ from scipy.optimize import linear_sum_assignment
 from xarray import DataArray
 
 from discophon.data import STEP_PHONES, STEP_UNITS, Phones, Units
-from discophon.validate import validate_first_two_arguments_same_keys
+from discophon.languages import Language
+from discophon.validate import infer_number_of_phonemes, validate_first_two_arguments_same_keys
 
 
 class UnitsAndPhones(TypedDict):
@@ -50,9 +51,10 @@ def coocurrence_matrix(
     phones: Phones,
     *,
     n_units: int,
-    n_phonemes: int,
+    n_phonemes: int | None = None,
     step_units: int = STEP_UNITS,
     step_phones: int = STEP_PHONES,
+    language: str | Language | None = None,
 ) -> DataArray:
     """Build the 2D coocurrence matrix of shape (`n_phonemes`, `n_units`) as a [`DataArray`][xarray.DataArray].
 
@@ -60,14 +62,17 @@ def coocurrence_matrix(
         units: Predicted discrete units
         phones: Gold phone annotations
         n_units: Number of distinct discrete units in the evaluated system
-        n_phonemes: Number of phonemes in the language under consideration
+        n_phonemes: Number of phonemes in the language under consideration. Either use this argument or `language`.
         step_units: Step between consecutive units (in ms)
         step_phones: Step between consecutive phones (in ms)
+        language: Evaluated language. Used to infer the number of phonemes if `n_phonemes` is not set.
+            Do not set both at the same time.
 
     Returns:
         2D array for which the element (`i`, `j`) is the number of times the unit `j` has appeared where the
             underlying phoneme is `i`. The phonemes are sorted by frequency.
     """
+    n_phonemes = infer_number_of_phonemes(n_phonemes, language)
     n_phonemes_with_sil = n_phonemes + 1
     index, phone_to_index = 0, {}
     phone_indices, unit_indices = [], []

@@ -3,7 +3,7 @@ from functools import wraps
 from itertools import product
 from pathlib import Path
 
-from discophon.languages import all_languages
+from discophon.languages import all_languages, get_language, Language
 
 
 class ArgumentsError(ValueError):
@@ -67,3 +67,17 @@ def validate_dataset_structure(path: str | Path) -> None:
     for lang in languages:
         if {p.stem for p in (root / "audio" / lang.iso_639_3).glob("*")} != splits:
             raise DatasetError
+
+
+class NumberPhonemesError(ValueError):
+    """To raise when there is an issue between n_phonemes and language."""
+
+
+def infer_number_of_phonemes(n_phonemes: int | None, language: str | Language | None) -> int:
+    if n_phonemes is not None and language is not None:
+        raise NumberPhonemesError("Either specify `language` or `n_phonemes`, but not both")
+    if language is None:
+        if n_phonemes is None:
+            raise NumberPhonemesError("You must set `language` or `n_phonemes` to get the number of target phonemes")
+        return n_phonemes
+    return get_language(language).n_phonemes

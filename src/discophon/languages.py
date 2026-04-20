@@ -49,7 +49,9 @@ class Language:
         return load_phonemes()[self.iso_639_3]
 
 
-def get_language(n: str, /) -> Language:  # noqa: C901, PLR0911
+def get_language(n: str | Language, /) -> Language:  # noqa: C901, PLR0911, PLR0912
+    if isinstance(n, Language):
+        return n
     match n.lower():
         case "german" | "deu":
             return Language(name="German", iso_639_3="deu", split="dev", n_phonemes=41)

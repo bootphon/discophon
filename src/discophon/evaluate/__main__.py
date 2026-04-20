@@ -5,7 +5,6 @@ from pathlib import Path
 
 from discophon.data import read_gold_annotations, read_submitted_units
 from discophon.evaluate.discovery import phoneme_discovery
-from discophon.languages import get_language
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -27,19 +26,14 @@ if __name__ == "__main__":
     )
     parser.add_argument("--step-units", type=int, default=20, help="Step between units (in ms)")
     args = parser.parse_args()
-    if args.n_phonemes is not None:
-        n_phonemes = args.n_phonemes
-    elif args.language is not None:
-        n_phonemes = get_language(args.language).n_phonemes
-    else:
-        parser.error("Either specify `--language` or `--n-phonemes` in order to specify the number of target phonemes")
     print(
         phoneme_discovery(
             read_submitted_units(args.units),
             read_gold_annotations(args.phones),
             n_units=args.n_units,
-            n_phonemes=n_phonemes,
+            n_phonemes=args.n_phonemes,
             step_units=args.step_units,
             kind=args.kind,
+            language=args.language,
         )
     )
