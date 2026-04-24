@@ -197,27 +197,3 @@ def finetune_hubert(  # noqa: PLR0914
                 ckpt.save(step, epoch)
                 profiler.step()
         ckpt.save_final(step, epoch)
-
-
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("name", type=str)
-    parser.add_argument("project", type=str)
-    parser.add_argument("workdir", type=Path)
-    parser.add_argument("checkpoint", type=Path)
-    parser.add_argument("manifest", type=str)
-    parser.add_argument("--n-clusters", type=int, required=True)
-    parser.add_argument("--layer", type=int, required=True)
-    args = parser.parse_args()
-
-    finetune_hubert(
-        args.name,
-        args.project,
-        args.workdir,
-        args.checkpoint,
-        args.manifest,
-        n_clusters=args.n_clusters,
-        target_layer=args.layer,
-    )

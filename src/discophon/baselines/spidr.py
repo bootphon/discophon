@@ -1,38 +1,23 @@
 """Training loop."""
 
-import math
 from contextlib import ExitStack
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
-import polars as pl
 import torch
 import wandb
 from spidr.checkpoint import Checkpointer
 from spidr.config import DataConfig, MaskingConfig
-from spidr.data import build_dataloader, read_manifest
+from spidr.data import build_dataloader
 from spidr.environment import set_seed, setup_environment, setup_pytorch
 from spidr.models import build_model
 from spidr.tools import AverageMeters, profiler_context
 from torch import GradScaler
 from torch.nn.utils import clip_grad_norm_
-from torch.optim import AdamW, Optimizer, lr_scheduler
+from torch.optim import AdamW
 from tqdm import tqdm
 
-
-def tristage_scheduler(
-    opt: Optimizer,
-    *,
-    warmup_steps: int,
-    hold_steps: int,
-    decay_steps: int,
-    init_lr_scale: float = 1e-2,
-    final_lr_scale: float = 1e-2,
-) -> lr_scheduler.SequentialLR:
-    warmup = lr_scheduler.LinearLR(opt, start_factor=init_lr_scale, total_iters=warmup_steps)
-    hold = lr_scheduler.LinearLR(opt, start_factor=1.0, total_iters=hold_steps)
-    decay = lr_scheduler.LambdaLR(opt, lambda step: math.exp(math.log(final_lr_scale) * step / decay_steps))
-    return lr_scheduler.SequentialLR(opt, [warmup, hold, decay], [warmup_steps, hold_steps + warmup_steps])
+from discophon.baselines.hubert import patch_manifest_with_paths, tristage_scheduler
 
 
 def spidr_ft_data_config(manifest: str) -> DataConfig:
@@ -48,19 +33,16 @@ def spidr_ft_data_config(manifest: str) -> DataConfig:
     )
 
 
-def patch_manifest_with_paths(src: str | Path, dest: str | Path) -> None:
-    manifest = read_manifest(src)
-    if "path" not in manifest.columns:
-        discophon = Path(src).parent.parent.resolve()
-        _, lang, *split = Path(src).stem.split("-")
-        audios = discophon / "audio" / lang / "-".join(split)
-        if not audios.is_dir():
-            raise ValueError(audios)
-        manifest = manifest.with_columns(path=pl.concat_str(pl.lit(str(audios) + "/"), "fileid", pl.lit(".wav")))
-    manifest.write_csv(dest)
-
-
 def finetune_spidr(name: str, project: str, workdir: Path, checkpoint: Path, manifest: str) -> None:  # noqa: PLR0914
+    """Finetune SpidR on DiscoPhon data with the default configuration.
+
+    Args:
+        name: Run name
+        project: Run project
+        workdir: Working directory for checkpoints and Wandb logs
+        checkpoint: Path to the pretrained checkpoint
+        manifest: Path to the manifest
+    """
     max_steps, seed = 20_000, 0
     with ExitStack() as stack:
         set_seed(seed)
@@ -127,16 +109,3 @@ def finetune_spidr(name: str, project: str, workdir: Path, checkpoint: Path, man
                 ckpt.save(step, epoch)
                 profiler.step()
         ckpt.save_final(step, epoch)
-
-
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("name", type=str)
-    parser.add_argument("project", type=str)
-    parser.add_argument("workdir", type=Path)
-    parser.add_argument("checkpoint", type=Path)
-    parser.add_argument("manifest", type=str)
-    args = parser.parse_args()
-    finetune_spidr(args.name, args.project, args.workdir, args.checkpoint, args.manifest)

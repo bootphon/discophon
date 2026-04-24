@@ -8,8 +8,8 @@ Baselines[^1]:
 
 - SpidR MMS-ulab: https://huggingface.co/coml/spidr-mmsulab
 - SpidR VP-20: https://huggingface.co/coml/spidr-vp20
-- HuBERT MMS-ulab: https://huggingface.co/coml/hubert-mmsulab
-- HuBERT VP-20: https://huggingface.co/coml/hubert-vp20
+- HuBERT MMS-ulab: https://huggingface.co/coml/hubert-base-mmsulab
+- HuBERT VP-20: https://huggingface.co/coml/hubert-base-vp20
 
 [^1]: For HuBERT, we also provide checkpoints compatible with Transformers or torchaudio.
 
@@ -38,15 +38,15 @@ from torchcodec.decoders import AudioDecoder
 model = SpidR.from_pretrained("coml/spidr-vp20")
 wav = AudioDecoder("/path/to/file.wav").get_all_samples().data
 
-### Training loss
+# Training loss
 mask = ...  # Set up your boolean mask
 loss, _ = model(wav, mask=mask)
 
-### Continuous representations
+# Continuous representations
 codebook_predictions = model.get_codebooks(wav)  # Log-probs from prediction heads
 hidden_states = model.get_intermediate_outputs(wav)  # Hidden Transformer states
 
-### Discrete units
+# Discrete units
 layer = 6  # Target layer
 
 # From prediction heads
@@ -75,26 +75,22 @@ units_from_interm = kmeans.predict(hidden_states[layer - 1])
     from minimal_hubert import HuBERT, HuBERTPretrain
 
     model = HuBERT.from_pretrained("coml/hubert-vp20")
-    model_train = HuBERTPretrain.from_pretrained("coml/hubert-vp20", revision="pretraining")
+    model_from_pretraining = HuBERTPretrain.from_pretrained(
+        "https://huggingface.co/coml/hubert-base-vp20/resolve/main/it2.pt"
+    )
 
-    loss, _ = model_train(wav, mask=mask) # Training loss
-    hs = model.get_intermediate_outputs(wav) # Hidden Transformer states
-    hs_after_residual = model.get_intermediate_outputs(wav, before_residual=False) # Same as HF transformers
-    ```
+    # Training loss
+    loss, _ = model_from_pretraining(wav, mask=mask)
 
-- With torchaudio:
+    # Intermediate Transformer representations (same convention as in fairseq)
+    # Use this method if you want to get discrete units using K-means
+    # that were trained in this project or in projects that used fairseq.
+    feats = model.get_intermediate_outputs(wav)
 
-    ```python
-    from torch.hub import load_state_dict_from_url
-    from torchaudio.models import hubert_base, hubert_pretrain_base
-
-    url = "https://huggingface.co/coml/hubert-vp20/blob/main/checkpoint_torchaudio.pt"
-    model = hubert_base()
-    model.load_state_dict(load_state_dict_from_url(url))
-
-    url_train = "https://huggingface.co/coml/hubert-vp20/blob/pretraining/checkpoint_torchaudio.pt"
-    model_train = hubert_pretrain_base(num_classes=500)
-    model_train.load_state_dict(load_state_dict_from_url(url_train))
+    # Same as HF transformers, s3prl and torchaudio:
+    # representations are taken at the end of the Transformer layer block
+    # instead of just before the residual.
+    feats_after_residual = model.get_intermediate_outputs(wav, before_residual=False)
     ```
 
 ### Datasets
@@ -163,22 +159,38 @@ Check out their README for more details on their structure and how they were bui
 
 ### HuBERT pretraining
 
-Coming soon! For now, check out
-[`minimal_hubert`'s README](https://github.com/mxmpl/minimal_hubert/blob/main/README.md#pretraining-hubert-step-by-step).
+Check out
+[`minimal_hubert`'s README](https://github.com/mxmpl/minimal_hubert/blob/main/README.md#pretraining-hubert-step-by-step)
+for easy pretraining. It involves multiple steps, but the pretraining part is very similar to SpidR's.
 
 ### Finetuning
 
-```bash
-python -m discophon.baselines.finetune_spidr \
-    spidr-ft \
-    discophon-ft \
-    ./workdir \
-    ./path/to/spidr/pretrained/checkpoint.pt \
-    ./path/to/manifest.csv
+Use the CLI utility:
+
+```console
+❯ python -m discophon.baselines --help
+usage: python -m discophon.baselines [-h] [--n-clusters N_CLUSTERS] [--layer LAYER]
+                                     {hubert,spidr} name project workdir checkpoint manifest
+
+Baseline finetuning of HuBERT or SpidR
+
+positional arguments:
+  {hubert,spidr}        Model architecture
+  name                  Run name
+  project               Run project
+  workdir               Working directory for checkpoints and Wandb logs
+  checkpoint            Path to pretrained checkpoint
+  manifest              Manifest file for finetuning
+
+options:
+  -h, --help            show this help message and exit
+  --n-clusters N_CLUSTERS
+                        Number of target clusters for HuBERT finetuning
+  --layer LAYER         Target layer for HuBERT finetuning used to train the K-means
 ```
 
 or use the [`finetune_spidr`][discophon.baselines.finetune_spidr]
-or [`finetune_hubert`][discophon.baselines.finetune_spidr].
+and [`finetune_hubert`][discophon.baselines.finetune_spidr] functions.
 
 ### Discrete units
 
