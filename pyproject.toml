@@ -41,7 +41,7 @@ abx = [
   "fastabx>=0.7.2",
 ]
 baselines = [
-  "minimal-hubert>=0.0.2",
+  "minimal-hubert>=0.0.5",
   "spidr[train]>=0.1.3",
 ]
 
