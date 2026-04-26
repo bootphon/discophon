@@ -125,10 +125,18 @@ Then, either run it in Python:
 ```python
 from discophon.abx import discrete_abx, continuous_abx
 
-result_discrete = discrete_abx("/path/to/discophon_data/item/triphone-eng-test.item", "/path/to/units/units-eng-test.jsonl", frequency=50)
+result_discrete = discrete_abx(
+    "/path/to/discophon_data/item/triphone-eng-test.item",
+    "/path/to/units/units-eng-test.jsonl",
+    frequency=50,
+)
 print("Discrete: ", result_discrete)
 
-result_continuous = continuous_abx("/path/to/discophon_data/item/triphone-eng-test.item", "/path/to/units/units-eng-test.jsonl", frequency=50)
+result_continuous = continuous_abx(
+    "/path/to/discophon_data/item/triphone-eng-test.item",
+    "/path/to/units/units-eng-test.jsonl",
+    frequency=50,
+)
 print("Continuous: ", result_discrete)
 ```
 

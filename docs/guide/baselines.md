@@ -32,10 +32,13 @@ pip install discophon[baselines]
 
 ```python
 import joblib
-from spidr import SpidR
+from spidr.models import SpidR
+from torch.hub import load_state_dict_from_url
 from torchcodec.decoders import AudioDecoder
 
-model = SpidR.from_pretrained("coml/spidr-vp20")
+state_dict = load_state_dict_from_url("https://huggingface.co/coml/spidr-vp20/resolve/main/final.pt")
+model = SpidR().eval()
+model.load_state_dict(state_dict)
 wav = AudioDecoder("/path/to/file.wav").get_all_samples().data
 
 # Training loss
