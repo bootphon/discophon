@@ -4,14 +4,12 @@
 
 The baselines and pretraining datasets are available on Hugging Face.
 
-Baselines[^1]:
+Baselines:
 
 - SpidR MMS-ulab: https://huggingface.co/coml/spidr-mmsulab
 - SpidR VP-20: https://huggingface.co/coml/spidr-vp20
 - HuBERT MMS-ulab: https://huggingface.co/coml/hubert-base-mmsulab
 - HuBERT VP-20: https://huggingface.co/coml/hubert-base-vp20
-
-[^1]: For HuBERT, we also provide checkpoints compatible with Transformers or torchaudio.
 
 Datasets:
 

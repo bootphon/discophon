@@ -98,7 +98,7 @@ In this example, there are 18 true positives (green lines), 6 false positives (d
 ![Boundaries combined](../assets/tasks-6.svg){ width=100% }
 
 <div style="display:flex; align-items:center; gap:1em">
-<img src="../../assets/tasks-7.svg" style="width:120%">
+<img src="../assets/tasks-7.svg" style="width:120%">
  <span>
   The $R$-value has a geometric interpretation. It represents how close the segmentation is from the ideal
   $(\text{OS}, R) = (0, 1)$ point (with distance $r_1$) and the $P = 1$ line (with $r_2$) in the $R$, $\text{OS}$ space.

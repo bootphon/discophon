@@ -4,7 +4,7 @@ updates:
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
-      interval: semiannually
+      interval: yearly
     open-pull-requests-limit: 1
     cooldown:
       default-days: 30
