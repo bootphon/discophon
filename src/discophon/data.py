@@ -121,6 +121,25 @@ def write_textgrids(seqs: Phones | Units, /, outdir: str | Path, *, tier_name: s
         tg.write(path)
 
 
+def rttm_to_textgrids(source: str | Path, outdir: str | Path, *, tier_name: str) -> None:
+    outdir = Path(outdir)
+    outdir.mkdir(parents=True, exist_ok=True)
+    rttm = read_rttm(source)
+    for (file,), subdf in rttm.group_by("File ID", maintain_order=True):
+        path = outdir / f"{file}.TextGrid"
+        tg = textgrids.TextGrid(path if path.is_file() else None)
+        array = [
+            TextGridEntry(
+                begin=row["Turn Onset"],
+                end=row["Turn Onset"] + row["Turn Duration"],
+                label=row["Speaker Name"],
+            )
+            for row in subdf.sort("Turn Onset").iter_rows(named=True)
+        ]
+        tg.interval_tier_from_array(tier_name, array)
+        tg.write(path)
+
+
 def num_invalid_rows(df: pl.DataFrame, *, step_in_ms: int) -> int:
     """For each file, the first entry starts at 0 and each subsequent entry starts where the previous has ended."""
     incorrect_duration = ~(step_in_ms / 1000 <= pl.col(OFFSET) - pl.col(ONSET))

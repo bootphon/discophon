@@ -132,6 +132,9 @@ interm = "interm"
 tha = "tha"
 Charis = "Charis"
 
+[tool.typos.files]
+extend-exclude = ["*.html"]
+
 [tool.uv.workspace]
 members = [
   "paper",

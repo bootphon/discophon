@@ -28,4 +28,28 @@ See [this page](../guide/prepare.md) to download and pre-process data. You will:
 
 ## Statistics
 
-Coming soon!
+The following chart shows the distribution of audio file duration by language and split:
+
+<iframe
+  title="Distribution of audio files duration by language and split"
+  style="border: none; width: 100%;"
+  src="../assets/duration_distribution.html"
+  onload="
+    var f = this;
+    var resize = function() { f.style.height = f.contentDocument.body.scrollHeight + 'px'; };
+    new ResizeObserver(resize).observe(f.contentDocument.body);
+  ">
+</iframe>
+
+This one shows the speech volume of the top 30 speakers in each language and split, colored by gender:
+
+<iframe
+  title="Speech volume of top 30 speakers in each language and split"
+  style="border: none; width: 100%;"
+  src="../assets/top_speakers_distribution.html"
+  onload="
+    var f = this;
+    var resize = function() { f.style.height = f.contentDocument.body.scrollHeight + 'px'; };
+    new ResizeObserver(resize).observe(f.contentDocument.body);
+  ">
+</iframe>

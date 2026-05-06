@@ -100,3 +100,6 @@ show_source = false
 show_symbol_type_heading = true
 show_symbol_type_toc = true
 signature_crossrefs = true
+
+[project.validation]  # https://github.com/zensical/zensical/issues/600
+unresolved_references = false
