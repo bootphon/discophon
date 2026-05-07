@@ -31,3 +31,18 @@ Test languages:
 | Wolof            | f, s, x                |                        | p, t, c, k, q, b, ᵐb, d, ⁿd, ɟ, ᶮɟ, ɡ, ᵑɡ | r | m, n, ɲ, ŋ         | w, l, j            | i, u, e, o, ə, ɛ, ɔ, a, iː, uː, eː, oː, ɛː, ɔː, aː |                    |
 
 </div>
+
+## Statistics
+
+This chart shows the number of phones in the annotations for each language and evaluation split:
+
+<iframe
+  title="Distribution of phones in each language and evaluation split"
+  style="border: none; width: 100%;"
+  src="../assets/phone_distribution.html"
+  onload="
+    var f = this;
+    var resize = function() { f.style.height = f.contentDocument.body.scrollHeight + 'px'; };
+    new ResizeObserver(resize).observe(f.contentDocument.body);
+  ">
+</iframe>
