@@ -497,19 +497,25 @@ function drawRuler() {
     }
 }
 
+function contentBottom() {
+    const tierCount = state.textGridData ? state.textGridData.length : 0;
+    return RULER_HEIGHT + WAVEFORM_HEIGHT + tierCount * (TIER_GAP + TIER_HEIGHT);
+}
+
 function drawSelection() {
     if (!state.selection) return;
     const x1 = Math.max(0, timeToX(state.selection.start));
     const x2 = Math.min(canvasW, timeToX(state.selection.end));
     if (x2 <= x1) return;
+    const yEnd = contentBottom();
     ctx.fillStyle = 'rgba(123, 123, 255, 0.15)';
-    ctx.fillRect(x1, 0, x2 - x1, canvasH);
+    ctx.fillRect(x1, 0, x2 - x1, yEnd);
     // Selection boundary lines
     ctx.strokeStyle = 'rgba(123, 123, 255, 0.6)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(x1 + 0.5, 0); ctx.lineTo(x1 + 0.5, canvasH);
-    ctx.moveTo(x2 - 0.5, 0); ctx.lineTo(x2 - 0.5, canvasH);
+    ctx.moveTo(x1 + 0.5, 0); ctx.lineTo(x1 + 0.5, yEnd);
+    ctx.moveTo(x2 - 0.5, 0); ctx.lineTo(x2 - 0.5, yEnd);
     ctx.stroke();
 }
 
@@ -577,7 +583,8 @@ function drawTiers() {
         ctx.fillText(tier.name, 6, yOffset + 13);
 
         if (tier.type === 'IntervalTier') {
-            for (const iv of tier.items) {
+            for (let i = 0; i < tier.items.length; i++) {
+                const iv = tier.items[i];
                 if (iv.xmax < state.viewStart || iv.xmin > state.viewEnd) continue;
                 const x1 = Math.max(0, timeToX(iv.xmin));
                 const x2 = Math.min(canvasW, timeToX(iv.xmax));
@@ -596,6 +603,12 @@ function drawTiers() {
                 ctx.beginPath();
                 ctx.moveTo(x1 + 0.5, yOffset);
                 ctx.lineTo(x1 + 0.5, yOffset + TIER_HEIGHT);
+                // Right border: only when no following item picks it up via its left border
+                const next = tier.items[i + 1];
+                if (!next || next.xmin > iv.xmax) {
+                    ctx.moveTo(x2 - 0.5, yOffset);
+                    ctx.lineTo(x2 - 0.5, yOffset + TIER_HEIGHT);
+                }
                 ctx.stroke();
 
                 // Label
@@ -668,7 +681,7 @@ function drawCursor() {
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(x, 0);
-    ctx.lineTo(x, canvasH);
+    ctx.lineTo(x, contentBottom());
     ctx.stroke();
 }
 
