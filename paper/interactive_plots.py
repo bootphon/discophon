@@ -93,14 +93,33 @@ def _read_manifests(root: Path) -> pl.DataFrame:
     ).with_columns(duration=(pl.col("num_samples") / 16_000).round(3))
 
 
+_LAYER_X = ("layer", alt.X("layer:Q", title="Layer", axis=alt.Axis(grid=False, format="d")))
+_DURATION_X = (
+    "duration_val",
+    alt.X(
+        "duration_val:Q",
+        title="Finetuning duration",
+        scale=alt.Scale(type="log", base=10),
+        axis=alt.Axis(
+            grid=False,
+            values=[1, 10, 60, 600],
+            labelExpr="datum.value == 1 ? '0' : datum.value == 10 ? '10min' : datum.value == 60 ? '1h' : '10h'",
+        ),
+    ),
+)
+
+
 def _baseline_layers(
     base: alt.Chart,
     filters: Iterable[alt.Selection],
     legend_select: alt.Selection,
+    *,
+    x: tuple[str, alt.X] = _LAYER_X,
 ) -> tuple[alt.Chart, alt.Chart, alt.Chart]:
     filters = list(filters)
+    x_field, x_enc = x
     fg = base.mark_line(point={"size": 50}).encode(
-        x=alt.X("layer:Q", title="Layer", axis=alt.Axis(grid=False, format="d")),
+        x=x_enc,
         y=alt.Y("score:Q", title="Score", scale=alt.Scale(zero=False)),
         color=alt.Color(
             "model:N",
@@ -115,16 +134,16 @@ def _baseline_layers(
         fg = fg.transform_filter(f)
     fg = fg.add_params(legend_select)
 
-    nearest = alt.selection_point(nearest=True, on="pointerover", fields=["layer"], empty=False)
+    nearest = alt.selection_point(nearest=True, on="pointerover", fields=[x_field], empty=False)
     when_near = alt.when(nearest)
     rules = base
     for f in filters:
         rules = rules.transform_filter(f)
     rules = (
         rules.transform_filter(legend_select)
-        .transform_pivot("model", value="score", groupby=["layer"])
+        .transform_pivot("model", value="score", groupby=[x_field])
         .mark_rule(color="gray", tooltip={"content": "data"})
-        .encode(x="layer:Q", opacity=when_near.then(alt.value(0.3)).otherwise(alt.value(0)))
+        .encode(x=f"{x_field}:Q", opacity=when_near.then(alt.value(0.3)).otherwise(alt.value(0)))
         .add_params(nearest)
     )
     points = (
@@ -184,6 +203,53 @@ def plot_baselines_by_lang(data_url: str) -> alt.LayerChart | alt.FacetChart:
         alt.layer(bg_shared, bg_local, fg, points, rules)
         .add_params(share_y, split_select, finetuning_select, metric_select, language_select)
         .properties(width="container", height=300, title=alt.Title(text={"expr": title_expr}))
+    )
+
+
+def plot_best_layer_by_ft_by_split(data_url: str) -> alt.LayerChart | alt.FacetChart:
+    metric_select, split_select, _, legend_select = common_selectors()
+    language_select = alt.selection_point(
+        name="lang_sel",
+        fields=["test_split"],
+        bind=alt.binding_radio(options=["dev", "test"], name="Languages: "),
+        value="test",
+    )
+    base = alt.Chart(alt.UrlData(url=data_url, format=alt.CsvDataFormat()))
+    bg = (
+        base.mark_point(opacity=0, size=0)
+        .encode(y=alt.Y("score:Q", scale=alt.Scale(zero=False)))
+        .transform_filter(metric_select)
+    )
+    fg, rules, points = _baseline_layers(
+        base, [language_select, split_select, metric_select], legend_select, x=_DURATION_X
+    )
+    title_expr = f"({METRIC_NAME_EXPR}) + ' — ' + lang_sel.test_split + ' languages — ' + split_sel.split + ' split'"
+    return (
+        alt.layer(bg, fg, points, rules)
+        .add_params(split_select, metric_select, language_select)
+        .properties(width="container", height=200, title=alt.Title(text={"expr": title_expr}))
+    )
+
+
+def plot_best_layer_by_ft_by_lang(data_url: str) -> alt.LayerChart | alt.FacetChart:
+    metric_select, split_select, _, legend_select = common_selectors()
+    language_select = _language_select(LANGUAGES[0])
+    share_y = alt.param(name="share_y", bind=alt.binding_checkbox(name="y-axis shared: "), value=False)
+
+    base = alt.Chart(alt.UrlData(url=data_url, format=alt.CsvDataFormat()))
+    bg_encoding = base.mark_point(opacity=0, size=0).encode(y=alt.Y("score:Q", scale=alt.Scale(zero=False)))
+    bg_shared = bg_encoding.transform_filter(metric_select).transform_filter("share_y")
+    bg_local = (
+        bg_encoding.transform_filter(metric_select).transform_filter(language_select).transform_filter("!share_y")
+    )
+    fg, rules, points = _baseline_layers(
+        base, [metric_select, language_select, split_select], legend_select, x=_DURATION_X
+    )
+    title_expr = f"({METRIC_NAME_EXPR}) + ' — ' + ({LANG_NAME_EXPR}) + ' — ' + split_sel.split + ' split'"
+    return (
+        alt.layer(bg_shared, bg_local, fg, points, rules)
+        .add_params(share_y, split_select, metric_select, language_select)
+        .properties(width="container", height=200, title=alt.Title(text={"expr": title_expr}))
     )
 
 
@@ -376,17 +442,40 @@ if __name__ == "__main__":
             pl.col("metric").is_in(METRICS),
         )
         .with_columns(pl.col("model").replace_strict(MODELS))
-        .select("split", "model", "layer", "duration", "duration_val", "language", "test_split", "metric", "score")
+        .select(
+            "split",
+            "model",
+            "layer",
+            "duration",
+            "duration_val",
+            "language",
+            "test_split",
+            "metric",
+            "score",
+            "best_layer",
+        )
     )
     by_split = by_lang.group_by(cs.exclude("language", "score"), maintain_order=True).agg(pl.mean("score"))
-    by_lang.with_columns(pl.col("score").round(2)).write_csv(args.destination / "scores_by_lang.csv")
-    by_split.with_columns(pl.col("score").round(2)).write_csv(args.destination / "scores_by_split.csv")
+    by_lang.drop("best_layer").with_columns(pl.col("score").round(2)).write_csv(
+        args.destination / "scores_by_lang.csv"
+    )
+    by_split.drop("best_layer").with_columns(pl.col("score").round(2)).write_csv(
+        args.destination / "scores_by_split.csv"
+    )
+    by_lang.filter("best_layer").drop("best_layer").with_columns(pl.col("score").round(2)).write_csv(
+        args.destination / "scores_best_layer_by_lang.csv"
+    )
+    by_split.filter("best_layer").drop("best_layer").with_columns(pl.col("score").round(2)).write_csv(
+        args.destination / "scores_best_layer_by_split.csv"
+    )
 
     def write(chart: alt.Chart | alt.LayerChart | alt.FacetChart, name: str) -> None:
         (args.destination / name).write_text(to_html(chart, "../stylesheets/vega.css"), encoding="utf-8")
 
     write(plot_baselines_by_lang("scores_by_lang.csv"), "baseline_across_layers_by_lang.html")
     write(plot_baselines_by_split("scores_by_split.csv"), "baseline_across_layers_by_split.html")
+    write(plot_best_layer_by_ft_by_lang("scores_best_layer_by_lang.csv"), "baseline_best_layer_by_ft_by_lang.html")
+    write(plot_best_layer_by_ft_by_split("scores_best_layer_by_split.csv"), "baseline_best_layer_by_ft_by_split.html")
     write(plot_datasets_stats(args.dataset / "manifest"), "dataset_stats.html")
     write(plot_speakers_stats(args.dataset / "manifest"), "speaker_stats.html")
     write(plot_phone_distribution(args.dataset / "alignment"), "phone_distribution.html")
