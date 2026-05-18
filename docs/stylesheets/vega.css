@@ -23,46 +23,6 @@ body {
   flex-wrap: wrap;
   gap: 0.4rem 0.75rem;
   padding: 0.75rem 0;
-  margin-bottom: 0.5rem;
-}
-
-/* DOM order: 1=Finetuning, 2=Language, 3=Split, 4=Metric, 5=Share Y */
-/* Row 1: Finetuning + Metric */
-.vega-bind:nth-child(1) {
-  order: 1;
-}
-
-.vega-bind:nth-child(4) {
-  order: 2;
-}
-
-/* Row 2: Language + Share Y */
-.vega-bind:nth-child(2) {
-  order: 4;
-}
-
-.vega-bind:nth-child(5) {
-  order: 5;
-}
-
-/* Row 3: Split */
-.vega-bind:nth-child(3) {
-  order: 7;
-}
-
-/* Invisible line breaks between rows */
-.vega-bindings::before {
-  content: "";
-  flex-basis: 100%;
-  height: 0;
-  order: 3;
-}
-
-.vega-bindings::after {
-  content: "";
-  flex-basis: 100%;
-  height: 0;
-  order: 6;
 }
 
 /* Each binding row */
@@ -71,12 +31,13 @@ body {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.25rem;
+  margin-right: 1rem;
 }
 
 /* ── Labels ── */
 .vega-bind-name {
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 700;
   color: #666;
   margin-right: 0.1rem;
   white-space: nowrap;

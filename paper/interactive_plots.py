@@ -135,30 +135,6 @@ def _baseline_layers(
     return fg, rules, points
 
 
-def plot_baselines_by_lang(data_url: str) -> alt.LayerChart | alt.FacetChart:
-    metric_select, split_select, finetuning_select, legend_select = common_selectors()
-    language_select = _language_select(LANGUAGES[0])
-    share_y = alt.param(name="share_y", bind=alt.binding_checkbox(name="y-axis shared: "), value=False)
-
-    base = alt.Chart(alt.UrlData(url=data_url, format=alt.CsvDataFormat()))
-    bg_encoding = base.mark_point(opacity=0, size=0).encode(y=alt.Y("score:Q", scale=alt.Scale(zero=False)))
-    bg_shared = bg_encoding.transform_filter(metric_select).transform_filter("share_y")
-    bg_local = (
-        bg_encoding.transform_filter(metric_select).transform_filter(language_select).transform_filter("!share_y")
-    )
-    fg, rules, points = _baseline_layers(
-        base, [metric_select, finetuning_select, language_select, split_select], legend_select
-    )
-    title_expr = (
-        f"({METRIC_NAME_EXPR}) + ' — ' + ({LANG_NAME_EXPR}) + ' — ' + split_sel.split + ' split — ' + ({FT_NAME_EXPR})"
-    )
-    return (
-        alt.layer(bg_shared, bg_local, fg, points, rules)
-        .add_params(metric_select, share_y, language_select, finetuning_select, split_select)
-        .properties(width="container", height=300, title=alt.Title(text={"expr": title_expr}))
-    )
-
-
 def plot_baselines_by_split(data_url: str) -> alt.LayerChart | alt.FacetChart:
     metric_select, split_select, finetuning_select, legend_select = common_selectors()
     language_select = alt.selection_point(
@@ -182,7 +158,31 @@ def plot_baselines_by_split(data_url: str) -> alt.LayerChart | alt.FacetChart:
     )
     return (
         alt.layer(bg, fg, points, rules)
-        .add_params(language_select, split_select, finetuning_select, metric_select)
+        .add_params(split_select, finetuning_select, metric_select, language_select)
+        .properties(width="container", height=300, title=alt.Title(text={"expr": title_expr}))
+    )
+
+
+def plot_baselines_by_lang(data_url: str) -> alt.LayerChart | alt.FacetChart:
+    metric_select, split_select, finetuning_select, legend_select = common_selectors()
+    language_select = _language_select(LANGUAGES[0])
+    share_y = alt.param(name="share_y", bind=alt.binding_checkbox(name="y-axis shared: "), value=False)
+
+    base = alt.Chart(alt.UrlData(url=data_url, format=alt.CsvDataFormat()))
+    bg_encoding = base.mark_point(opacity=0, size=0).encode(y=alt.Y("score:Q", scale=alt.Scale(zero=False)))
+    bg_shared = bg_encoding.transform_filter(metric_select).transform_filter("share_y")
+    bg_local = (
+        bg_encoding.transform_filter(metric_select).transform_filter(language_select).transform_filter("!share_y")
+    )
+    fg, rules, points = _baseline_layers(
+        base, [metric_select, finetuning_select, language_select, split_select], legend_select
+    )
+    title_expr = (
+        f"({METRIC_NAME_EXPR}) + ' — ' + ({LANG_NAME_EXPR}) + ' — ' + split_sel.split + ' split — ' + ({FT_NAME_EXPR})"
+    )
+    return (
+        alt.layer(bg_shared, bg_local, fg, points, rules)
+        .add_params(share_y, split_select, finetuning_select, metric_select, language_select)
         .properties(width="container", height=300, title=alt.Title(text={"expr": title_expr}))
     )
 
@@ -237,7 +237,7 @@ def plot_datasets_stats(root_manifests: Path) -> alt.Chart:
 def plot_speakers_stats(root_manifests: Path, *, top_speakers: int = 30) -> alt.Chart:
     per_speaker = (
         _read_manifests(root_manifests)
-        .join(pl.read_ndjson(root_manifests / "manifest/speakers.jsonl").drop("split"), on=["speaker", "language"])
+        .join(pl.read_ndjson(root_manifests / "speakers.jsonl").drop("split"), on=["speaker", "language"])
         .group_by(["language", "split", "speaker", "gender"], maintain_order=True)
         .agg(duration=pl.sum("duration"))
         .with_columns(speaker=pl.col("speaker").str.head(6))
