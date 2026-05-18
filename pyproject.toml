@@ -127,6 +127,9 @@ allow-magic-value-types = ["int", "str"]
 max-args = 10
 max-statements = 75
 
+[tool.ruff.lint.pep8-naming]
+extend-ignore-names = ["F"]  # from torch.nn import functional as F
+
 [tool.typos.default.extend-words]
 interm = "interm"
 tha = "tha"

@@ -1,9 +1,11 @@
 """SpidR finetuning."""
 
+from collections.abc import Iterable
 from contextlib import ExitStack
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
+import orjson
 import torch
 import wandb
 from spidr.checkpoint import Checkpointer
@@ -21,7 +23,9 @@ from discophon.baselines.utils import (
     LOG_INTERVAL,
     SAVE_INTERVAL,
     SEED,
+    DiscophonAudioDataset,
     ft_optimizer_config,
+    get_target_layers,
     patch_manifest_with_paths,
     spidr_ft_data_config,
     tristage_scheduler,
@@ -131,3 +135,77 @@ def finetune_spidr(  # noqa: PLR0914
                 ckpt.save(step, epoch)
                 profiler.step()
         ckpt.save_final(step, epoch)
+
+
+@torch.inference_mode()
+def extract_spidr_discrete_units(
+    path_dataset: str | Path,
+    path_manifest: str | Path,
+    path_jsonl: Path,
+    checkpoint: str | Path,
+    *,
+    layers: int | Iterable[int] | None = None,
+) -> None:
+    """Extract SpidR discrete units for all utterances of a manifest.
+
+    The units are taken from the codebooks of the student network (one codebook per quantized layer).
+    For each requested layer, the units are written to a JSONL file at
+    `path_jsonl.parent / {layer} / path_jsonl.name`, with one entry per
+    utterance with keys `file` ([`str`][]) and `units` (`list[int]`).
+
+    Args:
+        path_dataset: Path to the DiscoPhon dataset
+        path_manifest: Path to the manifest
+        path_jsonl: Path to the output JSONL file. The layer index is inserted as a parent directory.
+        checkpoint: Path to the SpidR checkpoint
+        layers: Layers to extract. If `None`, all layers with a codebook are used.
+    """
+    dataset = DiscophonAudioDataset(path_dataset, path_manifest, normalize=True)
+    model = build_model(model_type="spidr", checkpoint=checkpoint).eval().cuda()
+    available = [len(model.student.layers) - model.num_codebooks + i + 1 for i in range(len(model.student.layers))]
+    layers = get_target_layers(layers, available)
+    for fileid, waveform in tqdm(dataset, desc=Path(path_manifest).stem):
+        all_features = model.get_codebooks(waveform.unsqueeze(0).cuda())
+        for layer, features in enumerate(all_features):
+            if features is None or layer + 1 not in layers:
+                continue
+            units = features.squeeze().argmax(dim=-1).cpu().numpy().tolist()
+            entry = {"file": fileid, "units": units}
+            new_jsonl = path_jsonl.parent / f"{layer + 1}" / path_jsonl.name
+            new_jsonl.parent.mkdir(exist_ok=True)
+            with new_jsonl.open("ab") as f:
+                f.write(orjson.dumps(entry, option=orjson.OPT_APPEND_NEWLINE))
+
+
+@torch.inference_mode()
+def extract_spidr_continuous_features(
+    path_dataset: str | Path,
+    path_manifest: str | Path,
+    path_features: Path,
+    checkpoint: str | Path,
+    *,
+    layers: int | Iterable[int] | None = None,
+) -> None:
+    """Extract SpidR continuous features for all utterances of a manifest.
+
+    For each requested layer, the features are saved as PyTorch tensors at
+    `path_features / {layer} / {iso_639_3} / {split} / {fileid}.pt`.
+
+    Args:
+        path_dataset: Path to the DiscoPhon dataset
+        path_manifest: Path to the manifest
+        path_features: Path to the output directory for the extracted features
+        checkpoint: Path to the SpidR checkpoint
+        layers: Layers to extract. If `None`, all available layers are used.
+    """
+    dataset = DiscophonAudioDataset(path_dataset, path_manifest, normalize=True)
+    model = build_model(model_type="spidr", checkpoint=checkpoint).eval().cuda()
+    layers = get_target_layers(layers, [i + 1 for i in range(len(model.student.layers))])
+    for fileid, waveform in tqdm(dataset, desc=Path(path_manifest).stem):
+        all_features = model.get_intermediate_outputs(waveform.unsqueeze(0).cuda())
+        for layer, features in enumerate(all_features):
+            if layer + 1 not in layers:
+                continue
+            path = path_features / f"{layer + 1}" / dataset.language.iso_639_3 / dataset.split / f"{fileid}.pt"
+            path.parent.mkdir(exist_ok=True, parents=True)
+            torch.save(features.squeeze().cpu(), path)

@@ -1,17 +1,48 @@
 import math
+from collections.abc import Iterable
 from pathlib import Path
 
 import polars as pl
 import torch
 from sklearn.cluster import MiniBatchKMeans
-from spidr.config import DataConfig, OptimizerConfig
+from spidr.config import SAMPLE_RATE, DataConfig, OptimizerConfig
 from spidr.data import read_manifest
+from torch.nn import functional as F
 from torch.optim import Optimizer, lr_scheduler
+from torch.utils.data import Dataset
+from torchcodec.decoders import AudioDecoder
 from tqdm import tqdm
+
+from discophon.languages import get_language
 
 SEED = 0
 SAVE_INTERVAL = 1_000
 LOG_INTERVAL = 200
+
+
+class DiscophonAudioDataset(Dataset):
+    def __init__(self, root: Path | str, manifest_path: Path | str, *, normalize: bool) -> None:
+        super().__init__()
+        self.root = Path(root)
+        language, *split = Path(manifest_path).stem.removeprefix("manifest-").split("-")
+        self.language = get_language(language)
+        self.split = "-".join(split)
+        self.manifest = read_manifest(manifest_path)
+        self.normalize = normalize
+
+    def __len__(self) -> int:
+        return len(self.manifest)
+
+    def __getitem__(self, index: int) -> tuple[str, torch.Tensor]:
+        fileid = self.manifest[index, "fileid"]
+        path = self.root / "audio" / self.language.iso_639_3 / self.split / f"{fileid}.wav"
+        samples = AudioDecoder(path).get_all_samples()
+        waveform = samples.data
+        if samples.sample_rate != SAMPLE_RATE or waveform.size(0) != 1:
+            raise ValueError(index)
+        if self.normalize:
+            waveform = F.layer_norm(waveform, waveform.shape)
+        return fileid, waveform.squeeze()
 
 
 def ft_optimizer_config() -> OptimizerConfig:
@@ -95,3 +126,17 @@ def patch_manifest_with_units(
         units = kmeans.predict(features.numpy()).tolist()
         new_manifest.append(row | {"units": units})
     pl.DataFrame(new_manifest).write_ndjson(dest)
+
+
+def get_target_layers(layers: int | Iterable[int] | None, available: Iterable[int]) -> set[int]:
+    available = set(available)
+    if layers is None:
+        return available
+    if isinstance(layers, int):
+        if layers in available:
+            return {layers}
+        raise ValueError(f"Invalid layer: {layers}")
+    layers = set(layers)
+    if layers & available != layers:
+        raise ValueError(f"Some of the requested layers ({layers}) are not available (choose among: {available})")
+    return layers

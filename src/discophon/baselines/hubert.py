@@ -1,14 +1,16 @@
 """HuBERT finetuning."""
 
 import logging
+from collections.abc import Iterable
 from contextlib import ExitStack
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 import joblib
+import orjson
 import torch
 import wandb
-from minimal_hubert import HuBERTPretrain
+from minimal_hubert import HuBERT, HuBERTPretrain
 from minimal_hubert.data import build_dataloader_with_labels
 from minimal_hubert.features import compute_and_save_hubert_features
 from minimal_hubert.kmeans import build_kmeans
@@ -26,7 +28,9 @@ from discophon.baselines.utils import (
     LOG_INTERVAL,
     SAVE_INTERVAL,
     SEED,
+    DiscophonAudioDataset,
     ft_optimizer_config,
+    get_target_layers,
     hubert_ft_data_config,
     patch_manifest_with_paths,
     patch_manifest_with_units,
@@ -169,3 +173,78 @@ def finetune_hubert(  # noqa: PLR0914
                 ckpt.save(step, epoch)
                 profiler.step()
         ckpt.save_final(step, epoch)
+
+
+@torch.inference_mode()
+def extract_hubert_discrete_units(
+    path_dataset: str | Path,
+    path_manifest: str | Path,
+    path_jsonl: Path,
+    checkpoint: str | Path,
+    kmeans: dict[int, MiniBatchKMeans],
+    *,
+    layers: int | Iterable[int] | None = None,
+) -> None:
+    """Extract HuBERT discrete units for all utterances of a manifest.
+
+    For each requested layer, the units are written to a JSONL file at
+    `path_jsonl.parent / {layer} / path_jsonl.name`, with one entry per
+    utterance with keys `file` ([`str`][]) and `units` (`list[int]`).
+
+    Args:
+        path_dataset: Path to the DiscoPhon dataset
+        path_manifest: Path to the manifest
+        path_jsonl: Path to the output JSONL file. The layer index is inserted as a parent directory.
+        checkpoint: Path to the HuBERT checkpoint
+        kmeans: Mapping from layer index to the K-means model used to quantize that layer
+        layers: Layers to extract. If `None`, all available layers are used. Only layers present
+            in both `layers` and `kmeans` are extracted.
+    """
+    dataset = DiscophonAudioDataset(path_dataset, path_manifest, normalize=True)
+    model = HuBERT.from_pretrained(checkpoint).eval().cuda()
+    layers = get_target_layers(layers, [i + 1 for i in range(len(model.encoder.layers))])
+    for fileid, waveform in tqdm(dataset, desc=Path(path_manifest).stem):
+        all_features = model.get_intermediate_outputs(waveform.unsqueeze(0).cuda())
+        for layer, features in enumerate(all_features):
+            if layer + 1 not in layers or layer + 1 not in kmeans:
+                continue
+            units = kmeans[layer + 1].predict(features.squeeze().cpu().numpy()).tolist()
+            entry = {"file": fileid, "units": units}
+            new_jsonl = path_jsonl.parent / f"{layer + 1}" / path_jsonl.name
+            new_jsonl.parent.mkdir(exist_ok=True)
+            with new_jsonl.open("ab") as f:
+                f.write(orjson.dumps(entry, option=orjson.OPT_APPEND_NEWLINE))
+
+
+@torch.inference_mode()
+def extract_hubert_continuous_features(
+    path_dataset: str | Path,
+    path_manifest: str | Path,
+    path_features: Path,
+    checkpoint: str | Path,
+    *,
+    layers: int | Iterable[int] | None = None,
+) -> None:
+    """Extract HuBERT continuous features for all utterances of a manifest.
+
+    For each requested layer, the features are saved as PyTorch tensors at
+    `path_features / {layer} / {iso_639_3} / {split} / {fileid}.pt`.
+
+    Args:
+        path_dataset: Path to the DiscoPhon dataset
+        path_manifest: Path to the manifest
+        path_features: Path to the output directory for the extracted features
+        checkpoint: Path to the HuBERT checkpoint
+        layers: Layers to extract. If `None`, all available layers are used.
+    """
+    dataset = DiscophonAudioDataset(path_dataset, path_manifest, normalize=True)
+    model = HuBERT.from_pretrained(checkpoint).eval().cuda()
+    layers = get_target_layers(layers, [i + 1 for i in range(len(model.encoder.layers))])
+    for fileid, waveform in tqdm(dataset, desc=Path(path_manifest).stem):
+        all_features = model.get_intermediate_outputs(waveform.unsqueeze(0).cuda())
+        for layer, features in enumerate(all_features):
+            if layer + 1 not in layers:
+                continue
+            path = path_features / f"{layer + 1}" / dataset.language.iso_639_3 / dataset.split / f"{fileid}.pt"
+            path.parent.mkdir(exist_ok=True, parents=True)
+            torch.save(features.squeeze().cpu(), path)
