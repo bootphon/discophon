@@ -33,7 +33,7 @@ The following chart shows the distribution of audio file duration by language an
 <iframe
   title="Distribution of audio files duration by language and split"
   style="border: none; width: 100%;"
-  src="../assets/duration_distribution.html"
+  src="../assets/dataset_stats.html"
   onload="
     var f = this;
     var resize = function() { f.style.height = f.contentDocument.body.scrollHeight + 'px'; };
@@ -46,7 +46,7 @@ This one shows the speech volume of the top 30 speakers in each language and spl
 <iframe
   title="Speech volume of top 30 speakers in each language and split"
   style="border: none; width: 100%;"
-  src="../assets/top_speakers_distribution.html"
+  src="../assets/speaker_stats.html"
   onload="
     var f = this;
     var resize = function() { f.style.height = f.contentDocument.body.scrollHeight + 'px'; };

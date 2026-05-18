@@ -60,7 +60,6 @@ if __name__ == "__main__":
         .filter(
             pl.col("split") == "test",
             pl.col("best_layer"),
-            pl.col("duration").is_in(["0", "10h"]),
             pl.col("metric").is_in(METRICS),
             pl.col("model").is_in(MODELS),
         )
