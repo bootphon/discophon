@@ -8,8 +8,10 @@ from discophon.data import (
     DEFAULT_N_UNITS,
     STEP_PHONES,
     STEP_UNITS,
+    alignment_filename,
     read_gold_annotations,
     read_submitted_units,
+    units_filename,
     write_textgrids,
 )
 from discophon.evaluate import phone_assignments
@@ -26,8 +28,8 @@ if __name__ == "__main__":
         if split not in {"dev", "test"}:
             continue
         code = language.iso_639_3
-        units = read_submitted_units(args.predictions / f"units-{code}-{split}.jsonl")
-        phones = read_gold_annotations(args.dataset / f"alignment/alignment-{code}-{split}.txt")
+        units = read_submitted_units(args.predictions / units_filename(language, split))
+        phones = read_gold_annotations(args.dataset / "alignment" / alignment_filename(language, split))
         coocurrence = coocurrence_matrix(units, phones, n_units=DEFAULT_N_UNITS, n_phonemes=language.n_phonemes)
         predictions = phone_assignments(units, coocurrence, kind="many-to-one")
         write_textgrids(phones, args.outdir / f"{code}/{split}", tier_name="phones", step_in_ms=STEP_PHONES)

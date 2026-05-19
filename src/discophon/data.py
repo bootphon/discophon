@@ -10,14 +10,20 @@ import numpy as np
 import polars as pl
 import textgrids
 
+from discophon.languages import Language
+
 __all__ = [
     "DEFAULT_N_UNITS",
     "STEP_PHONES",
     "STEP_UNITS",
     "Phones",
     "Units",
+    "alignment_filename",
+    "item_filename",
+    "manifest_filename",
     "read_gold_annotations",
     "read_submitted_units",
+    "units_filename",
 ]
 
 Splits = Literal["all", "train-10min", "train-1h", "train-10h", "dev", "test"]
@@ -40,6 +46,26 @@ DEFAULT_N_UNITS = 256
 
 SAMPLE_RATE = 16_000
 FILE, ONSET, OFFSET, PHONE, UNITS = "#file", "onset", "offset", "#phone", "units"
+
+
+def units_filename(language: Language, split: str) -> str:
+    """Filename for the predicted units of a (language, split) pair."""
+    return f"units-{language.iso_639_3}-{split}.jsonl"
+
+
+def alignment_filename(language: Language, split: str) -> str:
+    """Filename for the gold phone alignment of a (language, split) pair."""
+    return f"alignment-{language.iso_639_3}-{split}.txt"
+
+
+def item_filename(language: Language, split: str, *, kind: str) -> str:
+    """Filename for the ABX item file of a (language, split, kind) triple."""
+    return f"{kind}-{language.iso_639_3}-{split}.item"
+
+
+def manifest_filename(language: Language, split: str) -> str:
+    """Filename for the audio manifest of a (language, split) pair."""
+    return f"manifest-{language.iso_639_3}-{split}.csv"
 
 
 def read_rttm(source: str | Path) -> pl.DataFrame:

@@ -31,6 +31,7 @@ from discophon.baselines.utils import (
     spidr_ft_data_config,
     tristage_scheduler,
 )
+from discophon.data import units_filename
 
 
 def finetune_spidr(  # noqa: PLR0914
@@ -177,7 +178,7 @@ def extract_spidr_discrete_units(
                 continue
             units = features.squeeze().argmax(dim=-1).cpu().numpy().tolist()
             entry = {"file": fileid, "units": units}
-            jsonl = path_units / f"{layer + 1}" / f"units-{dataset.language.iso_639_3}-{dataset.split}.jsonl"
+            jsonl = path_units / f"{layer + 1}" / units_filename(dataset.language, dataset.split)
             jsonl.parent.mkdir(exist_ok=True, parents=True)
             with jsonl.open("ab") as f:
                 f.write(orjson.dumps(entry, option=orjson.OPT_APPEND_NEWLINE))

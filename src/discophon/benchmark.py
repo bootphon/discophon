@@ -8,7 +8,15 @@ from typing import Literal
 
 import polars as pl
 
-from discophon.data import DEFAULT_N_UNITS, STEP_UNITS, read_gold_annotations, read_submitted_units
+from discophon.data import (
+    DEFAULT_N_UNITS,
+    STEP_UNITS,
+    alignment_filename,
+    item_filename,
+    read_gold_annotations,
+    read_submitted_units,
+    units_filename,
+)
 from discophon.evaluate import phoneme_discovery
 from discophon.languages import Language, get_language
 from discophon.validate import validate_dataset_structure
@@ -59,8 +67,8 @@ def benchmark_discovery(
     for language, split in available_languages_and_splits_for_units(path_units):
         if split not in {"dev", "test"}:
             continue
-        units = read_submitted_units(Path(path_units) / f"units-{language.iso_639_3}-{split}.jsonl")
-        phones = read_gold_annotations(Path(path_dataset) / f"alignment/alignment-{language.iso_639_3}-{split}.txt")
+        units = read_submitted_units(Path(path_units) / units_filename(language, split))
+        phones = read_gold_annotations(Path(path_dataset) / "alignment" / alignment_filename(language, split))
         n_units = DEFAULT_N_UNITS if kind == "many-to-one" else language.n_phonemes + 1
         scores = phoneme_discovery(
             units,
@@ -103,8 +111,8 @@ def benchmark_abx_discrete(
         if split not in {"dev", "test"}:
             continue
         abx = discrete_abx(
-            Path(path_dataset) / f"item/{kind}-{language.iso_639_3}-{split}.item",
-            Path(path_units) / f"units-{language.iso_639_3}-{split}.jsonl",
+            Path(path_dataset) / "item" / item_filename(language, split, kind=kind),
+            Path(path_units) / units_filename(language, split),
             frequency=1_000 // step_units,
             kind=kind,
         )
@@ -143,8 +151,8 @@ def benchmark_abx_continuous(
         if split not in {"dev", "test"}:
             continue
         abx = continuous_abx(
-            Path(path_dataset) / f"item/{kind}-{language.iso_639_3}-{split}.item",
-            Path(path_features) / f"{language.iso_639_3}/{split}",
+            Path(path_dataset) / "item" / item_filename(language, split, kind=kind),
+            Path(path_features) / language.iso_639_3 / split,
             frequency=1_000 // step_units,
             kind=kind,
         )

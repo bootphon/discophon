@@ -37,6 +37,7 @@ from discophon.baselines.utils import (
     patch_manifest_with_units,
     tristage_scheduler,
 )
+from discophon.data import units_filename
 
 logger = logging.getLogger()
 
@@ -217,7 +218,7 @@ def extract_hubert_discrete_units(
                 continue
             units = kmeans_by_layer[layer + 1].predict(features.squeeze().cpu().numpy()).tolist()
             entry = {"file": fileid, "units": units}
-            jsonl = path_units / f"{layer + 1}" / f"units-{dataset.language.iso_639_3}-{dataset.split}.jsonl"
+            jsonl = path_units / f"{layer + 1}" / units_filename(dataset.language, dataset.split)
             jsonl.parent.mkdir(exist_ok=True)
             with jsonl.open("ab") as f:
                 f.write(orjson.dumps(entry, option=orjson.OPT_APPEND_NEWLINE))

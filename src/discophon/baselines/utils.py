@@ -13,6 +13,7 @@ from torch.utils.data import Dataset
 from torchcodec.decoders import AudioDecoder
 from tqdm import tqdm
 
+from discophon.data import manifest_filename
 from discophon.languages import get_language
 
 SEED = 0
@@ -25,7 +26,7 @@ class DiscophonAudioDataset(Dataset):
         super().__init__()
         self.normalize = normalize
         self.root, self.language, self.split = Path(root), get_language(language), split
-        self.manifest = read_manifest(self.root / "manifest" / f"manifest-{self.language.iso_639_3}-{self.split}.csv")
+        self.manifest = read_manifest(self.root / "manifest" / manifest_filename(self.language, self.split))
 
     def __len__(self) -> int:
         return len(self.manifest)

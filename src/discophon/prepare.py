@@ -12,8 +12,8 @@ import soundfile as sf
 import soxr
 from tqdm import tqdm
 
-from discophon.data import SAMPLE_RATE, Splits
-from discophon.languages import ISO6393_TO_CV, commonvoice_languages, get_language
+from discophon.data import SAMPLE_RATE, Splits, manifest_filename
+from discophon.languages import ISO6393_TO_CV, Language, commonvoice_languages, get_language
 
 __all__ = ["download_benchmark", "prepare_commonvoice_datasets"]
 
@@ -83,13 +83,13 @@ def resample(
     sf.write(output, resampled, output_sample_rate)
 
 
-def get_filenames(manifests: Path, iso_code: str, *, split: Splits) -> list[str]:
+def get_filenames(manifests: Path, language: Language, *, split: Splits) -> list[str]:
     if split not in get_args(Splits):
         raise ValueError(f"Invalid {split=}. Must be in {get_args(Splits)}")
     if split != "all":
-        manifest = pl.read_csv(manifests / f"manifest-{iso_code}-{split}.csv")
+        manifest = pl.read_csv(manifests / manifest_filename(language, split))
     else:
-        manifest = pl.concat([pl.read_csv(path) for path in manifests.glob(f"manifest-{iso_code}-*.csv")])
+        manifest = pl.concat([pl.read_csv(path) for path in manifests.glob(manifest_filename(language, "*"))])
     return sorted(manifest["fileid"].unique().to_list())
 
 
@@ -104,13 +104,13 @@ def prepare_commonvoice_datasets(path_dataset: str | Path, language: str) -> Non
         language: Name of the language of the Common Voice dataset under consideration.
                   Also works with ISO-639-3 code or Common Voice code.
     """
-    iso_code = get_language(language).iso_639_3
-    src = Path(path_dataset) / "raw" / ISO6393_TO_CV[iso_code] / "clips"
-    dest = Path(path_dataset) / "audio" / iso_code / "all"
+    resolved = get_language(language)
+    src = Path(path_dataset) / "raw" / ISO6393_TO_CV[resolved.iso_639_3] / "clips"
+    dest = Path(path_dataset) / "audio" / resolved.iso_639_3 / "all"
     if not src.is_dir():
         raise ValueError(f"Directory {src} does not exist.")
     dest.mkdir(exist_ok=True, parents=True)
-    filenames = get_filenames(Path(path_dataset) / "manifest", iso_code, split="all")
+    filenames = get_filenames(Path(path_dataset) / "manifest", resolved, split="all")
     filenames = filenames[slice(*split_across_slurm_array(len(filenames)))]
     for filename in tqdm(filenames, desc="Resampling and converting to WAV"):
         resample(

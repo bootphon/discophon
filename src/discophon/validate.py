@@ -1,8 +1,9 @@
 from collections.abc import Callable
 from functools import wraps
-from itertools import product
+from itertools import product, starmap
 from pathlib import Path
 
+from discophon.data import alignment_filename, item_filename, manifest_filename
 from discophon.languages import Language, all_languages, get_language
 
 
@@ -44,20 +45,17 @@ def validate_dataset_structure(path: str | Path) -> None:
     languages = all_languages()
     if {p.name for p in root.glob("*")} != {"alignment", "audio", "item", "manifest"}:
         raise DatasetError
-    if {p.name for p in (root / "alignment").glob("*")} != {
-        f"alignment-{lang.iso_639_3}-{split}.txt" for lang, split in product(languages, ["dev", "test"])
-    }:
+    if {p.name for p in (root / "alignment").glob("*")} != set(
+        starmap(alignment_filename, product(languages, ["dev", "test"]))
+    ):
         raise DatasetError
     if {p.name for p in (root / "item").glob("*")} != {
-        f"{kind}-{lang.iso_639_3}-{split}.item"
+        item_filename(lang, split, kind=kind)
         for kind, lang, split in product(["triphone", "phoneme"], languages, ["dev", "test"])
     }:
         raise DatasetError
     if {p.name for p in (root / "manifest").glob("*")} != (
-        {
-            f"manifest-{lang.iso_639_3}-{split}.csv"
-            for lang, split in product(languages, ["dev", "test", "train-10h", "train-10min", "train-1h"])
-        }
+        set(starmap(manifest_filename, product(languages, ["dev", "test", "train-10h", "train-10min", "train-1h"])))
         | {"speakers.jsonl"}
     ):
         raise DatasetError
