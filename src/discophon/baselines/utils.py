@@ -21,14 +21,11 @@ LOG_INTERVAL = 200
 
 
 class DiscophonAudioDataset(Dataset):
-    def __init__(self, root: Path | str, manifest_path: Path | str, *, normalize: bool) -> None:
+    def __init__(self, root: Path | str, language: str, split: str, *, normalize: bool) -> None:
         super().__init__()
-        self.root = Path(root)
-        language, *split = Path(manifest_path).stem.removeprefix("manifest-").split("-")
-        self.language = get_language(language)
-        self.split = "-".join(split)
-        self.manifest = read_manifest(manifest_path)
         self.normalize = normalize
+        self.root, self.language, self.split = Path(root), get_language(language), split
+        self.manifest = read_manifest(self.root / "manifest" / f"manifest-{self.language.iso_639_3}-{self.split}.csv")
 
     def __len__(self) -> int:
         return len(self.manifest)

@@ -66,7 +66,7 @@ units_from_interm = kmeans.predict(hidden_states[layer - 1])
     ```python
     from transformers import HubertModel
 
-    model = HubertModel.from_pretrained("coml/hubert-vp20")
+    model = HubertModel.from_pretrained("coml/hubert-base-vp20")
     ```
 
 
@@ -75,7 +75,7 @@ units_from_interm = kmeans.predict(hidden_states[layer - 1])
     ```python
     from minimal_hubert import HuBERT, HuBERTPretrain
 
-    model = HuBERT.from_pretrained("coml/hubert-vp20")
+    model = HuBERT.from_pretrained("coml/hubert-base-vp20")
     model_from_pretraining = HuBERTPretrain.from_pretrained(
         "https://huggingface.co/coml/hubert-base-vp20/resolve/main/it2.pt"
     )
@@ -195,4 +195,36 @@ and [`finetune_hubert`][discophon.baselines.finetune_spidr] functions.
 
 ### Discrete units
 
-Coming soon!
+We provide utilities to easily extract discrete units with the functions
+[`extract_spidr_discrete_units`][discophon.baselines.extract_spidr_discrete_units]
+and [`extract_hubert_discrete_units`][discophon.baselines.extract_hubert_discrete_units]:
+
+```python
+import joblib
+from discophon.baselines import extract_hubert_discrete_units, extract_spidr_discrete_units
+
+language = "German" # Either name or ISO 639-3 code
+split = "test" # Or "dev", "train-10min", "train-1h", "train-10h"
+
+# HuBERT units, only layer 11
+kmeans = joblib.load("/path/to/hubert-base-vp20/km256-it2-l11.joblib")
+extract_hubert_discrete_units(
+    "/path/to/discophon_data",
+    path_units="/path/to/scores/hubert-base-vp20",
+    language=language,
+    split=split,
+    model="coml/hubert-base-vp20",
+    kmeans={11: kmeans},
+    layers=11,
+)
+
+# SpidR units, all layers
+extract_spidr_discrete_units(
+    "/path/to/discophon_data",
+    path_units="/path/to/scores/spidr-vp20",
+    language=language,
+    split=split,
+    model="/path/to/spidr-vp20/final.pt",
+    layers=None, # Default value
+)
+```

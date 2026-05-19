@@ -20,7 +20,7 @@ __all__ = [
     "read_submitted_units",
 ]
 
-Splits = Literal["all", "train-10min", "train-1h", "train-10h", "train-100h", "train-all", "dev", "test"]
+Splits = Literal["all", "train-10min", "train-1h", "train-10h", "dev", "test"]
 
 type Units = dict[str, list[int]]
 """Type of the discrete units: dictionary mapping file identifiers to lists of integers."""

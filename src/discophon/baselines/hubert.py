@@ -5,6 +5,7 @@ from collections.abc import Iterable
 from contextlib import ExitStack
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
+from typing import Literal
 
 import joblib
 import orjson
@@ -178,69 +179,79 @@ def finetune_hubert(  # noqa: PLR0914
 @torch.inference_mode()
 def extract_hubert_discrete_units(
     path_dataset: str | Path,
-    path_manifest: str | Path,
-    path_jsonl: Path,
-    checkpoint: str | Path,
-    kmeans: dict[int, MiniBatchKMeans],
+    path_units: str | Path,
+    language: str,
+    split: Literal["dev", "test", "train-10min", "train-1h", "train-10h"],
+    pretrained_model_name_or_path: str | Path,
+    kmeans_by_layer: dict[int, MiniBatchKMeans],
     *,
     layers: int | Iterable[int] | None = None,
 ) -> None:
-    """Extract HuBERT discrete units for all utterances of a manifest.
+    """Extract HuBERT discrete units for all utterances of a DiscoPhon split.
 
     For each requested layer, the units are written to a JSONL file at
-    `path_jsonl.parent / {layer} / path_jsonl.name`, with one entry per
+    `path_units / {layer} / units-{iso_639_3}-{split}.jsonl`, with one entry per
     utterance with keys `file` ([`str`][]) and `units` (`list[int]`).
 
     Args:
-        path_dataset: Path to the DiscoPhon dataset
-        path_manifest: Path to the manifest
-        path_jsonl: Path to the output JSONL file. The layer index is inserted as a parent directory.
-        checkpoint: Path to the HuBERT checkpoint
-        kmeans: Mapping from layer index to the K-means model used to quantize that layer
-        layers: Layers to extract. If `None`, all available layers are used. Only layers present
-            in both `layers` and `kmeans` are extracted.
+        path_dataset: Path to the DiscoPhon dataset.
+        path_units: Output path used as a template. Its parent directory and filename stem
+            determine where the per-layer JSONL files are written.
+        language: Language identifier resolved by [`get_language`][discophon.languages.get_language],
+            either name or ISO 639-3 code.
+        split: Dataset split to process.
+        pretrained_model_name_or_path: HuBERT checkpoint or HuggingFace model identifier.
+        kmeans_by_layer: Mapping from 1-based layer index to the K-means model used to
+            quantize that layer.
+        layers: Layers to extract. If `None`, all encoder layers are used. Only layers present
+            in both `layers` and `kmeans_by_layer` are written.
     """
-    dataset = DiscophonAudioDataset(path_dataset, path_manifest, normalize=True)
-    model = HuBERT.from_pretrained(checkpoint).eval().cuda()
+    path_units = Path(path_units)
+    dataset = DiscophonAudioDataset(path_dataset, language, split, normalize=True)
+    model = HuBERT.from_pretrained(pretrained_model_name_or_path).eval().cuda()
     layers = get_target_layers(layers, [i + 1 for i in range(len(model.encoder.layers))])
-    for fileid, waveform in tqdm(dataset, desc=Path(path_manifest).stem):
+    for fileid, waveform in tqdm(dataset, desc=f"{dataset.language.iso_639_3}-{dataset.split}"):
         all_features = model.get_intermediate_outputs(waveform.unsqueeze(0).cuda())
         for layer, features in enumerate(all_features):
-            if layer + 1 not in layers or layer + 1 not in kmeans:
+            if layer + 1 not in layers or layer + 1 not in kmeans_by_layer:
                 continue
-            units = kmeans[layer + 1].predict(features.squeeze().cpu().numpy()).tolist()
+            units = kmeans_by_layer[layer + 1].predict(features.squeeze().cpu().numpy()).tolist()
             entry = {"file": fileid, "units": units}
-            new_jsonl = path_jsonl.parent / f"{layer + 1}" / path_jsonl.name
-            new_jsonl.parent.mkdir(exist_ok=True)
-            with new_jsonl.open("ab") as f:
+            jsonl = path_units / f"{layer + 1}" / f"units-{dataset.language.iso_639_3}-{dataset.split}.jsonl"
+            jsonl.parent.mkdir(exist_ok=True)
+            with jsonl.open("ab") as f:
                 f.write(orjson.dumps(entry, option=orjson.OPT_APPEND_NEWLINE))
 
 
 @torch.inference_mode()
 def extract_hubert_continuous_features(
     path_dataset: str | Path,
-    path_manifest: str | Path,
-    path_features: Path,
-    checkpoint: str | Path,
+    path_features: str | Path,
+    language: str,
+    split: Literal["dev", "test", "train-10min", "train-1h", "train-10h"],
+    pretrained_model_name_or_path: str | Path,
     *,
     layers: int | Iterable[int] | None = None,
 ) -> None:
-    """Extract HuBERT continuous features for all utterances of a manifest.
+    """Extract HuBERT continuous features for all utterances of a DiscoPhon split.
 
     For each requested layer, the features are saved as PyTorch tensors at
     `path_features / {layer} / {iso_639_3} / {split} / {fileid}.pt`.
 
     Args:
-        path_dataset: Path to the DiscoPhon dataset
-        path_manifest: Path to the manifest
-        path_features: Path to the output directory for the extracted features
-        checkpoint: Path to the HuBERT checkpoint
-        layers: Layers to extract. If `None`, all available layers are used.
+        path_dataset: Path to the DiscoPhon dataset.
+        path_features: Output directory under which per-layer feature tensors are written.
+        language: Language identifier resolved by [`get_language`][discophon.languages.get_language],
+            either name or ISO 639-3 code.
+        split: Dataset split to process.
+        pretrained_model_name_or_path: HuBERT checkpoint or HuggingFace model identifier.
+        layers: Layers to extract. If `None`, all encoder layers are used.
     """
-    dataset = DiscophonAudioDataset(path_dataset, path_manifest, normalize=True)
-    model = HuBERT.from_pretrained(checkpoint).eval().cuda()
+    path_features = Path(path_features)
+    dataset = DiscophonAudioDataset(path_dataset, language, split, normalize=True)
+    model = HuBERT.from_pretrained(pretrained_model_name_or_path).eval().cuda()
     layers = get_target_layers(layers, [i + 1 for i in range(len(model.encoder.layers))])
-    for fileid, waveform in tqdm(dataset, desc=Path(path_manifest).stem):
+    for fileid, waveform in tqdm(dataset, desc=f"{dataset.language.iso_639_3}-{dataset.split}"):
         all_features = model.get_intermediate_outputs(waveform.unsqueeze(0).cuda())
         for layer, features in enumerate(all_features):
             if layer + 1 not in layers:

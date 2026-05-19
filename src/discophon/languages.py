@@ -62,7 +62,29 @@ class Language:
 
 
 def get_language(n: str | Language, /) -> Language:  # noqa: C901, PLR0911, PLR0912
-    """Return the language corresponding to this string."""
+    """Resolve a language identifier to its [`Language`][discophon.languages.Language] record.
+
+    The input is matched case-insensitively against any of the following identifiers:
+
+    - the English name (e.g. `"German"`, `"Mandarin Chinese"`);
+    - the ISO 639-3 code (e.g. `"deu"`, `"cmn"`);
+    - for languages available on Common Voice, the Common Voice locale code
+      (e.g. `"sw"`, `"zh-CN"`).
+
+    A few languages also accept additional aliases: `"mandarin"` and `"chinese"` both
+    resolve to Mandarin Chinese. Passing an existing [`Language`][discophon.languages.Language]
+    instance returns it unchanged.
+
+    Args:
+        n: Language identifier (name, ISO 639-3 code, Common Voice locale, alias) or an
+            already-resolved [`Language`][discophon.languages.Language] instance.
+
+    Returns:
+        The matching [`Language`][discophon.languages.Language] record.
+
+    Raises:
+        ValueError: If `n` does not match any known identifier.
+    """
     if isinstance(n, Language):
         return n
     match n.lower():
