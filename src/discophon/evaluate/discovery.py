@@ -42,7 +42,6 @@ def phoneme_discovery(
         n_phonemes: Number of phonemes in the language under consideration. Either use this argument or `language`.
         step_units: Step between consecutive units (in ms)
         step_phones: Step between consecutive phones (in ms)
-        step_units: Step between consecutive units (in ms)
         language: Evaluated language. Used to infer the number of phonemes if `n_phonemes` is not set.
             Do not set both at the same time.
 
@@ -55,7 +54,7 @@ def phoneme_discovery(
         n_units=n_units,
         n_phonemes=n_phonemes,
         step_units=step_units,
-        step_phones=STEP_PHONES,
+        step_phones=step_phones,
         language=language,
     )
     assignment = phone_assignments(units, coocurrence, kind=kind)
