@@ -7,17 +7,19 @@ from tempfile import NamedTemporaryFile
 from typing import Literal
 
 import orjson
+import polars as pl
 import torch
 import wandb
 from spidr.checkpoint import Checkpointer
 from spidr.config import MaskingConfig
 from spidr.data import build_dataloader
 from spidr.environment import set_seed, setup_environment, setup_pytorch
-from spidr.models import build_model
+from spidr.models import DinoSR, build_model
 from spidr.tools import AverageMeters, profiler_context
 from torch import GradScaler
 from torch.nn.utils import clip_grad_norm_
 from torch.optim import AdamW
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from discophon.baselines.utils import (
@@ -137,6 +139,64 @@ def finetune_spidr(  # noqa: PLR0914
                 ckpt.save(step, epoch)
                 profiler.step()
         ckpt.save_final(step, epoch)
+
+
+@torch.no_grad()
+def validate_spidr(model: DinoSR, loader: DataLoader, device: torch.device, dtype: torch.dtype) -> dict[str, float]:
+    model.eval()
+    total_loss = torch.zeros(1, device=device)
+    total_pred_ppl = torch.zeros(1, device=device)
+    total_target_ppl = torch.zeros(1, device=device)
+    for waveforms, attn_mask, mask in loader:
+        with torch.autocast("cuda", dtype):
+            loss, outputs = model(
+                waveforms.to(device),
+                mask=mask.to(device),
+                attention_mask=attn_mask.to(device),
+            )
+        total_loss += loss.mean()
+        total_target_ppl += outputs["target_ppl"]
+        total_pred_ppl += outputs["pred_ppl"]
+    total_loss /= len(loader)
+    total_target_ppl /= len(loader)
+    total_pred_ppl /= len(loader)
+    return {"loss": total_loss.item(), "target_ppl": total_target_ppl.item(), "pred_ppl": total_pred_ppl.item()}
+
+
+def validate_all_spidr_checkpoints(
+    output: str | Path,
+    checkpoints: str | Path,
+    manifest: str | Path,
+    *,
+    seed: int = 0,
+) -> None:
+    set_seed(seed)
+    setup_pytorch(use_deterministic=False)
+    setup_environment()
+    device = torch.device("cuda")
+    dtype = torch.bfloat16 if torch.cuda.get_device_capability() >= (8, 0) else torch.float16
+    with NamedTemporaryFile(suffix=".csv") as tempfile:
+        patch_manifest_with_paths(manifest, tempfile.name)
+        loader = build_dataloader(spidr_ft_data_config(tempfile.name), MaskingConfig())
+    paths = sorted(Path(checkpoints).glob("*.pt"))
+    group = Path(manifest).stem.removeprefix("manifest-")
+    for path in tqdm(paths):
+        if path.name == "final.pt":
+            continue
+        step = int(path.stem.removeprefix("step_"))
+        model = build_model(model_type="spidr", checkpoint=path).to(device)
+        losses = validate_spidr(model, loader, device, dtype)
+        with Path(output).open("ab") as f:
+            f.write(orjson.dumps({"step": step, "group": group} | losses, option=orjson.OPT_APPEND_NEWLINE))
+
+    best_step = (
+        pl.read_ndjson(output)
+        .sort("step")
+        .filter(pl.col("loss") == pl.col("loss").min())
+        .tail(1)
+        .to_dicts()[0]["step"]
+    )
+    (Path(checkpoints) / "best.pt").symlink_to(f"step_{best_step}.pt")
 
 
 @torch.inference_mode()
