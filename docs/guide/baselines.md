@@ -32,12 +32,12 @@ pip install discophon[baselines]
 import joblib
 from spidr.models import SpidR
 from torch.hub import load_state_dict_from_url
-from torchcodec.decoders import AudioDecoder
+from torchcodec.decoders import WavDecoder
 
 state_dict = load_state_dict_from_url("https://huggingface.co/coml/spidr-vp20/resolve/main/final.pt")
 model = SpidR().eval()
 model.load_state_dict(state_dict)
-wav = AudioDecoder("/path/to/file.wav").get_all_samples().data
+wav = WavDecoder("/path/to/file.wav").get_all_samples().data
 
 # Training loss
 mask = ...  # Set up your boolean mask

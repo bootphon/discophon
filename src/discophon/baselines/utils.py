@@ -10,7 +10,7 @@ from spidr.data import read_manifest
 from torch.nn import functional as F
 from torch.optim import Optimizer, lr_scheduler
 from torch.utils.data import Dataset
-from torchcodec.decoders import AudioDecoder
+from torchcodec.decoders import WavDecoder
 from tqdm import tqdm
 
 from discophon.data import manifest_filename
@@ -34,7 +34,7 @@ class DiscophonAudioDataset(Dataset):
     def __getitem__(self, index: int) -> tuple[str, torch.Tensor]:
         fileid = self.manifest[index, "fileid"]
         path = self.root / "audio" / self.language.iso_639_3 / self.split / f"{fileid}.wav"
-        samples = AudioDecoder(path).get_all_samples()
+        samples = WavDecoder(path).get_all_samples()
         waveform = samples.data
         if samples.sample_rate != SAMPLE_RATE or waveform.size(0) != 1:
             raise ValueError(index)
