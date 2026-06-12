@@ -21,7 +21,7 @@ MODELS = {
 }
 
 
-def format_row(entry: dict[str, float | str]) -> str:
+def format_row(entry: dict) -> str:
     row = rf"{MODELS[entry['model']]} (L{entry['layer']}) & "
     for lang_set in ["dev", "test"]:
         for metric in METRICS:

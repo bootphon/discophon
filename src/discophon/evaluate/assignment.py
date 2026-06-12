@@ -41,7 +41,7 @@ def align_units_and_phones(
         min_len = min(len(this_phones), len(this_units))
         if (len(this_phones) - min_len > repeat) or (len(this_units) - min_len > repeat):
             raise ValueError(f"More than {repeat} tokens of differences between phones and units.")
-        data[fileid] = {"phones": this_phones[:min_len], "units": this_units[:min_len]}
+        data[fileid] = UnitsAndPhones(phones=this_phones[:min_len], units=this_units[:min_len])
     return data
 
 
