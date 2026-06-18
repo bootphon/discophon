@@ -44,6 +44,8 @@ def merge_metrics(df: pl.DataFrame, metrics: list[str]) -> pl.DataFrame:
         cols = [c for c in df.columns if c not in {"metric", "score", "std", "top"}]
         x = df.filter(pl.col("metric") == f"{metric}_within_speaker")
         y = df.filter(pl.col("metric") == f"{metric}_across_speaker")
+        if len(x) == 0 or len(y) == 0:
+            continue
         pair = (
             x.join(y, on=cols, suffix="_y", validate="1:1", nulls_equal=True)
             .with_columns(score=(pl.col("score") + pl.col("score_y")) / 2, metric=pl.lit(metric))
