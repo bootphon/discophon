@@ -14,9 +14,13 @@ Given only 10 hours of speech in an unseen language, models must produce discret
 
 ## Getting started
 
+DiscoPhon requires **Python ≥ 3.12** and has no system dependencies.
+
 - Install this package:
   ```bash
-  pip install discophon
+  pip install discophon            # core: data preparation and phoneme discovery
+  pip install discophon[abx]       # adds ABX discriminability (fastabx)
+  pip install discophon[baselines] # adds the baseline models
   ```
 - [Follow the tutorials](./guide/index.md) to download data, evaluate models, and prepare your submission.
 - [Current leaderboard](./leaderboard/index.md).

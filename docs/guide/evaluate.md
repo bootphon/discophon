@@ -6,6 +6,25 @@ There are two interfaces to evaluate your predicted units:
   all available units.
 - Low level with [`discophon.evaluate`][discophon.evaluate], where you have fine-grain control over the metrics.
 
+## Resolution
+
+All evaluation runs at a fixed frame rate. By default, units are assumed to be at **50 Hz, i.e. one
+unit every 20 ms**. This is controlled by `step_units` (the `--step-units` flag on the CLI), with
+`frequency = 1000 // step_units`. The gold phone annotations are resampled to match this resolution
+automatically.
+
+If your model emits frames at a different rate, you **must** set `step_units` accordingly. Otherwise
+your units and the gold phones are misaligned and every metric is wrong:
+
+| Model frame rate | `step_units` | `frequency` |
+|------------------|--------------|-------------|
+| 50 Hz (20 ms)    | 20 (default) | 50          |
+| 100 Hz (10 ms)   | 10           | 100         |
+| 40 Hz (25 ms)    | 25           | 40          |
+
+Each unit (or feature frame) is taken to span exactly `step_units` ms, in order, starting from the
+beginning of the file.
+
 ## High level
 
 To run the complete benchmark evaluation, you first need to save your predicted units to JSONL files organized like this:
@@ -30,6 +49,27 @@ Each line of a JSONL file is a JSON object with exactly two fields: `file`, the 
 {"file": "0188-135249-0001", "units": [12, 12, 45, 3, 3, 3, 78]}
 ```
 
+### Producing units from your own model
+
+You are responsible for turning your model's output into these JSONL files. For each language and
+split, iterate over the audio files of that split and write one line per file. After
+[data preparation](./prepare.md), the per-split audio lives under `$DATA/audio/{code}/{split}/`:
+
+```python
+import json
+from pathlib import Path
+
+data, code, split = Path("/path/to/discophon_data"), "eng", "test"
+with open(f"units/units-{code}-{split}.jsonl", "w") as f:
+    for wav in sorted((data / "audio" / code / split).glob("*.wav")):
+        units = my_model(wav)  # your model: -> list[int], one unit per frame
+        f.write(json.dumps({"file": wav.stem, "units": units}) + "\n")
+```
+
+The `file` id is the stem of the audio file, without extension or directory (e.g.
+`0188-135249-0001`). Make sure the units match the resolution described in
+[Resolution](#resolution) above.
+
 [^1]:
     dev languages: `deu`, `swa`, `tam`, `tha`, `tur`, `ukr`.
 
@@ -44,6 +84,11 @@ from discophon.benchmark import benchmark_discovery
 df = benchmark_discovery("/path/to/discophon_data", "/path/to/units", kind="many-to-one")
 print(df)  # pl.DataFrame with the results for each language and split
 ```
+
+The result is a long-format DataFrame with columns `language`, `split`, `metric`, and `score`. The
+`metric` column holds one row per metric and language/split: `pnmi`, `per` (phone error rate), and
+the segmentation scores `f1` and `r_val` ($R$-value). The ABX helpers return DataFrames with the
+same layout.
 
 Use the functions [`benchmark_abx_continuous`][discophon.benchmark.benchmark_abx_continuous] or
 [`benchmark_abx_discrete`][discophon.benchmark.benchmark_abx_discrete] for ABX evaluation.
@@ -127,6 +172,12 @@ The ABX evaluation is done separately. First, install this package with the `abx
 pip install discophon[abx]
 ```
 
+Discrete ABX reads the same `units-{code}-{split}.jsonl` files as above. **Continuous** ABX instead
+reads extracted features stored as one tensor file per audio file: save them as `.pt` files under
+`path_features/{code}/{split}/`, each named after the file id, e.g.
+`features/eng/test/0188-135249-0001.pt`. Each is a 2D tensor of shape `(num_frames, feature_dim)` at
+the resolution set by `frequency` (the inverse of `step_units`).
+
 Then, either run it in Python:
 
 ```python
@@ -151,7 +202,7 @@ Or via the CLI:
 
 ```console
 ❯ python -m discophon.abx --help
-usage: discophon.evaluate.abx [-h] --frequency FREQUENCY [--kind {triphone,phoneme}] item root
+usage: discophon.abx [-h] --frequency FREQUENCY [--kind {triphone,phoneme}] item root
 
 Continuous or discrete ABX
 

@@ -1,9 +1,8 @@
 # Data preparation
 
-To download the benchmark data, you need:
-
-- The `discophon` package installed.
-- The `sox` binary available in your `$PATH` to pre-process audio files.
+To download the benchmark data, you only need the `discophon` package installed. Audio
+pre-processing (resampling) is done in-process via the `soxr` dependency, so there is no
+external binary to install.
 
 Let's call `$DATA` the directory where you want to install the benchmark data.
 

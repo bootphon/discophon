@@ -180,7 +180,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(
-        prog="discophon.evaluate.abx",
+        prog="discophon.abx",
         description="Continuous or discrete ABX",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
