@@ -2,7 +2,7 @@
 
 ## Description
 
-DiscoPhon includes 6 languages (German, Swahili, Tamil, Thai, Turkish, Ukrainian)
+DiscoPhon includes 6 dev languages (German, Swahili, Tamil, Thai, Turkish, Ukrainian)
 and 6 test languages (Basque, English, French, Japanese, Mandarin Chinese, Wolof),
 spanning a wide range of phonemic categories, as shown in [this page](./phonemes.md).
 
@@ -18,7 +18,7 @@ using the original dataset. German, English, and French are based on LibriVox au
 from which we selected 10 male and 10 female speakers per train set.
 The remaining languages are sourced from Common Voice, using alignments from the VoxCommunis project. We simplified
 some specific phonetic notations by folding them back to a single IPA symbol representing
-the underlying constrastive category.
+the underlying contrastive category.
 
 See [this page](../guide/prepare.md) to download and pre-process data. You will:
 

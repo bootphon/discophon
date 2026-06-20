@@ -137,7 +137,7 @@ Check out their README for more details on their structure and how they were bui
     constraint = "v100-32g"
     ```
 
-    1. > Set to `online` if you cluster has internet access and you want to log to Weights & Biases
+    1. > Set to `online` if your cluster has internet access and you want to log to Weights & Biases
 
     Adapt the paths and SLURM parameters to your setup.
 
@@ -191,7 +191,7 @@ options:
 ```
 
 or use the [`finetune_spidr`][discophon.baselines.finetune_spidr]
-and [`finetune_hubert`][discophon.baselines.finetune_spidr] functions.
+and [`finetune_hubert`][discophon.baselines.finetune_hubert] functions.
 
 ### Discrete units
 

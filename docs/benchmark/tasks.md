@@ -110,7 +110,7 @@ In this example, there are 18 true positives (green lines), 6 false positives (d
 We provide utilities to optionally compute ABX discriminability on continuous representations
 of triphones or discrete units, using the [fastabx library](https://github.com/bootphon/fastabx).
 ABX measures whether two instances of the same triphone (e.g., /bag/) are closer to one another
-in embedding space than to instances of a minimally constrasting triphone (e.g., /beg/).
+in embedding space than to instances of a minimally contrasting triphone (e.g., /beg/).
 On discrete units, ABX is related to PNMI but with a hard threshold for success:
 two realizations of the same triphone must be encoded as the same sequence.
 On continuous representations, it is a useful proxy during development to guide

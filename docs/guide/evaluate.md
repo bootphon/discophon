@@ -1,6 +1,6 @@
 # Evaluation
 
-Their are two interfaces to evaluate your predicted units:
+There are two interfaces to evaluate your predicted units:
 
 - High level with [`discophon.benchmark`][discophon.benchmark], which will run the complete evaluation suite on
   all available units.
@@ -22,6 +22,13 @@ units/
 
 The filenames should be in the format `units-{language}-{split}.jsonl`, where `language` is the language code[^1],
 and `split` is the dataset split (`test` or `dev`).
+
+Each line of a JSONL file is a JSON object with exactly two fields: `file`, the audio file id (a `str`), and
+`units`, the sequence of discrete units for that file (a `list[int]`):
+
+```json
+{"file": "0188-135249-0001", "units": [12, 12, 45, 3, 3, 3, 78]}
+```
 
 [^1]:
     dev languages: `deu`, `swa`, `tam`, `tha`, `tur`, `ukr`.
@@ -137,7 +144,7 @@ result_continuous = continuous_abx(
     "/path/to/units/units-eng-test.jsonl",
     frequency=50,
 )
-print("Continuous: ", result_discrete)
+print("Continuous: ", result_continuous)
 ```
 
 Or via the CLI:
