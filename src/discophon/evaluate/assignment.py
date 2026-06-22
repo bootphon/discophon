@@ -29,10 +29,15 @@ def align_units_and_phones(
     step_units: int,
     step_phones: int,
 ) -> dict[str, UnitsAndPhones]:
-    """Align units and phones by repeating each unit step_units // step_phones times.
+    """Align units and phones by repeating each unit ``step_units // step_phones`` times.
 
-    This assumes that step_units is a multiple of step_phones.
-    Allows for a small margin in the end, in case where the final unit is missing.
+    `step_units` **must** be an integer multiple of `step_phones` (the units are emitted at a lower or equal
+    rate than the phone annotations). The repeat factor is computed with integer division, so passing a
+    `step_units` that is not a multiple of `step_phones` silently rounds it down and produces a misaligned
+    result rather than an error; make sure the two steps are compatible before calling.
+
+    A small margin is allowed at the end: up to ``step_units // step_phones`` extra tokens on either side are
+    trimmed (e.g. when the final unit is missing). Any larger mismatch raises a `ValueError`.
     """
     repeat = step_units // step_phones
     data = {}
@@ -134,8 +139,26 @@ def mapping_many_to_one(coocurrence: DataArray) -> dict[int, str]:
     return dict(zip(most_frequent.get_index("unit").values.tolist(), most_frequent.values.tolist(), strict=True))
 
 
+class NonSquareCoocurrenceError(ValueError):
+    """Raised when a one-to-one assignment is requested on a non-square coocurrence matrix."""
+
+    def __init__(self, n_phones: int, n_units: int) -> None:
+        super().__init__(
+            f"One-to-one assignment requires a square coocurrence matrix, got {n_phones} phones and {n_units} units. "
+            "Set `n_units` to the number of phonemes plus one (for the silence) when computing the matrix."
+        )
+
+
 def mapping_one_to_one(coocurrence: DataArray) -> dict[int, str]:
-    """One-to-one mapping between phonemes and the optimal units according to the linear assignment sum problem."""
+    """One-to-one mapping between phonemes and the optimal units according to the linear assignment sum problem.
+
+    The coocurrence matrix must be square: a non-square matrix would leave some units unassigned, which would
+    later raise a `KeyError` when the mapping is applied in
+    [`phone_assignments`][discophon.evaluate.phone_assignments].
+    """
+    n_phones, n_units = coocurrence.shape
+    if n_phones != n_units:
+        raise NonSquareCoocurrenceError(n_phones, n_units)
     phones_idx, units_idx = linear_sum_assignment(coocurrence.values, maximize=True)
     return dict(
         zip(

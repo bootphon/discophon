@@ -100,7 +100,7 @@ def get_language(n: str | Language, /) -> Language:  # noqa: C901, PLR0911, PLR0
             return Language(name="Turkish", iso_639_3="tur", split="dev", n_phonemes=27)
         case "ukrainian" | "ukr" | "uk":
             return Language(name="Ukrainian", iso_639_3="ukr", split="dev", n_phonemes=35)
-        case "mandarin chinese" | "mandarin" | "chinese" | "cmn" | "zh-CN":
+        case "mandarin chinese" | "mandarin" | "chinese" | "cmn" | "zh-cn":
             return Language(name="Mandarin Chinese", iso_639_3="cmn", split="test", n_phonemes=42)
         case "english" | "eng":
             return Language(name="English", iso_639_3="eng", split="test", n_phonemes=39)

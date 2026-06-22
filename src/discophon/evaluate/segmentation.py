@@ -37,8 +37,8 @@ class SegmentationEvaluation:
 
     @cached_property
     def os(self) -> float:
-        """Over segmentation."""
-        return self.recall / self.precision - 1
+        """Over segmentation. Equivalent to recall / precision - 1."""
+        return (self.true_positives + self.false_positives) / (self.true_positives + self.false_negatives) - 1
 
     @cached_property
     def r_val(self) -> float:

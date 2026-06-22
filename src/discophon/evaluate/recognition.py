@@ -11,9 +11,12 @@ from discophon.data import Phones
 from discophon.validate import validate_first_two_arguments_same_keys
 
 
-def deduplicate[T](seq: Iterable[T]) -> list[T]:
+def deduplicate[T: np.generic](seq: Iterable[T]) -> list[T]:
     """Deduplicate consecutive values."""
-    return [key for key, _ in groupby(seq)]
+    deduplicated = [key for key, _ in groupby(seq)]
+    if len(deduplicated) == 0:
+        raise ValueError("Empty sequence found while deduplicating")
+    return deduplicated
 
 
 @numba.jit(nopython=True, nogil=True)

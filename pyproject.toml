@@ -48,14 +48,18 @@ baselines = [
 [dependency-groups]
 dev = [
   "ipykernel>=7.2.0",
-  "matplotlib>=3.10.8",
   "prek>=0.3.6",
-  "pytest>=9.0.2",
 ]
 docs = [
   "mkdocstrings-python>=2.0.3",
   "ruff>=0.15.7",
   "zensical>=0.0.38",
+]
+test = [
+  "hypothesis>=6.155.7",
+  "matplotlib>=3.10.8",
+  "pytest>=9.0.3",
+  "pytest-cov>=7.1.0",
 ]
 
 [build-system]
@@ -66,9 +70,12 @@ build-backend = "hatchling.build"
 source = "vcs"
 
 [tool.pytest]
-log_cli = true
-log_cli_level = "INFO"
-markers = ["requires_dataset: mark test as requiring a path to the dataset"]
+addopts = ["--cov=discophon"]
+markers = [
+  "requires_dataset: mark test as requiring a path to the dataset",
+  "requires_tipa_output: mark test as requiring an output path for the TIPA mapping plot",
+]
+testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 119

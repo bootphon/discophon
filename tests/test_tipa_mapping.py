@@ -1,16 +1,15 @@
-import logging
-from uuid import uuid4
+from pathlib import Path
 
 import matplotlib.pyplot as plt
+import pytest
 from matplotlib import rc
 from matplotlib.patches import Rectangle
 
 from discophon.languages import load_tipa
 
-logger = logging.getLogger()
 
-
-def test_tipa_mapping() -> None:
+@pytest.mark.requires_tipa_output
+def test_tipa_mapping(tipa_output: Path) -> None:
     mapping = load_tipa()
     rc("text", usetex=True)
     rc("text.latex", preamble=r"\usepackage{tipa}")
@@ -32,8 +31,6 @@ def test_tipa_mapping() -> None:
         ax.text(0.5, 0.3, tipa, ha="center", va="center", fontsize=30, color="red", usetex=True)
     for idx in range(n_items, len(axes_flat)):
         axes_flat[idx].axis("off")
-    output = f"tipa-mapping-{uuid4().hex[:6]}.pdf"
-    logger.info("Saving TIPA mapping verification plot to %s", output)
     plt.tight_layout()
-    plt.savefig(output)
+    plt.savefig(tipa_output)
     plt.close(fig)
