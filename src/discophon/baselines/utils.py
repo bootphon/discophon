@@ -37,7 +37,10 @@ class DiscophonAudioDataset(Dataset):
         samples = WavDecoder(path).get_all_samples()
         waveform = samples.data
         if samples.sample_rate != SAMPLE_RATE or waveform.size(0) != 1:
-            raise ValueError(index)
+            raise ValueError(
+                f"Expected mono audio at {SAMPLE_RATE} Hz for {path}, "
+                f"got {waveform.size(0)} channel(s) at {samples.sample_rate} Hz."
+            )
         if self.normalize:
             waveform = F.layer_norm(waveform, waveform.shape)
         return fileid, waveform.squeeze()
@@ -105,7 +108,7 @@ def patch_manifest_with_paths(src: str | Path, dest: str | Path) -> None:
         _, lang, *split = Path(src).stem.split("-")
         audios = discophon / "audio" / lang / "-".join(split)
         if not audios.is_dir():
-            raise ValueError(audios)
+            raise ValueError(f"Audio directory does not exist: {audios}")
         manifest = manifest.with_columns(path=pl.concat_str(pl.lit(str(audios) + "/"), "fileid", pl.lit(".wav")))
     manifest.write_csv(dest)
 

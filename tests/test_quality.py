@@ -4,9 +4,14 @@ import numpy as np
 import pytest
 from hypothesis import assume, given, settings
 from hypothesis import strategies as st
+from scipy.stats import entropy
+from sklearn.metrics import mutual_info_score
 from xarray import DataArray
 
 from discophon.evaluate.quality import pnmi, probability_phone_given_unit
+
+# Smallest phone entropy the eps-smoothed legacy oracle stays faithful at; below this its error blows up.
+MIN_PHONE_ENTROPY = 0.05
 
 
 def make_cooccurrence(matrix: list[list[int]]) -> DataArray:
@@ -65,9 +70,44 @@ def test_pnmi_matches_legacy_on_well_defined_inputs(rows: list[list[int]]) -> No
     width = len(rows[0])
     matrix = [row[:width] + [0] * (width - len(row)) for row in rows]
     arr = np.asarray(matrix, dtype=float)
-    assume((arr.sum(axis=1) > 0).sum() >= 2)
+    total = arr.sum()
+    assume(total > 0)
+    px = arr.sum(axis=1) / total
+    px = px[px > 0]
+    assume(len(px) >= 2 and -(px * np.log(px)).sum() >= MIN_PHONE_ENTROPY)
     cooc = make_cooccurrence(matrix)
     assert pnmi(cooc) == pytest.approx(_legacy_pnmi(cooc), abs=1e-6)
+
+
+def _reference_pnmi(cooccurrence: DataArray) -> float:
+    """Independent PNMI oracle from scikit-learn's mutual information and SciPy's entropy (both in nats).
+
+    Mirrors the documented degenerate convention: PNMI is 0.0 when there is no mass or the phone entropy is 0.
+    """
+    count = cooccurrence.values
+    total = count.sum()
+    if total == 0:
+        return 0.0
+    h_phone = entropy(count.sum(axis=1) / total)
+    if h_phone == 0:
+        return 0.0
+    return float(np.clip(mutual_info_score(None, None, contingency=count) / h_phone, 0.0, 1.0))
+
+
+@settings(max_examples=1000)
+@given(
+    st.lists(
+        st.lists(st.integers(min_value=0, max_value=512), min_size=1, max_size=50),
+        min_size=1,
+        max_size=50,
+    )
+)
+def test_pnmi_matches_independent_reference(rows: list[list[int]]) -> None:
+    # Faithful oracle (no eps smoothing), so it holds over the whole input range, degenerate cases included.
+    width = len(rows[0])
+    matrix = [row[:width] + [0] * (width - len(row)) for row in rows]
+    cooc = make_cooccurrence(matrix)
+    assert pnmi(cooc) == pytest.approx(_reference_pnmi(cooc), abs=1e-9)
 
 
 @given(
@@ -117,6 +157,12 @@ def test_pnmi_single_phone_is_defined_as_zero() -> None:
 
 def test_pnmi_empty_matrix_is_defined_as_zero() -> None:
     assert pnmi(make_cooccurrence([[0, 0], [0, 0]])) == 0.0
+
+
+def test_pnmi_single_row_is_defined_as_zero() -> None:
+    # Regression: a genuine single-phone matrix (no zero-padding row) has zero phone entropy. Rounding in the
+    # marginal made entropy_x ~1e-16 instead of 0, slipping the guard and clipping the ratio to a spurious 1.0.
+    assert pnmi(make_cooccurrence([[1, 182, 6]])) == 0.0
 
 
 def test_probability_columns_sum_to_one() -> None:

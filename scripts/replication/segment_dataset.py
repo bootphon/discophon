@@ -29,7 +29,7 @@ def segment_dataset(path_dataset: str, path_rttm: str, path_output: str, *, num_
             dest.parent.mkdir(parents=True, exist_ok=True)
             samples = data["audio"].get_samples_played_in_range(onset, offset)
             if samples.sample_rate != SAMPLE_RATE:
-                raise ValueError(data["id"])
+                raise ValueError(f"Expected {SAMPLE_RATE} Hz for {data['id']}, got {samples.sample_rate} Hz.")
             AudioEncoder(samples.data, sample_rate=samples.sample_rate).to_file(dest)
     if unvoiced:
         print("Unvoiced files:\n", json.dumps(unvoiced, indent=2))

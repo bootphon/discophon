@@ -79,6 +79,9 @@ def benchmark_discovery(
             kind=kind,
         )
         df.append({"language": language.iso_639_3, "split": split} | scores)
+    if not df:
+        schema = {"language": pl.String, "split": pl.String, "metric": pl.String, "score": pl.Float64}
+        return pl.DataFrame(schema=schema)
     return pl.DataFrame(df).unpivot(index=["language", "split"], variable_name="metric", value_name="score")
 
 

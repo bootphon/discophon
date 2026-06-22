@@ -29,7 +29,7 @@ def vad_dataset(path_dataset: str, path_rttm: str, *, model: str, token: str | N
     for data in tqdm(dataset, desc="VAD"):
         samples = data["audio"].get_all_samples()
         if samples.sample_rate != SAMPLE_RATE:
-            raise ValueError(data["id"])
+            raise ValueError(f"Expected {SAMPLE_RATE} Hz for {data['id']}, got {samples.sample_rate} Hz.")
         vad = pipeline({"waveform": samples.data.to(device), "sample_rate": samples.sample_rate})
         vad.uri = data["id"]
         with lock, rttm.open("a", encoding="utf-8") as f:

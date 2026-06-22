@@ -114,8 +114,10 @@ def read_textgrid(path: str | Path) -> dict[str, pl.DataFrame]:
         return _read_single_textgrid(path)
     if Path(path).is_dir():
         grids = [_read_single_textgrid(p) for p in Path(path).glob("*.TextGrid")]
+        if not grids:
+            raise ValueError(f"No TextGrid files found in directory {path}")
         return {name: pl.concat(grid[name] for grid in grids).sort("fileid") for name in grids[0]}
-    raise ValueError(path)
+    raise ValueError(f"Path is neither a TextGrid file nor a directory: {path}")
 
 
 class TextGridEntry(TypedDict):
@@ -191,8 +193,8 @@ def num_invalid_rows(df: pl.DataFrame, *, step_in_ms: int) -> int:
             pl.when(pl.col(f"prev_{OFFSET}").is_null())
             .then(pl.col(ONSET) != 0)
             .otherwise((pl.col(ONSET) != pl.col(f"prev_{OFFSET}")) | incorrect_duration)
-            .alias("valid")
-        )["valid"]
+            .alias("invalid")
+        )["invalid"]
         .sum()
     )
 

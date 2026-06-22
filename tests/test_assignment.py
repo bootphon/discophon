@@ -85,6 +85,13 @@ def test_cooccurrence_raises_when_too_many_phonemes() -> None:
         cooccurrence_matrix({"f": [0, 0, 0]}, {"f": ["a", "a", "b", "b", "c", "c"]}, n_units=1, n_phonemes=1)
 
 
+def test_cooccurrence_empty_input_is_all_zeros() -> None:
+    # empty sequences must not crash (np.array([]) would default to float and break np.bincount)
+    cooc = cooccurrence_matrix({"f": []}, {"f": []}, n_units=2, n_phonemes=2)
+    assert cooc.shape == (3, 2)
+    assert int(cooc.sum().item()) == 0
+
+
 def test_cooccurrence_rejects_mismatched_keys() -> None:
     with pytest.raises(ValidateSameKeysError):
         cooccurrence_matrix({"a": [0]}, {"b": ["x"]}, n_units=1, n_phonemes=1)

@@ -1,6 +1,7 @@
 """CLI entry-point for phoneme discovery evaluation."""
 
 import argparse
+import json
 from pathlib import Path
 
 from discophon.data import read_gold_annotations, read_submitted_units
@@ -27,13 +28,15 @@ if __name__ == "__main__":
     parser.add_argument("--step-units", type=int, default=20, help="Step between units (in ms)")
     args = parser.parse_args()
     print(
-        phoneme_discovery(
-            read_submitted_units(args.units),
-            read_gold_annotations(args.phones),
-            n_units=args.n_units,
-            n_phonemes=args.n_phonemes,
-            step_units=args.step_units,
-            kind=args.kind,
-            language=args.language,
+        json.dumps(
+            phoneme_discovery(
+                read_submitted_units(args.units),
+                read_gold_annotations(args.phones),
+                n_units=args.n_units,
+                n_phonemes=args.n_phonemes,
+                step_units=args.step_units,
+                kind=args.kind,
+                language=args.language,
+            )
         )
     )

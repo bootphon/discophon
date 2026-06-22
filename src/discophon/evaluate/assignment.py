@@ -100,7 +100,7 @@ def cooccurrence_matrix(
     for missing in range(len(phone_to_index), n_phonemes_with_sil):
         phone_to_index[f"<missing-{missing}>"] = missing
 
-    flattened_indices = np.array(phone_indices) * n_units + np.array(unit_indices)
+    flattened_indices = np.array(phone_indices, dtype=np.int64) * n_units + np.array(unit_indices, dtype=np.int64)
     count = DataArray(
         np.bincount(flattened_indices, minlength=n_phonemes_with_sil * n_units).reshape(n_phonemes_with_sil, n_units),
         dims=["phone", "unit"],

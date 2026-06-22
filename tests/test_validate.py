@@ -1,15 +1,21 @@
 """Tests for the validation helpers."""
 
+from itertools import product, starmap
+from pathlib import Path
+
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from discophon.languages import get_language
+from discophon.data import alignment_filename, item_filename, manifest_filename
+from discophon.languages import all_languages, get_language
 from discophon.validate import (
     ArgumentsError,
+    DatasetError,
     NumberPhonemesError,
     ValidateSameKeysError,
     infer_number_of_phonemes,
+    validate_dataset_structure,
     validate_first_two_arguments_same_keys,
 )
 
@@ -66,3 +72,50 @@ def test_infer_rejects_both_set() -> None:
 def test_infer_rejects_neither_set() -> None:
     with pytest.raises(NumberPhonemesError):
         infer_number_of_phonemes(None, None)
+
+
+def build_valid_dataset(root: Path) -> Path:
+    """Create the minimal (empty-file) tree that ``validate_dataset_structure`` accepts."""
+    languages = all_languages()
+    for name in starmap(alignment_filename, product(languages, ["dev", "test"])):
+        (root / "alignment" / name).parent.mkdir(parents=True, exist_ok=True)
+        (root / "alignment" / name).touch()
+    for kind, lang, split in product(["triphone", "phoneme"], languages, ["dev", "test"]):
+        (root / "item").mkdir(parents=True, exist_ok=True)
+        (root / "item" / item_filename(lang, split, kind=kind)).touch()
+    (root / "manifest").mkdir(parents=True, exist_ok=True)
+    splits = ["dev", "test", "train-10h", "train-10min", "train-1h"]
+    for name in starmap(manifest_filename, product(languages, splits)):
+        (root / "manifest" / name).touch()
+    (root / "manifest" / "speakers.jsonl").touch()
+    for lang in languages:
+        audio = root / "audio" / lang.iso_639_3
+        audio.mkdir(parents=True, exist_ok=True)
+        for split in ["all", "dev", "test", "train-10h", "train-10min", "train-1h"]:
+            (audio / f"{split}.wav").touch()
+    return root
+
+
+def test_validate_dataset_structure_accepts_valid_tree(tmp_path: Path) -> None:
+    validate_dataset_structure(build_valid_dataset(tmp_path))
+
+
+def test_validate_dataset_structure_rejects_missing_top_level_dir(tmp_path: Path) -> None:
+    root = build_valid_dataset(tmp_path)
+    next((root / "alignment").glob("*")).parent.rename(root / "alignment_renamed")
+    with pytest.raises(DatasetError):
+        validate_dataset_structure(root)
+
+
+def test_validate_dataset_structure_rejects_unexpected_extra_file(tmp_path: Path) -> None:
+    root = build_valid_dataset(tmp_path)
+    (root / "manifest" / "unexpected.csv").touch()
+    with pytest.raises(DatasetError):
+        validate_dataset_structure(root)
+
+
+def test_validate_dataset_structure_rejects_missing_audio_split(tmp_path: Path) -> None:
+    root = build_valid_dataset(tmp_path)
+    next((root / "audio").glob("*/all.wav")).unlink()
+    with pytest.raises(DatasetError):
+        validate_dataset_structure(root)

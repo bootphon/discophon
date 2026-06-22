@@ -759,6 +759,7 @@ test = [
     { name = "matplotlib" },
     { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "scikit-learn" },
 ]
 
 [package.metadata]
@@ -796,6 +797,7 @@ test = [
     { name = "matplotlib", specifier = ">=3.10.8" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-cov", specifier = ">=7.1.0" },
+    { name = "scikit-learn", specifier = ">=1.8.0" },
 ]
 
 [[package]]

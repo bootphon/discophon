@@ -114,7 +114,7 @@ def discrete_abx(
                 across_speaker_any_context=abx(dataset, "identical", speaker="across", context="any"),
             )
         case _:
-            raise ValueError(kind)
+            raise ValueError(f"Unknown kind {kind!r}, expected 'triphone' or 'phoneme'.")
 
 
 @overload
@@ -173,7 +173,7 @@ def continuous_abx(
                 across_speaker_any_context=abx(dataset, "angular", speaker="across", context="any"),
             )
         case _:
-            raise ValueError(kind)
+            raise ValueError(f"Unknown kind {kind!r}, expected 'triphone' or 'phoneme'.")
 
 
 if __name__ == "__main__":
@@ -204,5 +204,5 @@ if __name__ == "__main__":
     elif args.root.suffix == ".jsonl":
         scores = discrete_abx(args.item, args.root, frequency=args.frequency, kind=args.kind)
     else:
-        raise ValueError(args.root)
+        raise ValueError(f"Expected a directory of features or a .jsonl units file, got {args.root}")
     print("\n".join(f"{key}:\t{score:.2%}" for key, score in scores.items()))

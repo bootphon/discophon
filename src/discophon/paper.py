@@ -11,7 +11,7 @@ def lang_split(lang: str) -> pl.Expr:
     return (
         pl.when(pl.col(lang).is_null())
         .then(None)
-        .otherwise(pl.col(lang).replace_strict({lang.iso_639_3: lang.split for lang in all_languages()}))
+        .otherwise(pl.col(lang).replace_strict({language.iso_639_3: language.split for language in all_languages()}))
     )
 
 
@@ -52,7 +52,7 @@ def merge_metrics(df: pl.DataFrame, metrics: list[str]) -> pl.DataFrame:
             .drop("score_y", "metric_y")
         )
         if len(pair) == 0:
-            raise ValueError
+            raise ValueError(f"Joining within/across-speaker rows for metric {metric!r} produced no rows.")
         df = pl.concat([df, pair])
     return df
 

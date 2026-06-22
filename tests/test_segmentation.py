@@ -8,11 +8,21 @@ from hypothesis import strategies as st
 
 from discophon.evaluate.segmentation import (
     Boundaries,
+    NoBoundariesError,
     SegmentationEvaluation,
     compare_boundaries,
     phone_segmentation,
 )
 from discophon.validate import ValidateSameKeysError
+
+
+def test_metrics_raise_clear_error_without_boundaries() -> None:
+    # no gold and no predicted boundaries: metrics are undefined and must fail loudly, not with ZeroDivisionError
+    empty = SegmentationEvaluation(true_positives=0, false_positives=0, false_negatives=0)
+    for accessor in ("recall", "precision", "f1", "os", "r_val"):
+        with pytest.raises(NoBoundariesError):
+            getattr(empty, accessor)
+
 
 counts = st.integers(min_value=0, max_value=1000)
 

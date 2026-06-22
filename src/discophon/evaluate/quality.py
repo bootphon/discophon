@@ -36,7 +36,7 @@ def pnmi(cooccurrence: DataArray) -> float:
     """
     count = cooccurrence.values
     total = count.sum()
-    if total == 0:
+    if total == 0 or (count.sum(axis=1) > 0).sum() <= 1:
         return 0.0
     proba = count / total
     px, py = proba.sum(axis=1, keepdims=True), proba.sum(axis=0, keepdims=True)
@@ -45,6 +45,4 @@ def pnmi(cooccurrence: DataArray) -> float:
     mutual_info = (joint * np.log(joint / independent)).sum()
     px_positive = px[px > 0]
     entropy_x = -(px_positive * np.log(px_positive)).sum()
-    if entropy_x == 0:
-        return 0.0
     return (mutual_info / entropy_x).clip(0, 1).item()

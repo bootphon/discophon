@@ -12,6 +12,13 @@ from discophon.data import STEP_PHONES, STEP_UNITS, Phones
 from discophon.validate import validate_first_two_arguments_same_keys
 
 
+class NoBoundariesError(ZeroDivisionError):
+    """Raised when a segmentation metric is undefined because there are no boundaries to score."""
+
+    def __init__(self, which: str) -> None:
+        super().__init__(f"Segmentation metric is undefined: no {which} boundaries to score.")
+
+
 @dataclass(frozen=True)
 class SegmentationEvaluation:
     """Container for segmentation results. Target metrics are available as properties."""
@@ -23,21 +30,29 @@ class SegmentationEvaluation:
     @cached_property
     def recall(self) -> float:
         """Recall."""
+        if self.true_positives + self.false_negatives == 0:
+            raise NoBoundariesError("gold")
         return self.true_positives / (self.true_positives + self.false_negatives)
 
     @cached_property
     def precision(self) -> float:
         """Precision."""
+        if self.true_positives + self.false_positives == 0:
+            raise NoBoundariesError("predicted")
         return self.true_positives / (self.true_positives + self.false_positives)
 
     @cached_property
     def f1(self) -> float:
         """F1 score."""
+        if 2 * self.true_positives + self.false_positives + self.false_negatives == 0:
+            raise NoBoundariesError("gold or predicted")
         return 2 * self.true_positives / (2 * self.true_positives + self.false_positives + self.false_negatives)
 
     @cached_property
     def os(self) -> float:
         """Over segmentation. Equivalent to recall / precision - 1."""
+        if self.true_positives + self.false_negatives == 0:
+            raise NoBoundariesError("gold")
         return (self.true_positives + self.false_positives) / (self.true_positives + self.false_negatives) - 1
 
     @cached_property
