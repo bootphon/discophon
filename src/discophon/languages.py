@@ -174,5 +174,5 @@ ISO6393_TO_CV = {
     "ukr": "uk",
     "cmn": "zh-CN",
     "eus": "eu",
-    "jpn": "jpn",
+    "jpn": "ja",
 }

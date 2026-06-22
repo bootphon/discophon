@@ -92,12 +92,12 @@ def discrete_abx(
         path_units: Path to the predicted units: JSONL file with keys `file` ([`str`][]) and `units` (`list[int]`).
         frequency: Feature frequency in Hz. It is the inverse of the `step_units` parameter used in other functions.
         kind: Kind of representations to consider. If `phoneme`, we also compute the ABX in the "any" context
-              condition, if addition of "within" context.
+              condition, in addition to "within" context.
 
     Returns:
         Dictionary of ABX discriminabilities with keys `"within_speaker"` and `"across_speaker"` if `kind` is
-            `"phoneme"`, and with keys `"within_speaker_within_context"`, `"across_speaker_within_context"`,
-            `"within_speaker_any_context"`, and `"across_speaker_any_context"` otherwise.
+            `"triphone"`, and with keys `"within_speaker_within_context"`, `"across_speaker_within_context"`,
+            `"within_speaker_any_context"`, and `"across_speaker_any_context"` if `kind` is `"phoneme"`.
     """
     dataset = Dataset.from_item_and_units(path_item, path_units, frequency, audio_key="file")
     match kind:
@@ -151,12 +151,12 @@ def continuous_abx(
         path_features: Path to the extracted features: folder of `.pt` files with names corresponding to the file ids.
         frequency: Feature frequency in Hz. It is the inverse of the `step_units` parameter used in other functions.
         kind: Kind of representations to consider. If `phoneme`, we also compute the ABX in the "any" context
-              condition, if addition of "within" context.
+              condition, in addition to "within" context.
 
     Returns:
         Dictionary of ABX discriminabilities with keys `"within_speaker"` and `"across_speaker"` if `kind` is
-            `"phoneme"`, and with keys `"within_speaker_within_context"`, `"across_speaker_within_context"`,
-            `"within_speaker_any_context"`, and `"across_speaker_any_context"` otherwise.
+            `"triphone"`, and with keys `"within_speaker_within_context"`, `"across_speaker_within_context"`,
+            `"within_speaker_any_context"`, and `"across_speaker_any_context"` if `kind` is `"phoneme"`.
     """
     dataset = Dataset.from_item(path_item, path_features, frequency)
     match kind:

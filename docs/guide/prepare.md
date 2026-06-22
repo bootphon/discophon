@@ -59,8 +59,10 @@ for code in swa tam tha tur ukr cmn eus jpn; do
 done
 ```
 
-This will create directories `$DATA/audio/cmn/all`, `$DATA/audio/deu/all`, `$DATA/audio/eng/all`, etc., with
-resampled audio files. The directories corresponding to each split contain symlinks to those files.
+This will create directories `$DATA/audio/cmn/all`, `$DATA/audio/eus/all`, `$DATA/audio/jpn/all`, etc., with
+resampled audio files for the Common Voice languages (`cmn`, `eus`, `jpn`, `swa`, `tam`, `tha`, `tur`, `ukr`).
+The directories for `deu`, `eng`, `fra`, and `wol` were already created by the asset download above. The
+directories corresponding to each split contain symlinks to those files.
 
 You should parallelize this loop if you can to speed things up. If you are in a SLURM cluster, you should also parallelize each dataset
 processing across tasks or array jobs. The `discophon.prepare` package will automatically distribute the files to process to each job.

@@ -146,7 +146,7 @@ if __name__ == "__main__":
     match args.command:
         case "download":
             download_benchmark(args.data)
-        case "audio":
+        case "commonvoice":
             prepare_commonvoice_datasets(args.data, args.code)
         case _:
             parser.error("Invalid command")

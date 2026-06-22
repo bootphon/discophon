@@ -12,7 +12,7 @@
 The benchmark covers 12 languages chosen to span a wide range of phonemic contrasts, split into dev languages for
 tuning and test languages for final evaluation. Systems are given 10 hours of unannotated speech and must produce
 discrete units that can be mapped to the language's phoneme inventory, either many-to-one (with 256 units), or one-to-one
-(with as many units as phonemes).
+(with as many units as phonemes, plus one to account for silence).
 
 - **Languages**:
     - dev languages: German, Swahili, Tamil, Thai, Turkish, Ukrainian

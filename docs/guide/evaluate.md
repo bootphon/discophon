@@ -87,17 +87,23 @@ print(df)  # pl.DataFrame with the results for each language and split
 
 The result is a long-format DataFrame with columns `language`, `split`, `metric`, and `score`. The
 `metric` column holds one row per metric and language/split: `pnmi`, `per` (phone error rate), and
-the segmentation scores `f1` and `r_val` ($R$-value). The ABX helpers return DataFrames with the
-same layout.
+the segmentation scores `f1` and `r_val` ($R$-value).
 
 Use the functions [`benchmark_abx_continuous`][discophon.benchmark.benchmark_abx_continuous] or
-[`benchmark_abx_discrete`][discophon.benchmark.benchmark_abx_discrete] for ABX evaluation.
+[`benchmark_abx_discrete`][discophon.benchmark.benchmark_abx_discrete] for ABX evaluation. They
+return DataFrames with the same layout, but the `metric` column instead holds the ABX conditions,
+named `{kind}_abx_{discrete,continuous}_{condition}`. For `kind="triphone"` the conditions are
+`within_speaker` and `across_speaker`, so for instance discrete triphone ABX yields
+`triphone_abx_discrete_within_speaker` and `triphone_abx_discrete_across_speaker`. For
+`kind="phoneme"` the conditions are `within_speaker_within_context`, `across_speaker_within_context`,
+`within_speaker_any_context`, and `across_speaker_any_context`.
 
 Via the CLI:
 
 ```console
 ❯ python -m discophon.benchmark --help
-usage: discophon.benchmark [-h] [--benchmark {discovery,abx-discrete,abx-continuous}] [--kind {many-to-one,one-to-one}] [--step-units STEP_UNITS]
+usage: discophon.benchmark [-h] [--benchmark {discovery,abx-discrete,abx-continuous}] [--kind {many-to-one,one-to-one}]
+                           [--abx-kind {triphone,phoneme}] [--step-units STEP_UNITS]
                            dataset predictions output
 
 Phoneme Discovery benchmark
@@ -112,7 +118,11 @@ options:
   --benchmark {discovery,abx-discrete,abx-continuous}
                         Which benchmark (default: discovery)
   --kind {many-to-one,one-to-one}
-                        Kind of assignment (either many-to-one, or one-to-one) (default: many-to-one)
+                        Kind of assignment (either many-to-one, or one-to-one). Only applies to '--benchmark
+                        discovery'. (default: many-to-one)
+  --abx-kind {triphone,phoneme}
+                        Representation kind for the ABX benchmarks (ignored for '--benchmark discovery'). (default:
+                        triphone)
   --step-units STEP_UNITS
                         Step in ms between units or features. 'frequency' is then set to 1000 // step_units. (default: 20)
 ```
@@ -135,6 +145,14 @@ phones = read_gold_annotations("/path/to/discophon_data/alignment/alignment-eng-
 units = read_submitted_units("/path/to/units/units-eng-test.jsonl")
 result = phoneme_discovery(units, phones, kind="many-to-one", n_units=256, language="eng")
 print(result)
+```
+
+`n_units` is the number of distinct units in *your* system. For the many-to-one track this is 256.
+For the **one-to-one** track, the assignment is a bijection between units and phonemes, so you must
+set `n_units` to the number of phonemes plus one (the extra unit accounts for silence):
+
+```python
+result = phoneme_discovery(units, phones, kind="one-to-one", n_units=n_phonemes + 1, language="eng")
 ```
 
 Or via the CLI:
@@ -178,6 +196,10 @@ reads extracted features stored as one tensor file per audio file: save them as 
 `features/eng/test/0188-135249-0001.pt`. Each is a 2D tensor of shape `(num_frames, feature_dim)` at
 the resolution set by `frequency` (the inverse of `step_units`).
 
+The item file must match the `kind`: use `triphone-{code}-{split}.item` for `kind="triphone"` (the
+default) and `phoneme-{code}-{split}.item` for `kind="phoneme"`. Both ship with the dataset under
+`item/`. Pairing the wrong item file with a `kind` gives meaningless scores.
+
 Then, either run it in Python:
 
 ```python
@@ -192,7 +214,7 @@ print("Discrete: ", result_discrete)
 
 result_continuous = continuous_abx(
     "/path/to/discophon_data/item/triphone-eng-test.item",
-    "/path/to/units/units-eng-test.jsonl",
+    "/path/to/features/eng/test",
     frequency=50,
 )
 print("Continuous: ", result_continuous)

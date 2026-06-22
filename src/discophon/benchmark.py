@@ -187,7 +187,14 @@ if __name__ == "__main__":
         type=str,
         default="many-to-one",
         choices=["many-to-one", "one-to-one"],
-        help="Kind of assignment (either many-to-one, or one-to-one)",
+        help="Kind of assignment (either many-to-one, or one-to-one). Only applies to '--benchmark discovery'.",
+    )
+    parser.add_argument(
+        "--abx-kind",
+        type=str,
+        default="triphone",
+        choices=["triphone", "phoneme"],
+        help="Representation kind for the ABX benchmarks (ignored for '--benchmark discovery').",
     )
     parser.add_argument(
         "--step-units",
@@ -206,9 +213,19 @@ if __name__ == "__main__":
                 kind=args.kind,
             )
         case "abx-discrete":
-            out = benchmark_abx_discrete(args.dataset, args.predictions, step_units=args.step_units, kind="triphone")
+            out = benchmark_abx_discrete(
+                args.dataset,
+                args.predictions,
+                step_units=args.step_units,
+                kind=args.abx_kind,
+            )
         case "abx-continuous":
-            out = benchmark_abx_continuous(args.dataset, args.predictions, step_units=args.step_units, kind="triphone")
+            out = benchmark_abx_continuous(
+                args.dataset,
+                args.predictions,
+                step_units=args.step_units,
+                kind=args.abx_kind,
+            )
         case _:
             parser.error(f"Invalid benchmark: '{args.benchmark}'")
     lock = FileLock(f"{args.output}.lock")
