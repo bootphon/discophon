@@ -48,14 +48,14 @@ def test_textgrid_array_basic() -> None:
 def test_textgrid_array_is_contiguous_and_covers_sequence(seq: list[str], step: int) -> None:
     entries = textgrid_array_from_sequence(seq, step_in_ms=step)
     # intervals are contiguous: each begins where the previous ended, starting at 0
-    assert entries[0]["begin"] == pytest.approx(0.0)
+    assert entries[0]["begin"] == 0.0
     for prev, nxt in pairwise(entries):
-        assert nxt["begin"] == pytest.approx(prev["end"])
+        assert nxt["begin"] == prev["end"]
     # consecutive labels differ (groupby collapsed the runs)
     labels = [e["label"] for e in entries]
     assert all(a != b for a, b in pairwise(labels))
     # total duration matches the number of tokens
-    assert entries[-1]["end"] == pytest.approx(len(seq) * step / 1000)
+    assert entries[-1]["end"] == len(seq) * step / 1000
 
 
 def test_num_invalid_rows_accepts_contiguous_alignment() -> None:

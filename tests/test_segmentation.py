@@ -19,18 +19,18 @@ counts = st.integers(min_value=0, max_value=1000)
 
 def test_perfect_scores() -> None:
     seg = SegmentationEvaluation(true_positives=10, false_positives=0, false_negatives=0)
-    assert seg.precision == pytest.approx(1.0)
-    assert seg.recall == pytest.approx(1.0)
-    assert seg.f1 == pytest.approx(1.0)
-    assert seg.os == pytest.approx(0.0)
-    assert seg.r_val == pytest.approx(1.0)
+    assert seg.precision == 1.0
+    assert seg.recall == 1.0
+    assert seg.f1 == 1.0
+    assert seg.os == 0.0
+    assert seg.r_val == 1.0
 
 
 @given(tp=st.integers(1, 1000), fp=counts, fn=counts)
 def test_f1_is_harmonic_mean(tp: int, fp: int, fn: int) -> None:
     seg = SegmentationEvaluation(tp, fp, fn)
     expected = 2 * seg.precision * seg.recall / (seg.precision + seg.recall)
-    assert seg.f1 == pytest.approx(expected)
+    assert seg.f1 == pytest.approx(expected, abs=1e-12)
 
 
 @given(tp=st.integers(1, 1000), fp=counts, fn=counts)
@@ -45,14 +45,14 @@ def test_metrics_are_bounded(tp: int, fp: int, fn: int) -> None:
 @given(tp=st.integers(1, 1000), fp=counts, fn=counts)
 def test_over_segmentation_formula(tp: int, fp: int, fn: int) -> None:
     seg = SegmentationEvaluation(tp, fp, fn)
-    assert seg.os == pytest.approx(seg.recall / seg.precision - 1)
+    assert seg.os == pytest.approx(seg.recall / seg.precision - 1, abs=1e-12)
 
 
 def test_over_segmentation_defined_when_precision_is_zero() -> None:
     # A system that predicts boundaries but gets none right has precision 0; os must not divide by it.
     seg = SegmentationEvaluation(true_positives=0, false_positives=3, false_negatives=2)
-    assert seg.precision == pytest.approx(0.0)
-    assert seg.os == pytest.approx((0 + 3) / (0 + 2) - 1)
+    assert seg.precision == 0.0
+    assert seg.os == (0 + 3) / (0 + 2) - 1
     assert isinstance(seg.r_val, float)
 
 
@@ -149,7 +149,7 @@ def test_phone_segmentation_identical_sequences_score_perfectly() -> None:
     result = phone_segmentation(phones, phones, step_units=10, step_phones=10, margin_in_ms=20)
     assert result.false_positives == 0
     assert result.false_negatives == 0
-    assert result.f1 == pytest.approx(1.0)
+    assert result.f1 == 1.0
 
 
 def test_phone_segmentation_aggregates_over_files() -> None:

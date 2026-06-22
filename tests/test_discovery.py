@@ -18,9 +18,9 @@ def test_perfect_units_give_ideal_scores() -> None:
     units = {"f": [0, 1, 0, 1]}
     phones = {"f": ["x", "x", "y", "y", "x", "x", "y", "y"]}
     result = phoneme_discovery(units, phones, kind="many-to-one", n_units=2, n_phonemes=2)
-    assert result["pnmi"] == pytest.approx(1.0, abs=1e-6)
-    assert result["per"] == pytest.approx(0.0, abs=1e-9)
-    assert result["f1"] == pytest.approx(1.0)
+    assert result["pnmi"] == 1.0
+    assert result["per"] == 0.0
+    assert result["f1"] == 1.0
 
 
 def test_one_to_one_kind_runs() -> None:

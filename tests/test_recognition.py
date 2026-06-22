@@ -4,7 +4,8 @@ from itertools import pairwise
 
 import numpy as np
 import pytest
-from hypothesis import given
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 from discophon.evaluate.recognition import deduplicate, edit_distance, phone_error_rate
 from discophon.validate import ArgumentsError, ValidateSameKeysError
@@ -81,29 +82,39 @@ def test_edit_distance_triangle_inequality(a: list[int], b: list[int], c: list[i
 
 def test_per_perfect_match_is_zero() -> None:
     gold = {"f1": ["a", "b", "c"], "f2": ["a", "a", "b"]}
-    assert phone_error_rate(gold, gold, n_jobs=1) == pytest.approx(0.0)
+    assert phone_error_rate(gold, gold, n_jobs=1) == 0.0
 
 
 def test_per_deduplicates_before_comparing() -> None:
     # Repeated tokens collapse, so this is a perfect match after dedup.
-    assert phone_error_rate({"f": ["a", "a", "b"]}, {"f": ["a", "b"]}, n_jobs=1) == pytest.approx(0.0)
+    assert phone_error_rate({"f": ["a", "a", "b"]}, {"f": ["a", "b"]}, n_jobs=1) == 0.0
 
 
 def test_per_value_matches_manual_computation() -> None:
-    # dedup(pred)=[a,c], dedup(gold)=[a,b]; edit distance 1, gold length 2 -> 0.5
-    assert phone_error_rate({"f": ["a", "a", "c"]}, {"f": ["a", "b"]}, n_jobs=1) == pytest.approx(0.5)
+    # dedup(pred)=[a,c], dedup(gold)=[a,b]; edit distance 1, gold length 2 -> 1/2
+    assert phone_error_rate({"f": ["a", "a", "c"]}, {"f": ["a", "b"]}, n_jobs=1) == 1 / 2
 
 
 def test_per_aggregates_across_files() -> None:
     pred = {"f1": ["a", "x"], "f2": ["b", "b"]}
     gold = {"f1": ["a", "b"], "f2": ["b", "b"]}
     # total edits = 1 (f1) + 0 (f2); total gold length after dedup = 2 + 1 = 3
-    assert phone_error_rate(pred, gold, n_jobs=1) == pytest.approx(1 / 3)
+    assert phone_error_rate(pred, gold, n_jobs=1) == 1 / 3
 
 
 @given(phone_sequences(min_size=1), phone_sequences(min_size=1))
 def test_per_is_non_negative(a: list[str], b: list[str]) -> None:
     assert phone_error_rate({"f": a}, {"f": b}, n_jobs=1) >= 0.0
+
+
+@settings(max_examples=25, deadline=None)  # spinning up the joblib pool per example is slow; deadline is irrelevant
+@given(st.lists(st.tuples(phone_sequences(min_size=1), phone_sequences(min_size=1)), min_size=1, max_size=5))
+def test_per_parallel_matches_serial(pairs: list[tuple[list[str], list[str]]]) -> None:
+    # The shipped default is n_jobs=-1 (parallel); every other test forces n_jobs=1, so the path that
+    # actually runs in production is otherwise unexercised. Aggregation must not depend on n_jobs.
+    pred = {f"f{i}": p for i, (p, _) in enumerate(pairs)}
+    gold = {f"f{i}": g for i, (_, g) in enumerate(pairs)}
+    assert phone_error_rate(pred, gold, n_jobs=2) == phone_error_rate(pred, gold, n_jobs=1)
 
 
 def test_per_rejects_mismatched_keys() -> None:

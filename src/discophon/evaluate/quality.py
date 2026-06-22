@@ -19,6 +19,14 @@ def probability_phone_given_unit(coocurrence: DataArray) -> DataArray:
 def pnmi(coocurrence: DataArray) -> float:
     """Compute PNMI.
 
+    The phone-normalized mutual information is the mutual information between phones and units divided
+    by the phone entropy.
+
+    Both quantities are summed over their non-zero entries only, so the identity
+    ``0 * log(0) = 0`` holds exactly and the result is guaranteed to lie in `[0, 1]`.
+    Degenerate inputs have no information to normalize: if the matrix is empty or a single phone carries
+    all the mass (the phone entropy is zero), PNMI is defined to be `0.0`.
+
     Args:
         coocurrence: Coocurrence matrix between `units` and the underlying phones, computed with
             [`coocurrence_matrix`][discophon.evaluate.coocurrence_matrix]
@@ -27,9 +35,16 @@ def pnmi(coocurrence: DataArray) -> float:
         Phone-normalized mutual information (between 0 and 1)
     """
     count = coocurrence.values
-    eps = 1e-10
-    proba = count / count.sum()
+    total = count.sum()
+    if total == 0:
+        return 0.0
+    proba = count / total
     px, py = proba.sum(axis=1, keepdims=True), proba.sum(axis=0, keepdims=True)
-    mutual_info = (proba * np.log(proba / (px @ py + eps) + eps)).sum()
-    entropy_x = (-px * np.log(px + eps)).sum()
-    return (mutual_info / entropy_x).item()
+    joint = proba[proba > 0]
+    independent = (px @ py)[proba > 0]
+    mutual_info = (joint * np.log(joint / independent)).sum()
+    px_positive = px[px > 0]
+    entropy_x = -(px_positive * np.log(px_positive)).sum()
+    if entropy_x == 0:
+        return 0.0
+    return (mutual_info / entropy_x).clip(0, 1).item()

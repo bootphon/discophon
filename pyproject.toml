@@ -71,6 +71,7 @@ source = "vcs"
 
 [tool.pytest]
 addopts = ["--cov=discophon"]
+filterwarnings = ["ignore::numba.core.errors.NumbaPendingDeprecationWarning"]
 markers = [
   "requires_dataset: mark test as requiring a path to the dataset",
   "requires_tipa_output: mark test as requiring an output path for the TIPA mapping plot",
@@ -124,7 +125,7 @@ select = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*.py" = ["S101"]
+"tests/*.py" = ["S101", "RUF069"]
 
 [tool.ruff.lint.flake8-tidy-imports]
 banned-module-level-imports = ["discophon.abx"]
