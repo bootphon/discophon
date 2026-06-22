@@ -3,7 +3,7 @@
 from typing import Literal, TypedDict
 
 from discophon.data import STEP_PHONES, STEP_UNITS, Phones, Units
-from discophon.evaluate.assignment import coocurrence_matrix, phone_assignments
+from discophon.evaluate.assignment import cooccurrence_matrix, phone_assignments
 from discophon.evaluate.quality import pnmi
 from discophon.evaluate.recognition import phone_error_rate
 from discophon.evaluate.segmentation import phone_segmentation
@@ -48,7 +48,7 @@ def phoneme_discovery(
     Returns:
         Phoneme discovery results in a dictionary with keys `"pnmi"`, `"per"`, `"f1"`, and `"r_val"`.
     """
-    coocurrence = coocurrence_matrix(
+    cooccurrence = cooccurrence_matrix(
         units,
         phones,
         n_units=n_units,
@@ -57,7 +57,7 @@ def phoneme_discovery(
         step_phones=step_phones,
         language=language,
     )
-    assignment = phone_assignments(units, coocurrence, kind=kind)
+    assignment = phone_assignments(units, cooccurrence, kind=kind)
     per = phone_error_rate(assignment, phones)
     detection = phone_segmentation(assignment, phones, step_units=step_units, step_phones=step_phones)
-    return {"pnmi": pnmi(coocurrence), "per": per, "f1": detection.f1, "r_val": detection.r_val}
+    return {"pnmi": pnmi(cooccurrence), "per": per, "f1": detection.f1, "r_val": detection.r_val}

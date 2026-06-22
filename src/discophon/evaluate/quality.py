@@ -4,10 +4,10 @@ import numpy as np
 from xarray import DataArray
 
 
-def probability_phone_given_unit(coocurrence: DataArray) -> DataArray:
+def probability_phone_given_unit(cooccurrence: DataArray) -> DataArray:
     """P(phone|unit) from a DataArray."""
-    coocurrence = coocurrence[:, coocurrence.any(dim="phone")]
-    proba = coocurrence / coocurrence.sum(dim="phone")
+    cooccurrence = cooccurrence[:, cooccurrence.any(dim="phone")]
+    proba = cooccurrence / cooccurrence.sum(dim="phone")
     most_probable_phones = proba.idxmax(dim="phone")
     units_order = []
     for phone in proba["phone"]:
@@ -16,7 +16,7 @@ def probability_phone_given_unit(coocurrence: DataArray) -> DataArray:
     return proba[:, units_order].rename("P(phone|unit)")
 
 
-def pnmi(coocurrence: DataArray) -> float:
+def pnmi(cooccurrence: DataArray) -> float:
     """Compute PNMI.
 
     The phone-normalized mutual information is the mutual information between phones and units divided
@@ -28,13 +28,13 @@ def pnmi(coocurrence: DataArray) -> float:
     all the mass (the phone entropy is zero), PNMI is defined to be `0.0`.
 
     Args:
-        coocurrence: Coocurrence matrix between `units` and the underlying phones, computed with
-            [`coocurrence_matrix`][discophon.evaluate.coocurrence_matrix]
+        cooccurrence: Cooccurrence matrix between `units` and the underlying phones, computed with
+            [`cooccurrence_matrix`][discophon.evaluate.cooccurrence_matrix]
 
     Returns:
         Phone-normalized mutual information (between 0 and 1)
     """
-    count = coocurrence.values
+    count = cooccurrence.values
     total = count.sum()
     if total == 0:
         return 0.0

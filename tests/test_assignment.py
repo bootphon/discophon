@@ -1,4 +1,4 @@
-"""Tests for unit-to-phone alignment, the coocurrence matrix, and assignments."""
+"""Tests for unit-to-phone alignment, the cooccurrence matrix, and assignments."""
 
 import numpy as np
 import pytest
@@ -6,9 +6,9 @@ from hypothesis import given
 from xarray import DataArray
 
 from discophon.evaluate.assignment import (
-    NonSquareCoocurrenceError,
+    NonSquareCooccurrenceError,
     align_units_and_phones,
-    coocurrence_matrix,
+    cooccurrence_matrix,
     mapping_many_to_one,
     mapping_one_to_one,
     phone_assignments,
@@ -44,8 +44,8 @@ def test_align_lengths_are_equal_per_file(units: list[int]) -> None:
     assert len(aligned["f"]["units"]) == len(aligned["f"]["phones"])
 
 
-def test_coocurrence_shape_and_counts() -> None:
-    cooc = coocurrence_matrix({"f": [0, 1]}, {"f": ["x", "x", "y", "y"]}, n_units=2, n_phonemes=2)
+def test_cooccurrence_shape_and_counts() -> None:
+    cooc = cooccurrence_matrix({"f": [0, 1]}, {"f": ["x", "x", "y", "y"]}, n_units=2, n_phonemes=2)
     assert cooc.shape == (3, 2)  # n_phonemes + 1 (SIL slot), n_units
     assert cooc.dims == ("phone", "unit")
     # unit 0 always under phone x, unit 1 always under phone y
@@ -54,40 +54,40 @@ def test_coocurrence_shape_and_counts() -> None:
     assert cooc.sel(phone="x", unit=1).item() == 0
 
 
-def test_coocurrence_total_equals_aligned_tokens() -> None:
-    cooc = coocurrence_matrix({"f": [0, 1, 2]}, {"f": ["a", "a", "b", "b", "c", "c"]}, n_units=3, n_phonemes=3)
+def test_cooccurrence_total_equals_aligned_tokens() -> None:
+    cooc = cooccurrence_matrix({"f": [0, 1, 2]}, {"f": ["a", "a", "b", "b", "c", "c"]}, n_units=3, n_phonemes=3)
     assert int(cooc.sum().item()) == 6
 
 
-def test_coocurrence_rows_sorted_by_frequency_descending() -> None:
+def test_cooccurrence_rows_sorted_by_frequency_descending() -> None:
     # phone "a" appears far more often than "b"
     units = {"f": [0] * 5 + [1]}
     phones = {"f": ["a"] * 10 + ["b"] * 2}
-    cooc = coocurrence_matrix(units, phones, n_units=2, n_phonemes=2)
+    cooc = cooccurrence_matrix(units, phones, n_units=2, n_phonemes=2)
     row_sums = cooc.sum(dim="unit").values
     assert list(row_sums) == sorted(row_sums, reverse=True)
 
 
-def test_coocurrence_pads_missing_phonemes() -> None:
+def test_cooccurrence_pads_missing_phonemes() -> None:
     # only one phone observed but language has 2 -> a "<missing>" row is added plus the SIL slot
-    cooc = coocurrence_matrix({"f": [0]}, {"f": ["a", "a"]}, n_units=1, n_phonemes=2)
+    cooc = cooccurrence_matrix({"f": [0]}, {"f": ["a", "a"]}, n_units=1, n_phonemes=2)
     assert cooc.shape == (3, 1)
     assert any("missing" in str(p) for p in cooc["phone"].values)
 
 
-def test_coocurrence_raises_when_unit_out_of_range() -> None:
+def test_cooccurrence_raises_when_unit_out_of_range() -> None:
     with pytest.raises(IndexError):
-        coocurrence_matrix({"f": [0, 5]}, {"f": ["a", "a", "b", "b"]}, n_units=2, n_phonemes=2)
+        cooccurrence_matrix({"f": [0, 5]}, {"f": ["a", "a", "b", "b"]}, n_units=2, n_phonemes=2)
 
 
-def test_coocurrence_raises_when_too_many_phonemes() -> None:
+def test_cooccurrence_raises_when_too_many_phonemes() -> None:
     with pytest.raises(IndexError):
-        coocurrence_matrix({"f": [0, 0, 0]}, {"f": ["a", "a", "b", "b", "c", "c"]}, n_units=1, n_phonemes=1)
+        cooccurrence_matrix({"f": [0, 0, 0]}, {"f": ["a", "a", "b", "b", "c", "c"]}, n_units=1, n_phonemes=1)
 
 
-def test_coocurrence_rejects_mismatched_keys() -> None:
+def test_cooccurrence_rejects_mismatched_keys() -> None:
     with pytest.raises(ValidateSameKeysError):
-        coocurrence_matrix({"a": [0]}, {"b": ["x"]}, n_units=1, n_phonemes=1)
+        cooccurrence_matrix({"a": [0]}, {"b": ["x"]}, n_units=1, n_phonemes=1)
 
 
 def test_mapping_many_to_one_picks_argmax_phone() -> None:
@@ -128,16 +128,16 @@ def test_mapping_one_to_one_rejects_non_square_matrix() -> None:
         dims=["phone", "unit"],
         coords=[["a", "b"], [0, 1, 2]],
     )
-    with pytest.raises(NonSquareCoocurrenceError):
+    with pytest.raises(NonSquareCooccurrenceError):
         mapping_one_to_one(cooc)
 
 
 def test_phone_assignments_one_to_one_rejects_non_square_matrix() -> None:
-    # n_units (5) > n_phonemes + 1 (4) -> non-square coocurrence
+    # n_units (5) > n_phonemes + 1 (4) -> non-square cooccurrence
     units = {"f": [0, 1, 2, 3, 4]}
     phones = {"f": ["a", "a", "b", "b", "c", "c", "a", "a", "b", "b"]}
-    cooc = coocurrence_matrix(units, phones, n_units=5, n_phonemes=3)
-    with pytest.raises(NonSquareCoocurrenceError):
+    cooc = cooccurrence_matrix(units, phones, n_units=5, n_phonemes=3)
+    with pytest.raises(NonSquareCooccurrenceError):
         phone_assignments(units, cooc, kind="one-to-one")
 
 
@@ -152,13 +152,13 @@ def test_mapping_one_to_one_maximizes_total_weight() -> None:
 
 
 def test_phone_assignments_applies_mapping() -> None:
-    cooc = coocurrence_matrix({"f": [0, 1]}, {"f": ["x", "x", "y", "y"]}, n_units=2, n_phonemes=2)
+    cooc = cooccurrence_matrix({"f": [0, 1]}, {"f": ["x", "x", "y", "y"]}, n_units=2, n_phonemes=2)
     out = phone_assignments({"f": [0, 0, 1]}, cooc, kind="many-to-one")
     assert out == {"f": ["x", "x", "y"]}
 
 
 def test_phone_assignments_unknown_kind_raises() -> None:
-    cooc = coocurrence_matrix({"f": [0, 1]}, {"f": ["x", "x", "y", "y"]}, n_units=2, n_phonemes=2)
+    cooc = cooccurrence_matrix({"f": [0, 1]}, {"f": ["x", "x", "y", "y"]}, n_units=2, n_phonemes=2)
     with pytest.raises(ValueError, match="Unknown kind"):
         phone_assignments({"f": [0]}, cooc, kind="bogus")  # ty:ignore[invalid-argument-type]
 

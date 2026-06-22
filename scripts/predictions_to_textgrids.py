@@ -15,7 +15,7 @@ from discophon.data import (
     write_textgrids,
 )
 from discophon.evaluate import phone_assignments
-from discophon.evaluate.assignment import coocurrence_matrix
+from discophon.evaluate.assignment import cooccurrence_matrix
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Export gold phones, units, and predicted phones to TextGrid format")
@@ -30,8 +30,8 @@ if __name__ == "__main__":
         code = language.iso_639_3
         units = read_submitted_units(args.predictions / units_filename(language, split))
         phones = read_gold_annotations(args.dataset / "alignment" / alignment_filename(language, split))
-        coocurrence = coocurrence_matrix(units, phones, n_units=DEFAULT_N_UNITS, n_phonemes=language.n_phonemes)
-        predictions = phone_assignments(units, coocurrence, kind="many-to-one")
+        cooccurrence = cooccurrence_matrix(units, phones, n_units=DEFAULT_N_UNITS, n_phonemes=language.n_phonemes)
+        predictions = phone_assignments(units, cooccurrence, kind="many-to-one")
         write_textgrids(phones, args.outdir / f"{code}/{split}", tier_name="phones", step_in_ms=STEP_PHONES)
         write_textgrids(units, args.outdir / f"{code}/{split}", tier_name="units", step_in_ms=STEP_UNITS)
         write_textgrids(predictions, args.outdir / f"{code}/{split}", tier_name="predictions", step_in_ms=STEP_UNITS)

@@ -11,8 +11,8 @@ from discophon.data import Phones
 from discophon.validate import validate_first_two_arguments_same_keys
 
 
-def deduplicate[T: np.generic](seq: Iterable[T]) -> list[T]:
-    """Deduplicate consecutive values."""
+def deduplicate[T](seq: Iterable[T]) -> list[T]:
+    """Deduplicate consecutive values into a numba typed list (so it can be passed to `edit_distance`)."""
     deduplicated = [key for key, _ in groupby(seq)]
     if len(deduplicated) == 0:
         raise ValueError("Empty sequence found while deduplicating")
@@ -42,6 +42,11 @@ def edit_distance[T](hypothesis: Sequence[T], target: Sequence[T]) -> int:
     return dold[-1].item()
 
 
+def _edit_distance_and_length(predicted: Sequence[str], gold: Sequence[str]) -> tuple[int, int]:
+    hypothesis, target = deduplicate(predicted), deduplicate(gold)
+    return edit_distance(hypothesis, target), len(target)
+
+
 @validate_first_two_arguments_same_keys
 def phone_error_rate(predicted_phones_from_units: Phones, gold_phones: Phones, *, n_jobs: int = -1) -> float:
     """Phone error rate.
@@ -58,9 +63,7 @@ def phone_error_rate(predicted_phones_from_units: Phones, gold_phones: Phones, *
         Phone error rate. Multiply it by 100 to get a percentage.
     """
     results = Parallel(n_jobs=n_jobs)(
-        delayed(lambda x, y: (edit_distance(x, y), len(y)))(
-            deduplicate(predicted_phones_from_units[fileid]), deduplicate(gold_phones[fileid])
-        )
+        delayed(_edit_distance_and_length)(predicted_phones_from_units[fileid], gold_phones[fileid])
         for fileid in predicted_phones_from_units
     )
     edit_distances, lengths = zip(*results, strict=True)

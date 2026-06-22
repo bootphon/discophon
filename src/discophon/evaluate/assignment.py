@@ -32,13 +32,14 @@ def align_units_and_phones(
     """Align units and phones by repeating each unit ``step_units // step_phones`` times.
 
     `step_units` **must** be an integer multiple of `step_phones` (the units are emitted at a lower or equal
-    rate than the phone annotations). The repeat factor is computed with integer division, so passing a
-    `step_units` that is not a multiple of `step_phones` silently rounds it down and produces a misaligned
-    result rather than an error; make sure the two steps are compatible before calling.
+    rate than the phone annotations); otherwise a `ValueError` is raised rather than silently producing a
+    misaligned result.
 
     A small margin is allowed at the end: up to ``step_units // step_phones`` extra tokens on either side are
     trimmed (e.g. when the final unit is missing). Any larger mismatch raises a `ValueError`.
     """
+    if step_phones <= 0 or step_units % step_phones != 0:
+        raise ValueError(f"step_units ({step_units}) must be an integer multiple of step_phones ({step_phones}).")
     repeat = step_units // step_phones
     data = {}
     for fileid, this_phones in phones.items():
@@ -51,7 +52,7 @@ def align_units_and_phones(
 
 
 @validate_first_two_arguments_same_keys
-def coocurrence_matrix(
+def cooccurrence_matrix(
     units: Units,
     phones: Phones,
     *,
@@ -61,7 +62,7 @@ def coocurrence_matrix(
     step_phones: int = STEP_PHONES,
     language: str | Language | None = None,
 ) -> DataArray:
-    """Build the 2D coocurrence matrix of shape (`n_phonemes`, `n_units`) as a [`DataArray`][xarray.DataArray].
+    """Build the 2D cooccurrence matrix of shape (`n_phonemes`, `n_units`) as a [`DataArray`][xarray.DataArray].
 
     Arguments:
         units: Predicted discrete units
@@ -87,8 +88,13 @@ def coocurrence_matrix(
             if phone not in phone_to_index:
                 phone_to_index[phone] = index
                 index += 1
-            if phone_to_index[phone] >= n_phonemes_with_sil or unit >= n_units:
-                raise IndexError
+            if phone_to_index[phone] >= n_phonemes_with_sil:
+                raise IndexError(
+                    f"Found more than {n_phonemes_with_sil} distinct phones (phonemes plus silence); "
+                    f"increase n_phonemes (currently {n_phonemes})."
+                )
+            if unit >= n_units:
+                raise IndexError(f"Found unit {unit}, but n_units is {n_units}; units must be in [0, {n_units}).")
             phone_indices.append(phone_to_index[phone])
             unit_indices.append(unit)
     for missing in range(len(phone_to_index), n_phonemes_with_sil):
@@ -99,7 +105,7 @@ def coocurrence_matrix(
         np.bincount(flattened_indices, minlength=n_phonemes_with_sil * n_units).reshape(n_phonemes_with_sil, n_units),
         dims=["phone", "unit"],
         coords=[list(phone_to_index.keys()), list(range(n_units))],
-        name="Coocurrence Matrix",
+        name="Cooccurrence Matrix",
     )
     return count.sortby(count.sum(dim="unit"), ascending=False)
 
@@ -130,52 +136,52 @@ def relabel_assignment(assignment: Iterable[int], proba: DataArray) -> DataArray
     )
 
 
-def mapping_many_to_one(coocurrence: DataArray) -> dict[int, str]:
+def mapping_many_to_one(cooccurrence: DataArray) -> dict[int, str]:
     """Many-to-one mapping between each unit to the phoneme that it was associated with the most.
 
     Many units can be associated to the same phoneme.
     """
-    most_frequent = coocurrence.idxmax(dim="phone")
+    most_frequent = cooccurrence.idxmax(dim="phone")
     return dict(zip(most_frequent.get_index("unit").values.tolist(), most_frequent.values.tolist(), strict=True))
 
 
-class NonSquareCoocurrenceError(ValueError):
-    """Raised when a one-to-one assignment is requested on a non-square coocurrence matrix."""
+class NonSquareCooccurrenceError(ValueError):
+    """Raised when a one-to-one assignment is requested on a non-square cooccurrence matrix."""
 
     def __init__(self, n_phones: int, n_units: int) -> None:
         super().__init__(
-            f"One-to-one assignment requires a square coocurrence matrix, got {n_phones} phones and {n_units} units. "
+            f"One-to-one assignment requires a square cooccurrence matrix, got {n_phones} phones and {n_units} units. "
             "Set `n_units` to the number of phonemes plus one (for the silence) when computing the matrix."
         )
 
 
-def mapping_one_to_one(coocurrence: DataArray) -> dict[int, str]:
+def mapping_one_to_one(cooccurrence: DataArray) -> dict[int, str]:
     """One-to-one mapping between phonemes and the optimal units according to the linear assignment sum problem.
 
-    The coocurrence matrix must be square: a non-square matrix would leave some units unassigned, which would
+    The cooccurrence matrix must be square: a non-square matrix would leave some units unassigned, which would
     later raise a `KeyError` when the mapping is applied in
     [`phone_assignments`][discophon.evaluate.phone_assignments].
     """
-    n_phones, n_units = coocurrence.shape
+    n_phones, n_units = cooccurrence.shape
     if n_phones != n_units:
-        raise NonSquareCoocurrenceError(n_phones, n_units)
-    phones_idx, units_idx = linear_sum_assignment(coocurrence.values, maximize=True)
+        raise NonSquareCooccurrenceError(n_phones, n_units)
+    phones_idx, units_idx = linear_sum_assignment(cooccurrence.values, maximize=True)
     return dict(
         zip(
-            coocurrence.get_index("unit").values[units_idx].tolist(),
-            coocurrence.get_index("phone").values[phones_idx].tolist(),
+            cooccurrence.get_index("unit").values[units_idx].tolist(),
+            cooccurrence.get_index("phone").values[phones_idx].tolist(),
             strict=True,
         )
     )
 
 
-def phone_assignments(units: Units, coocurrence: DataArray, *, kind: Literal["many-to-one", "one-to-one"]) -> Phones:
-    """Compute the assigned sequences of phones from units, the coocurrence matrix, and the kind of assignment.
+def phone_assignments(units: Units, cooccurrence: DataArray, *, kind: Literal["many-to-one", "one-to-one"]) -> Phones:
+    """Compute the assigned sequences of phones from units, the cooccurrence matrix, and the kind of assignment.
 
     Arguments:
         units: Predicted discrete units
-        coocurrence: Coocurrence matrix between `units` and the underlying phones, computed with
-            [`coocurrence_matrix`][discophon.evaluate.coocurrence_matrix]
+        cooccurrence: Cooccurrence matrix between `units` and the underlying phones, computed with
+            [`cooccurrence_matrix`][discophon.evaluate.cooccurrence_matrix]
         kind: Kind of assignment.
 
     Returns:
@@ -183,9 +189,9 @@ def phone_assignments(units: Units, coocurrence: DataArray, *, kind: Literal["ma
     """
     match kind:
         case "many-to-one":
-            mapping = mapping_many_to_one(coocurrence)
+            mapping = mapping_many_to_one(cooccurrence)
         case "one-to-one":
-            mapping = mapping_one_to_one(coocurrence)
+            mapping = mapping_one_to_one(cooccurrence)
         case _:
             raise ValueError(f"Unknown kind of assignment: {kind}")
     return {fileid: [mapping[u] for u in this_units] for fileid, this_units in units.items()}

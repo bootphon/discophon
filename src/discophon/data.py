@@ -113,8 +113,8 @@ def read_textgrid(path: str | Path) -> dict[str, pl.DataFrame]:
     if Path(path).is_file():
         return _read_single_textgrid(path)
     if Path(path).is_dir():
-        textgrids = [_read_single_textgrid(p) for p in Path(path).glob("*.TextGrid")]
-        return {name: pl.concat(textgrid[name] for textgrid in textgrids).sort("fileid") for name in textgrids[0]}
+        grids = [_read_single_textgrid(p) for p in Path(path).glob("*.TextGrid")]
+        return {name: pl.concat(grid[name] for grid in grids).sort("fileid") for name in grids[0]}
     raise ValueError(path)
 
 
