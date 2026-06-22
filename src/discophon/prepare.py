@@ -1,5 +1,7 @@
 """Download and prepare the DiscoPhon benchmark dataset."""
 
+import argparse
+import hashlib
 import math
 import os
 import tarfile
@@ -27,7 +29,7 @@ def split_across_slurm_array(n_total: int) -> tuple[int, int]:
             raise ValueError(
                 f"Inside a SLURM array, but {os.environ['SLURM_ARRAY_TASK_MIN']=} and "
                 f"{os.environ['SLURM_ARRAY_TASK_MAX']=} are not consistent with "
-                f"{os.environ["SLURM_ARRAY_TASK_COUNT"]=}."
+                f"{os.environ['SLURM_ARRAY_TASK_COUNT']=}."
             )
     else:
         array_id, num_arrays = 0, 1
@@ -37,7 +39,9 @@ def split_across_slurm_array(n_total: int) -> tuple[int, int]:
     return start, end
 
 
-def download_file(url: str, dest: str | Path, *, chunk_size: int = 2**20, byte_size: int | None = None) -> None:
+def download_file(url: str, dest: str | Path, *, chunk_size: int = 2**20, byte_size: int | None = None) -> str:
+    """Download `url` to `dest` in chunks and return the SHA-256 checksum of the downloaded file."""
+    digest = hashlib.sha256()
     with (
         fsspec.open(url, "rb", block_size=0) as src,
         Path(dest).open("wb") as dst,
@@ -45,7 +49,9 @@ def download_file(url: str, dest: str | Path, *, chunk_size: int = 2**20, byte_s
     ):
         while chunk := src.read(chunk_size):
             dst.write(chunk)
+            digest.update(chunk)
             progress.update(len(chunk))
+    return digest.hexdigest()
 
 
 def download_benchmark(path_dataset: str | Path) -> None:
@@ -56,19 +62,26 @@ def download_benchmark(path_dataset: str | Path) -> None:
     """
     path_dataset = Path(path_dataset)
     path_dataset.mkdir(exist_ok=True, parents=True)
-    download_file(
+    archive = path_dataset / "discophon_data.tar.gz"
+    expected = "358dbc61e9e74e9b922e2ae38ec989d3ad4e101c9fd57b60e2ea3c0332b2502c"
+    actual = download_file(
         "https://cognitive-ml.fr/downloads/phoneme-discovery/discophon_data.tar.gz",
-        path_dataset / "discophon_data.tar.gz",
+        archive,
         byte_size=5374865887,
     )
-    with tarfile.open(path_dataset / "discophon_data.tar.gz", "r:gz") as tar:
-        for member in tar:
-            root, parts = member.path.split("/", 1)
-            if root != "discophon_data":
-                raise ValueError(f"Unexpected tarfile: root is {root} but should be 'discophon_data'")
-            member.path = parts
-            tar.extract(member, path=path_dataset, filter="data")
-    (path_dataset / "discophon_data.tar.gz").unlink()
+    if actual != expected:
+        archive.unlink(missing_ok=True)
+        raise ValueError(f"Checksum mismatch for {archive}: expected {expected}, got {actual}.")
+    try:
+        with tarfile.open(archive, "r:gz") as tar:
+            for member in tar:
+                root, parts = member.path.split("/", 1)
+                if root != "discophon_data":
+                    raise ValueError(f"Unexpected tarfile: root is {root} but should be 'discophon_data'")
+                member.path = parts
+                tar.extract(member, path=path_dataset, filter="data")
+    finally:
+        archive.unlink(missing_ok=True)
 
 
 def resample(
@@ -120,9 +133,8 @@ def prepare_commonvoice_datasets(path_dataset: str | Path, language: str) -> Non
         )
 
 
-if __name__ == "__main__":
-    import argparse
-
+def cli(argv: list[str] | None = None) -> None:
+    """Command-line entry point for dataset download and preparation."""
     parser = argparse.ArgumentParser(description="Prepare Phoneme Discovery benchmark")
     subparsers = parser.add_subparsers(dest="command", required=True, help="command to run")
     parser_download = subparsers.add_parser(
@@ -142,7 +154,7 @@ if __name__ == "__main__":
         help="CommonVoice language ISO 639-3 code",
         choices=[lang.iso_639_3 for lang in commonvoice_languages()],
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     match args.command:
         case "download":
             download_benchmark(args.data)
@@ -150,3 +162,7 @@ if __name__ == "__main__":
             prepare_commonvoice_datasets(args.data, args.code)
         case _:
             parser.error("Invalid command")
+
+
+if __name__ == "__main__":
+    cli()

@@ -7,7 +7,9 @@ from pathlib import Path
 from discophon.data import read_gold_annotations, read_submitted_units
 from discophon.evaluate.discovery import phoneme_discovery
 
-if __name__ == "__main__":
+
+def cli(argv: list[str] | None = None) -> None:
+    """Command-line entry point for phoneme discovery evaluation."""
     parser = argparse.ArgumentParser(
         prog="discophon.evaluate",
         description="Evaluate predicted units on phoneme discovery",
@@ -26,7 +28,7 @@ if __name__ == "__main__":
         help="Kind of assignment (either many-to-one, or one-to-one)",
     )
     parser.add_argument("--step-units", type=int, default=20, help="Step between units (in ms)")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     print(
         json.dumps(
             phoneme_discovery(
@@ -40,3 +42,7 @@ if __name__ == "__main__":
             )
         )
     )
+
+
+if __name__ == "__main__":
+    cli()

@@ -114,7 +114,14 @@ def relabel_assignment(assignment: Iterable[int], proba: DataArray) -> DataArray
     """Relabel the assignment of units to phones according to the most probable phones."""
     c_proba, c_phone, c_unit = str(proba.name), "phone", "unit"
     df_assignment = pl.DataFrame({c_unit: proba[c_unit].to_numpy(), "assignment": np.array(assignment)})
-    df_proba = pl.DataFrame(proba.to_dataframe().reset_index()).join(df_assignment, on=c_unit, how="left")
+    phones, units = proba[c_phone].to_numpy(), proba[c_unit].to_numpy()
+    df_proba = pl.DataFrame(
+        {
+            c_phone: np.repeat(phones, len(units)),
+            c_unit: np.tile(units, len(phones)),
+            c_proba: proba.values.reshape(-1),
+        }
+    ).join(df_assignment, on=c_unit, how="left")
     most_probable = (
         df_proba.group_by("assignment", c_phone, maintain_order=True)
         .agg(pl.col(c_proba).mean())

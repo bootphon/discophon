@@ -3,10 +3,12 @@
 Compute the scores for all languages and splits for which units or features have been extracted.
 """
 
+import argparse
 from pathlib import Path
 from typing import Literal
 
 import polars as pl
+from filelock import FileLock
 
 from discophon.data import (
     DEFAULT_N_UNITS,
@@ -22,6 +24,8 @@ from discophon.languages import Language, get_language
 from discophon.validate import validate_dataset_structure
 
 __all__ = ["benchmark_abx_continuous", "benchmark_abx_discrete", "benchmark_discovery"]
+
+_EMPTY_RESULTS_SCHEMA = {"language": pl.String, "split": pl.String, "metric": pl.String, "score": pl.Float64}
 
 
 def available_languages_and_splits_for_units(
@@ -80,8 +84,7 @@ def benchmark_discovery(
         )
         df.append({"language": language.iso_639_3, "split": split} | scores)
     if not df:
-        schema = {"language": pl.String, "split": pl.String, "metric": pl.String, "score": pl.Float64}
-        return pl.DataFrame(schema=schema)
+        return pl.DataFrame(schema=_EMPTY_RESULTS_SCHEMA)
     return pl.DataFrame(df).unpivot(index=["language", "split"], variable_name="metric", value_name="score")
 
 
@@ -122,6 +125,8 @@ def benchmark_abx_discrete(
         for speaker, score in abx.items():
             metric = f"{kind}_abx_discrete_{speaker}"
             df.append({"language": language.iso_639_3, "split": split, "metric": metric, "score": score})
+    if not df:
+        return pl.DataFrame(schema=_EMPTY_RESULTS_SCHEMA)
     return pl.DataFrame(df)
 
 
@@ -162,14 +167,13 @@ def benchmark_abx_continuous(
         for speaker_context, score in abx.items():
             metric = f"{kind}_abx_continuous_{speaker_context}"
             df.append({"language": language.iso_639_3, "split": split, "metric": metric, "score": score})
+    if not df:
+        return pl.DataFrame(schema=_EMPTY_RESULTS_SCHEMA)
     return pl.DataFrame(df)
 
 
-if __name__ == "__main__":
-    import argparse
-
-    from filelock import FileLock
-
+def cli(argv: list[str] | None = None) -> None:
+    """Command-line entry point for the benchmark."""
     parser = argparse.ArgumentParser(
         prog="discophon.benchmark",
         description="Phoneme Discovery benchmark",
@@ -205,7 +209,7 @@ if __name__ == "__main__":
         default=STEP_UNITS,
         help="Step in ms between units or features. 'frequency' is then set to 1000 // step_units.",
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     match args.benchmark:
         case "discovery":
@@ -234,3 +238,7 @@ if __name__ == "__main__":
     lock = FileLock(f"{args.output}.lock")
     with lock, args.output.open("a") as f:
         out.write_ndjson(f)
+
+
+if __name__ == "__main__":
+    cli()

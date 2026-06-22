@@ -29,3 +29,4 @@ repos:
   rev: v0.0.49
   hooks:
     - id: ty
+      args: [--no-default-groups, --all-extras, --group=test]

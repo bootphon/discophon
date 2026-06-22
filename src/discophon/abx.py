@@ -5,6 +5,7 @@ and takes more time to compute. If you want to use it, install `fastabx` either
 with `pip install discophon[abx]` or `pip install fastabx`.
 """
 
+import argparse
 from pathlib import Path
 from typing import Literal, TypedDict, overload
 
@@ -176,9 +177,8 @@ def continuous_abx(
             raise ValueError(f"Unknown kind {kind!r}, expected 'triphone' or 'phoneme'.")
 
 
-if __name__ == "__main__":
-    import argparse
-
+def cli(argv: list[str] | None = None) -> None:
+    """Command-line entry point for continuous or discrete ABX."""
     parser = argparse.ArgumentParser(
         prog="discophon.abx",
         description="Continuous or discrete ABX",
@@ -198,7 +198,7 @@ if __name__ == "__main__":
         default="triphone",
         help="Triphone- or phoneme-based ABX",
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if args.root.is_dir():
         scores = continuous_abx(args.item, args.root, frequency=args.frequency, kind=args.kind)
     elif args.root.suffix == ".jsonl":
@@ -206,3 +206,7 @@ if __name__ == "__main__":
     else:
         raise ValueError(f"Expected a directory of features or a .jsonl units file, got {args.root}")
     print("\n".join(f"{key}:\t{score:.2%}" for key, score in scores.items()))
+
+
+if __name__ == "__main__":
+    cli()

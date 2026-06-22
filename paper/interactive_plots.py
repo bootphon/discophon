@@ -1,3 +1,9 @@
+# /// script
+# requires-python = ">=3.14"
+# dependencies = [
+#     "altair>=6.2.1",
+# ]
+# ///
 import argparse
 import json
 from collections.abc import Iterable

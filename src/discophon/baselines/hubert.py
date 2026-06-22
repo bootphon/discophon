@@ -219,7 +219,7 @@ def extract_hubert_discrete_units(
             units = kmeans_by_layer[layer + 1].predict(features.squeeze().cpu().numpy()).tolist()
             entry = {"file": fileid, "units": units}
             jsonl = path_units / f"{layer + 1}" / units_filename(dataset.language, dataset.split)
-            jsonl.parent.mkdir(exist_ok=True)
+            jsonl.parent.mkdir(exist_ok=True, parents=True)
             with jsonl.open("ab") as f:
                 f.write(orjson.dumps(entry, option=orjson.OPT_APPEND_NEWLINE))
 

@@ -20,7 +20,7 @@ def deduplicate[T](seq: Iterable[T]) -> list[T]:
 
 
 @numba.jit(nopython=True, nogil=True)
-def edit_distance[T](hypothesis: Sequence[T], target: Sequence[T]) -> int:
+def edit_distance[T](hypothesis: Sequence[T], target: Sequence[T]) -> int:  # pragma: no cover
     """Edit distance.
 
     Based on the torchaudio implementation:

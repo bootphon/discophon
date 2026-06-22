@@ -101,7 +101,7 @@ class Boundaries:
     def __str__(self) -> str:
         return "[ " + "  ".join([f"{t}s" for t in (self.times / 1000)]) + " ]"
 
-    def tolerance(self, margin_in_ms: int) -> np.ndarray[tuple[int, int], np.dtype[np.float64]]:
+    def tolerance(self, margin_in_ms: int) -> np.ndarray[tuple[int, int], np.dtype[np.int64]]:
         """Tolerance windows for detection for each boundary.
 
         The window is +/- margin_in_ms around each time step. If two windows overlap, they are cut to the midpoint.
@@ -115,7 +115,7 @@ class Boundaries:
         return windows
 
     @property
-    def times(self) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
+    def times(self) -> np.ndarray[tuple[int], np.dtype[np.int64]]:
         """Times (in ms) associated to the boundaries."""
         return self._times
 

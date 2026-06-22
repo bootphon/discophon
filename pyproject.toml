@@ -67,6 +67,9 @@ test = [
 requires = ["hatch-vcs", "hatchling"]
 build-backend = "hatchling.build"
 
+[tool.coverage.run]
+branch = true
+
 [tool.hatch.version]
 source = "vcs"
 
@@ -138,6 +141,9 @@ max-statements = 75
 
 [tool.ruff.lint.pep8-naming]
 extend-ignore-names = ["F"]  # from torch.nn import functional as F
+
+[tool.ty]
+src.exclude = ["scripts/replication", "paper/interactive_plots.py"]
 
 [tool.typos.default.extend-words]
 interm = "interm"
