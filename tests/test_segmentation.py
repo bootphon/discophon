@@ -1,5 +1,6 @@
 """Tests for phone segmentation: metrics algebra, boundaries, and boundary comparison."""
 
+import math
 from itertools import pairwise
 
 import pytest
@@ -122,11 +123,111 @@ def test_from_tokens_count_equals_groups_minus_one(tokens: list[str], step: int)
 
 
 @given(st.lists(st.integers(0, 5000), max_size=30), st.integers(1, 100))
-def test_tolerance_windows_are_ordered_clipped_and_non_overlapping(times: list[int], margin: int) -> None:
+def test_tolerance_windows_are_ordered_clipped_and_disjoint(times: list[int], margin: int) -> None:
     windows = Boundaries(times).tolerance(margin)
     assert (windows >= 0).all()  # clipped at zero
     assert (windows[:, 1] >= windows[:, 0]).all()  # each window is well-formed
-    assert (windows[:-1, 1] <= windows[1:, 0]).all()  # consecutive windows never overlap
+    # strictly disjoint: a single prediction can never fall in two windows, so it cannot be double counted
+    assert (windows[:-1, 1] < windows[1:, 0]).all()
+
+
+@given(st.lists(st.integers(0, 5000), max_size=30), st.integers(1, 100))
+def test_tolerance_window_contains_its_own_boundary(times: list[int], margin: int) -> None:
+    # Splitting overlaps must never push a boundary out of its own window (this underpins perfect self-scoring).
+    b = Boundaries(times)
+    windows = b.tolerance(margin)
+    assert (windows[:, 0] <= b.times).all()
+    assert (b.times <= windows[:, 1]).all()
+
+
+def test_boundaries_deduplicates_coincident_times() -> None:
+    # A boundary is a point in time; coincident boundaries collapse to one (and stay sorted).
+    assert list(Boundaries([30, 10, 10, 20, 30]).times) == [10, 20, 30]
+    assert len(Boundaries([5, 5, 5])) == 1
+
+
+def test_tolerance_reference_windows() -> None:
+    # Far-apart boundaries keep the full +/-margin window; close ones are split at the boundary midpoint
+    # (the earlier window keeps the midpoint, the later one starts just after) so the regions are disjoint.
+    assert Boundaries([100]).tolerance(20).tolist() == [[80, 120]]
+    assert Boundaries([100, 200]).tolerance(20).tolist() == [[80, 120], [180, 220]]
+    assert Boundaries([100, 120]).tolerance(20).tolist() == [[80, 110], [111, 140]]  # overlapping
+    assert Boundaries([100, 140]).tolerance(20).tolist() == [[80, 120], [121, 160]]  # exactly touching
+
+
+def test_tolerance_clips_lower_edge_at_zero() -> None:
+    assert Boundaries([5]).tolerance(20).tolist() == [[0, 25]]
+
+
+def test_tolerance_splits_at_boundary_midpoint_near_zero() -> None:
+    # Regression: the split must use the midpoint between boundary *times*, not between the clipped window
+    # edges. Near t=0 the lower edges all clip to 0; deriving the split from them collapses the midpoints and
+    # produces inverted windows. Boundaries 0, 1, 2 must give the disjoint, well-formed windows below.
+    assert Boundaries([0, 1, 2]).tolerance(2).tolist() == [[0, 0], [1, 1], [2, 4]]
+
+
+def test_tolerance_empty_boundaries_returns_no_windows() -> None:
+    assert Boundaries([]).tolerance(20).shape == (0, 2)
+
+
+def test_from_tokens_without_transitions_has_no_boundary() -> None:
+    # A single group (or no tokens) has no internal transition, hence no boundary.
+    assert len(Boundaries.from_tokens(["a", "a", "a"], 10)) == 0
+    assert len(Boundaries.from_tokens([], 10)) == 0
+
+
+@given(st.lists(st.integers(0, 5000), max_size=20), st.integers(0, 200))
+def test_compare_self_is_all_true_positives(times: list[int], margin: int) -> None:
+    # Comparing a segmentation against itself must score perfectly for any margin.
+    b = Boundaries(times)
+    assert compare_boundaries(b, b, margin_in_ms=margin) == SegmentationEvaluation(len(b), 0, 0)
+
+
+@given(
+    gold=st.lists(st.integers(0, 5000), max_size=20),
+    pred=st.lists(st.integers(0, 5000), max_size=20),
+    margins=st.tuples(st.integers(0, 200), st.integers(0, 200)),
+)
+def test_larger_margin_never_reduces_true_positives(
+    gold: list[int], pred: list[int], margins: tuple[int, int]
+) -> None:
+    # A more tolerant margin only ever widens the detection windows, so it cannot lose a hit.
+    small, large = sorted(margins)
+    g, p = Boundaries(gold), Boundaries(pred)
+    assert (
+        compare_boundaries(g, p, margin_in_ms=large).true_positives
+        >= compare_boundaries(g, p, margin_in_ms=small).true_positives
+    )
+
+
+@given(
+    gold_times=st.lists(st.integers(0, 5000), max_size=20),
+    pred_times=st.lists(st.integers(0, 5000), max_size=20),
+    margin=st.integers(1, 100),
+)
+def test_compare_counts_stay_consistent(gold_times: list[int], pred_times: list[int], margin: int) -> None:
+    # false_positives and false_negatives are derived by subtracting tp, so the only way they stay
+    # non-negative is if each prediction is matched at most once: tp <= min(#gold, #pred).
+    result = compare_boundaries(Boundaries(gold_times), Boundaries(pred_times), margin_in_ms=margin)
+    assert 0 <= result.true_positives <= min(len(gold_times), len(pred_times))
+    assert result.false_positives >= 0
+    assert result.false_negatives >= 0
+
+
+def test_compare_shared_midpoint_is_not_double_counted() -> None:
+    # Gold boundaries 20 ms apart: their +/-20 ms windows overlap and are split at the midpoint 110.
+    # A single prediction at 110 must count as one hit, not one for each gold boundary.
+    result = compare_boundaries(Boundaries([100, 120]), Boundaries([110]), margin_in_ms=20)
+    assert result.true_positives == 1
+    assert result.false_positives == 0  # not -1
+    assert result.false_negatives == 1
+
+
+def test_compare_touching_windows_are_not_double_counted() -> None:
+    # Gold boundaries exactly 2*margin apart: windows touch at 120. The shared edge must belong to one side.
+    result = compare_boundaries(Boundaries([100, 140]), Boundaries([120]), margin_in_ms=20)
+    assert result.true_positives == 1
+    assert result.false_positives == 0
 
 
 def test_compare_identical_is_all_true_positives() -> None:
@@ -172,3 +273,71 @@ def test_phone_segmentation_aggregates_over_files() -> None:
 def test_phone_segmentation_rejects_mismatched_keys() -> None:
     with pytest.raises(ValidateSameKeysError):
         phone_segmentation({"a": ["x", "y"]}, {"b": ["x", "y"]})
+
+
+# --- Pathological cases and reference values from (Rasanen et al., 2009) ---------------------------------
+# The "search region method" (sec. 2.3): a +/-margin region is placed around every gold boundary; overlapping
+# regions are shrunk to a common midpoint so they stay disjoint. A region containing at least one predicted
+# boundary is a single hit; any further predictions in it are insertions; empty regions are deletions.
+
+
+def test_paper_figure1_single_boundary_in_overlap_counts_once() -> None:
+    # Fig. 1: two gold boundaries within 2*margin, the algorithm produces a single boundary in their
+    # overlapping search regions. Re-using it as a hit for both is the bug the paper rules out: it must
+    # be a hit for the nearest boundary only, leaving the other as a deletion.
+    result = compare_boundaries(Boundaries([100, 120]), Boundaries([105]), margin_in_ms=20)
+    assert result == SegmentationEvaluation(true_positives=1, false_positives=0, false_negatives=1)
+
+
+def test_paper_extra_predictions_in_one_region_are_insertions() -> None:
+    # Sec. 2.3: "a region containing a boundary is a hit and all additional boundaries are insertions".
+    # Three predictions all land within margin of a single gold boundary -> one hit, two insertions.
+    result = compare_boundaries(Boundaries([100]), Boundaries([90, 100, 110]), margin_in_ms=20)
+    assert result == SegmentationEvaluation(true_positives=1, false_positives=2, false_negatives=0)
+    assert result.recall == 1.0
+    assert result.precision == pytest.approx(1 / 3)
+
+
+def test_paper_empty_region_is_a_deletion() -> None:
+    # Sec. 2.3: "empty regions are considered as deletions". The far gold boundary gets no prediction.
+    result = compare_boundaries(Boundaries([100, 500]), Boundaries([100]), margin_in_ms=20)
+    assert result == SegmentationEvaluation(true_positives=1, false_positives=0, false_negatives=1)
+
+
+def test_paper_stochastic_over_segmentation_inflates_recall_but_sinks_rvalue() -> None:
+    # Sec. 3-4: an over-segmenting system (a boundary at every 20 ms frame) trivially covers the timeline,
+    # so it detects every gold boundary (recall == 1) yet floods the output with insertions. The F-value
+    # stays deceptively high while the R-value collapses below zero -- the paper's central argument.
+    gold = {"f": ["a", "a", "b", "b", "c", "c"]}  # boundaries at 20, 40 ms (10 ms step)
+    over_segmenting = {"f": ["x", "y", "x", "y", "x", "y"]}  # boundaries at 20, 40, 60, 80, 100 ms (20 ms step)
+    result = phone_segmentation(over_segmenting, gold)
+    assert result == SegmentationEvaluation(true_positives=2, false_positives=3, false_negatives=0)
+    assert result.recall == 1.0
+    assert result.os == pytest.approx(1.5)  # 150% over-segmentation
+    assert result.f1 == pytest.approx(4 / 7)  # F-value still ~0.57
+    assert result.r_val < 0.0  # but the R-value is negative
+    assert result.r_val < result.f1  # and far below the F-value
+
+
+# --- R-value reference points derived directly from the formula (eqs. 6-8) ------------------------------
+
+
+def test_r_value_target_point_is_one() -> None:
+    # Sec. 4: the "target point" of 100% hit-rate and 0% over-segmentation is the ideal operating point R=1.
+    assert SegmentationEvaluation(true_positives=10, false_positives=0, false_negatives=0).r_val == 1.0
+
+
+def test_r_value_matches_closed_form_for_a_known_point() -> None:
+    # recall = precision = 1/2 so os = 0; then r1 = sqrt((1-1/2)^2 + 0) = 1/2 and r2 = |1/2 - 1| / sqrt(2),
+    # giving R = 1 - (1/2 + (1/2)/sqrt(2)) / 2.
+    seg = SegmentationEvaluation(true_positives=2, false_positives=2, false_negatives=2)
+    expected = 1 - (0.5 + 0.5 / math.sqrt(2)) / 2
+    assert seg.os == 0.0
+    assert seg.r_val == pytest.approx(expected)
+
+
+@given(tp=st.integers(1, 1000), fp=counts, fn=counts)
+def test_r_value_is_one_iff_perfect(tp: int, fp: int, fn: int) -> None:
+    # Sec. 4: R reaches its maximum of 1 only at the target point (no insertions, no deletions).
+    seg = SegmentationEvaluation(tp, fp, fn)
+    assert (seg.r_val == 1.0) == (fp == 0 and fn == 0)

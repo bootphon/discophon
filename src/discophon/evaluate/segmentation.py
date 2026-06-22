@@ -91,8 +91,7 @@ class Boundaries:
     """Segmentation boundaries."""
 
     def __init__(self, times_in_ms: Iterable[int]) -> None:
-        self._times = np.array(times_in_ms, dtype=np.int64)
-        self._times.sort()
+        self._times = np.unique(np.fromiter(times_in_ms, dtype=np.int64))
         self._times.setflags(write=False)
 
     def __len__(self) -> int:
@@ -104,15 +103,17 @@ class Boundaries:
     def tolerance(self, margin_in_ms: int) -> np.ndarray[tuple[int, int], np.dtype[np.int64]]:
         """Tolerance windows for detection for each boundary.
 
-        The window is +/- margin_in_ms around each time step. If two windows overlap, they are cut to the midpoint.
-        Follows the procedure from (Rasanen et al., 2009).
+        The window is +/- margin_in_ms around each boundary. Overlapping (or touching) windows are split at the
+        midpoint between the two boundaries, which goes to the earlier window while the later one starts just
+        after. The resulting windows are disjoint, so a single predicted boundary cannot be counted as a hit for
+        two gold boundaries. Follows the procedure from (Rasanen et al., 2009, sec. 2.3).
         """
-        windows = np.vstack([self.times - margin_in_ms, self.times + margin_in_ms]).clip(0).T
-        overlaps = windows[:-1, 1] > windows[1:, 0]
-        midpoints = (windows[:-1, 1] + windows[1:, 0]) // 2
-        windows[:-1, 1] = np.where(overlaps, midpoints, windows[:-1, 1])
-        windows[1:, 0] = np.where(overlaps, midpoints, windows[1:, 0])
-        return windows
+        lower = (self.times - margin_in_ms).clip(0)
+        upper = self.times + margin_in_ms
+        midpoints = (self.times[:-1] + self.times[1:]) // 2
+        upper[:-1] = np.minimum(upper[:-1], midpoints)
+        lower[1:] = np.maximum(lower[1:], midpoints + 1)
+        return np.stack([lower, upper], axis=1)
 
     @property
     def times(self) -> np.ndarray[tuple[int], np.dtype[np.int64]]:
@@ -131,7 +132,13 @@ class Boundaries:
 
 
 def compare_boundaries(gold: Boundaries, prediction: Boundaries, *, margin_in_ms: int) -> SegmentationEvaluation:
-    """Evaluate the boundary detection of the gold boundaries with the given prediction."""
+    """Evaluate the detection of the gold boundaries by the prediction (search region method).
+
+    A tolerance window is placed around each *gold* boundary (see [`Boundaries.tolerance`][]). A gold window
+    holding at least one predicted boundary is a hit; any further predictions in it are insertions, and gold
+    windows left empty are deletions. The argument order therefore matters: `compare_boundaries(gold, prediction)`
+    is not the swap of `compare_boundaries(prediction, gold)` in general (Rasanen et al., 2009, sec. 2.3).
+    """
     windows = gold.tolerance(margin_in_ms)
     starts = windows[:, 0][:, np.newaxis]
     ends = windows[:, 1][:, np.newaxis]
