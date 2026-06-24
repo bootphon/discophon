@@ -74,11 +74,11 @@ branch = true
 source = "vcs"
 
 [tool.pytest]
-addopts = ["--cov=discophon"]
 filterwarnings = ["ignore::numba.core.errors.NumbaPendingDeprecationWarning"]
 markers = [
   "requires_dataset: mark test as requiring a path to the dataset",
   "requires_tipa_output: mark test as requiring an output path for the TIPA mapping plot",
+  "slow: mark test as slow (only runs with --run-slow)",
 ]
 testpaths = ["tests"]
 
@@ -143,7 +143,11 @@ max-statements = 75
 extend-ignore-names = ["F"]  # from torch.nn import functional as F
 
 [tool.ty]
-src.exclude = ["scripts/replication", "paper/interactive_plots.py"]
+src.exclude = [
+  "scripts/replication",
+  "paper/interactive_plots.py",
+  "tests/test_batching.py"
+]
 
 [tool.typos.default.extend-words]
 interm = "interm"

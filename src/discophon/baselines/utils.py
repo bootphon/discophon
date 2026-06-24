@@ -5,11 +5,14 @@ from pathlib import Path
 import polars as pl
 import torch
 from sklearn.cluster import MiniBatchKMeans
-from spidr.config import SAMPLE_RATE, DataConfig, OptimizerConfig
+from spidr.config import DEFAULT_CONV_LAYER_CONFIG, SAMPLE_RATE, DataConfig, OptimizerConfig
 from spidr.data import read_manifest
+from spidr.data.dataset import BucketizeBatchSampler, conv_length
+from torch import Tensor
 from torch.nn import functional as F
+from torch.nn.utils.rnn import pad_sequence
 from torch.optim import Optimizer, lr_scheduler
-from torch.utils.data import Dataset
+from torch.utils.data import DataLoader, Dataset
 from torchcodec.decoders import WavDecoder
 from tqdm import tqdm
 
@@ -44,6 +47,44 @@ class DiscophonAudioDataset(Dataset):
         if self.normalize:
             waveform = F.layer_norm(waveform, waveform.shape)
         return fileid, waveform.squeeze()
+
+
+def collate_fn(waveforms: list[Tensor]) -> tuple[Tensor, Tensor, Tensor]:
+    wav_lengths = torch.tensor([w.size(0) for w in waveforms])
+    wavs = pad_sequence(waveforms, batch_first=True)
+    feat_lengths = conv_length(DEFAULT_CONV_LAYER_CONFIG, wav_lengths)
+    batch_size, max_len = wavs.size(0), int(feat_lengths.max())
+    padding_mask = torch.arange(max_len).expand(batch_size, max_len) >= feat_lengths[:, None]
+    attn_mask = ~padding_mask[:, None, None, :].expand(batch_size, 1, max_len, max_len)
+    return wavs, attn_mask, feat_lengths
+
+
+def _collate_with_fileids(batch: list[tuple[str, Tensor]]) -> tuple[list[str], Tensor, Tensor, Tensor]:
+    fileids, waveforms = zip(*batch, strict=True)
+    wavs, attn_mask, feat_lengths = collate_fn(list(waveforms))
+    return list(fileids), wavs, attn_mask, feat_lengths
+
+
+def build_inference_dataloader(
+    dataset: DiscophonAudioDataset,
+    batch_size: int,
+    *,
+    num_buckets: int = 5,
+    num_workers: int = 10,
+) -> DataLoader:
+    batch_sampler = BucketizeBatchSampler(
+        lengths=dataset.manifest["num_samples"].to_list(),
+        num_buckets=num_buckets,
+        min_len=0,
+        max_len=None,
+        max_token_count=None,
+        batch_size=batch_size,
+        seed=SEED,
+        bucket_method="percentile",
+        shuffle=False,
+        drop_last=False,
+    )
+    return DataLoader(dataset, batch_sampler=batch_sampler, num_workers=num_workers, collate_fn=_collate_with_fileids)
 
 
 def ft_optimizer_config() -> OptimizerConfig:

@@ -18,6 +18,12 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         type=Path,
         help="Output path for the TIPA mapping verification plot. Required to run the TIPA mapping test.",
     )
+    parser.addoption(
+        "--run-slow",
+        action="store_true",
+        default=False,
+        help="Run slow tests (e.g. the model batching-equivalence tests)",
+    )
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
@@ -30,6 +36,11 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
         skip_marker = pytest.mark.skip(reason="Need --tipa_output option to run")
         for item in items:
             if "requires_tipa_output" in item.keywords:
+                item.add_marker(skip_marker)
+    if not config.getoption("--run-slow"):
+        skip_marker = pytest.mark.skip(reason="Need --run-slow option to run")
+        for item in items:
+            if "slow" in item.keywords:
                 item.add_marker(skip_marker)
 
 
