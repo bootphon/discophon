@@ -16,7 +16,7 @@ nav = [
   ] },
   { "Leaderboard" = [
     "leaderboard/index.md",
-    "leaderboard/results.md",
+    "leaderboard/additional.md",
   ] },
   { "User guide" = [
     "guide/index.md",
@@ -29,11 +29,13 @@ nav = [
 ]
 extra_javascript = [
   "javascripts/katex.js",
+  "javascripts/leaderboard.js",
   "https://unpkg.com/katex@0/dist/katex.min.js",
-  "https://unpkg.com/katex@0/dist/contrib/auto-render.min.js"
+  "https://unpkg.com/katex@0/dist/contrib/auto-render.min.js",
 ]
 extra_css = [
   "stylesheets/extra.css",
+  "stylesheets/leaderboard.css",
   "https://unpkg.com/katex@0/dist/katex.min.css",
 ]
 
@@ -48,9 +50,8 @@ features = [
   "content.code.select",
   "content.footnote.tooltips",
   "content.tooltips",
-  "navigation.indexes",
   "navigation.instant",
-  "navigation.instant.prefetch",
+  "navigation.indexes",
   "navigation.sections",
   "navigation.top",
   "navigation.tracking",
