@@ -1,0 +1,24 @@
+<div class="dlb-root" data-discophon-leaderboard id="{{ element_id }}" data-dlb-payload="{{ data_json }}">
+  <div class="dlb-controls">
+    <label>Split
+      <select data-control="split">
+        <option value="dev"{% if default_split == "dev" %} selected{% endif %}>Dev languages</option>
+        <option value="test"{% if default_split == "test" %} selected{% endif %}>Test languages</option>
+      </select>
+    </label>
+    <label>Language
+      <select data-control="language"></select>
+    </label>
+  </div>
+  <table class="dlb-table">
+    <thead>
+      <tr>
+        <th>Model</th>
+        {%- for metric in metrics %}
+        <th>{{ metric.label }} {% if metric.arrow == "down" %}&darr;{% else %}&uarr;{% endif %}</th>
+        {%- endfor %}
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
