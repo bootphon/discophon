@@ -1,0 +1,16 @@
+{# One description section per submission, rendered from submissions.toml metadata and
+   injected as markdown between the page's descriptions markers (see leaderboard.build_track).
+   The heading carries an attr_list id (#model-<key>) — the anchor a submission's name links
+   to from the table; keep it in sync with model_link. The shared Jinja env autoescapes for the
+   HTML table snippet, so this markdown template opts out: escaping '&'/'<'/quotes would corrupt
+   the markdown. Safe here — submissions.toml only changes through reviewed PRs. #}
+{% autoescape false %}
+{% for s in submissions %}
+### {{ s.label }} { #model-{{ s.key }} }
+
+{{ s.description }}
+
+**Authors:** {{ s.authors }} ({{ s.year }}) · **Step units:** {{ s.step_units }} · [Checkpoint]({{ s.url }})
+{: .dlb-submission-meta }
+{% endfor %}
+{% endautoescape %}
