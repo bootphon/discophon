@@ -82,3 +82,10 @@
   font-size: 0.8em;
   opacity: 0.65;
 }
+.dlb-submission {
+  scroll-margin-top: 4rem;
+}
+.dlb-submission-meta {
+  font-size: 0.8rem;
+  color: var(--md-default-fg-color--light);
+}

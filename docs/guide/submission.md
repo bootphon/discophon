@@ -31,15 +31,25 @@ lowercase, hyphenated, and unique (e.g. `wav2vec2-large-robust`).
 
 Then add an entry for your model in `submissions.toml` at the root of the repository:
 
+All fields are required:
+
 ```toml
 [wav2vec2-large-robust]
-label = "Wav2Vec2 Large Robust"
-url = "https://huggingface.co/your/checkpoint"
-track = "many-to-one"  # many-to-one | one-to-one | both
-step_units = 20        # --step-units value used during evaluation
-authors = "Author Name (Affiliation)"
+label       = "Wav2Vec2 Large Robust"
+track       = "many-to-one"  # many-to-one | one-to-one
+step_units  = 20             # --step-units value used during evaluation
+url         = "https://huggingface.co/your/checkpoint"
+authors     = "Author Name (Affiliation)"
+year        = 2026
 description = "One or two sentences about the model."
 ```
+
+A model entered on both tracks is two separate entries with distinct keys, one per
+track — there is no `both` value.
+
+The leaderboard generates your model's description section on the page automatically from
+this metadata (the `description` field plus authors, year, and checkpoint link), so there
+is no page to edit by hand — just write a clear `description`.
 
 ## 2. Validate the submission
 
@@ -67,6 +77,4 @@ Verify that scores look reasonable and that the model link resolves correctly.
 Create a PR using the **submission template**. The PR must include:
 
 - `scores/{model-key}-0.jsonl` — the score file
-- An entry in `submissions.toml` — the metadata
-- A description section in `docs/leaderboard/index.md` at heading
-  `### Your Model Name { #model-{model-key} }`
+- An entry in `submissions.toml` — the metadata (the description section is generated from it)
