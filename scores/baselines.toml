@@ -1,0 +1,15 @@
+[spidr-mmsulab]
+label = "SpidR MMS-ulab"
+url = "https://huggingface.co/coml/spidr-mmsulab"
+
+[spidr-vp20]
+label = "SpidR VP-20"
+url = "https://huggingface.co/coml/spidr-vp20"
+
+[hubert-mmsulab-it2]
+label = "HuBERT MMS-ulab"
+url = "https://huggingface.co/coml/hubert-base-mmsulab"
+
+[hubert-vp20-it2]
+label = "HuBERT VP-20"
+url = "https://huggingface.co/coml/hubert-base-vp20"

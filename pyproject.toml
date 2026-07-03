@@ -143,13 +143,6 @@ max-statements = 75
 [tool.ruff.lint.pep8-naming]
 extend-ignore-names = ["F"]  # from torch.nn import functional as F
 
-[tool.ty]
-src.exclude = [
-  "scripts/replication",
-  "paper/interactive_plots.py",
-  "tests/test_batching.py"
-]
-
 [tool.typos.default.extend-words]
 interm = "interm"
 tha = "tha"
@@ -159,8 +152,4 @@ Charis = "Charis"
 extend-exclude = ["*.html"]
 
 [tool.uv.workspace]
-members = [
-  "paper",
-  "scripts/replication",
-  "leaderboard",
-]
+members = ["scripts"]
