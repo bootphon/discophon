@@ -137,8 +137,4 @@ Charis = "Charis"
 extend-exclude = ["*.html"]
 
 [tool.uv.workspace]
-members = [
-  "paper",
-  "scripts/replication",
-  "leaderboard",
-]
+members = ["scripts"]

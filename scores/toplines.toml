@@ -1,0 +1,36 @@
+[mms-1b]
+label = "MMS-1B"
+url = "https://huggingface.co/facebook/mms-1b"
+
+[xeus]
+label = "XEUS"
+url = "https://huggingface.co/microsoft/XEUS"
+
+[mhubert-147]
+label = "mHuBERT-147"
+url = "https://huggingface.co/utter-project/mHuBERT-147"
+
+[hubert-base]
+label = "HuBERT base"
+url = "https://huggingface.co/facebook/hubert-base-ls960"
+allow_partial = true
+
+[spidr-base]
+label = "SpidR base"
+url = "https://github.com/facebookresearch/spidr"
+allow_partial = true
+
+[hubert-phoneme]
+label = "HuBERT phoneme"
+url = "https://huggingface.co/coml/hubert-phoneme-classification"
+allow_partial = true
+
+[japanese-hubert-base]
+label = "Japanese HuBERT base"
+url = "https://huggingface.co/reazon-research/japanese-hubert-base-k2"
+allow_partial = true
+
+[mandarin-hubert-base]
+label = "Mandarin HuBERT base"
+url = "https://huggingface.co/TencentGameMate/chinese-hubert-base"
+allow_partial = true
