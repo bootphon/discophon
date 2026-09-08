@@ -33,6 +33,7 @@ def pnmi(cooccurrence: DataArray) -> float:
 
     Returns:
         Phone-normalized mutual information (between 0 and 1)
+
     """
     count = cooccurrence.values
     total = count.sum()

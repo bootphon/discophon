@@ -21,7 +21,7 @@ from discophon.validate import (
 
 
 @validate_first_two_arguments_same_keys
-def _compare(a: dict, b: dict) -> str:  # noqa: ARG001 -- the decorator only inspects the arguments' keys
+def _compare(_a: dict, _b: dict) -> str:
     return "ok"
 
 

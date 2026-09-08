@@ -47,6 +47,7 @@ def phoneme_discovery(
 
     Returns:
         Phoneme discovery results in a dictionary with keys `"pnmi"`, `"per"`, `"f1"`, and `"r_val"`.
+
     """
     cooccurrence = cooccurrence_matrix(
         units,

@@ -39,11 +39,13 @@ def load_phonemes() -> dict[str, list[str]]:
 class Language:
     """The underlying representation of a language.
 
-    Parameters:
+    Parameters
+    ----------
         name: Name of the language.
         iso_639_3: Its ISO 639-3 code.
         split: Which split it belongs to in the benchmark.
         n_phonemes: The number of phoneme categories considered.
+
     """
 
     name: str
@@ -61,7 +63,7 @@ class Language:
         return load_phonemes()[self.iso_639_3]
 
 
-def get_language(n: str | Language, /) -> Language:  # noqa: C901, PLR0911, PLR0912
+def get_language(n: str | Language, /) -> Language:  # ruff: ignore[too-many-branches, too-many-return-statements]
     """Resolve a language identifier to its [`Language`][discophon.languages.Language] record.
 
     The input is matched case-insensitively against any of the following identifiers:
@@ -84,6 +86,7 @@ def get_language(n: str | Language, /) -> Language:  # noqa: C901, PLR0911, PLR0
 
     Raises:
         ValueError: If `n` does not match any known identifier.
+
     """
     if isinstance(n, Language):
         return n

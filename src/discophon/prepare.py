@@ -59,6 +59,7 @@ def download_benchmark(path_dataset: str | Path) -> None:
 
     Arguments:
         path_dataset: Target path to the DiscoPhon dataset.
+
     """
     path_dataset = Path(path_dataset)
     path_dataset.mkdir(exist_ok=True, parents=True)
@@ -75,10 +76,10 @@ def download_benchmark(path_dataset: str | Path) -> None:
     try:
         with tarfile.open(archive, "r:gz") as tar:
             for member in tar:
-                root, parts = member.path.split("/", 1)
+                root, parts = member.name.split("/", 1)
                 if root != "discophon_data":
                     raise ValueError(f"Unexpected tarfile: root is {root} but should be 'discophon_data'")
-                member.path = parts
+                member.name = parts
                 tar.extract(member, path=path_dataset, filter="data")
     finally:
         archive.unlink(missing_ok=True)
@@ -116,6 +117,7 @@ def prepare_commonvoice_datasets(path_dataset: str | Path, language: str) -> Non
         path_dataset: Path to the DiscoPhon dataset.
         language: Name of the language of the Common Voice dataset under consideration.
                   Also works with ISO-639-3 code or Common Voice code.
+
     """
     resolved = get_language(language)
     src = Path(path_dataset) / "raw" / ISO6393_TO_CV[resolved.iso_639_3] / "clips"

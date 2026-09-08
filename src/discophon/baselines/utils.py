@@ -25,6 +25,8 @@ LOG_INTERVAL = 200
 
 
 class DiscophonAudioDataset(Dataset):
+    """Small dataset interface to DiscoPhon audio data."""
+
     def __init__(self, root: Path | str, language: str, split: str, *, normalize: bool) -> None:
         super().__init__()
         self.normalize = normalize

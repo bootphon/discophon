@@ -65,6 +65,7 @@ def benchmark_discovery(
 
     Returns:
         DataFrame with the results
+
     """
     validate_dataset_structure(path_dataset)
     df = []
@@ -108,6 +109,7 @@ def benchmark_abx_discrete(
 
     Returns:
         DataFrame with the results
+
     """
     from discophon.abx import discrete_abx
 
@@ -150,6 +152,7 @@ def benchmark_abx_continuous(
 
     Returns:
         DataFrame with the results
+
     """
     from discophon.abx import continuous_abx
 

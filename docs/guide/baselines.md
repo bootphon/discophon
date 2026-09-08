@@ -203,8 +203,8 @@ and [`extract_hubert_discrete_units`][discophon.baselines.extract_hubert_discret
 import joblib
 from discophon.baselines import extract_hubert_discrete_units, extract_spidr_discrete_units
 
-language = "German" # Either name or ISO 639-3 code
-split = "test" # Or "dev", "train-10min", "train-1h", "train-10h"
+language = "German"  # Either name or ISO 639-3 code
+split = "test"  # Or "dev", "train-10min", "train-1h", "train-10h"
 
 # HuBERT units, only layer 11
 kmeans = joblib.load("/path/to/hubert-base-vp20/km256-it2-l11.joblib")
@@ -225,6 +225,6 @@ extract_spidr_discrete_units(
     language=language,
     split=split,
     model="/path/to/spidr-vp20/final.pt",
-    layers=None, # Default value
+    layers=None,  # Default value
 )
 ```

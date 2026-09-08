@@ -4,10 +4,7 @@ description = "The Phoneme Discovery Benchmark"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
-authors = [
-  { name = "Maxime Poli" },
-  { name = "CoML", email = "dev@cognitive-ml.fr" }
-]
+authors = [{ name = "Maxime Poli" }, { name = "CoML", email = "dev@cognitive-ml.fr" }]
 keywords = ["machine learning", "speech"]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -47,12 +44,10 @@ baselines = [
 
 [dependency-groups]
 dev = [
-  "ipykernel>=7.2.0",
   "prek>=0.3.6",
 ]
 docs = [
   "mkdocstrings-python>=2.0.3",
-  "ruff>=0.15.7",
   "zensical>=0.0.38",
 ]
 test = [
@@ -88,48 +83,36 @@ line-length = 119
 [tool.ruff.lint]
 preview = true
 select = [
-  "A",  # flake8-builtins
-  "ARG",  # flake8-unused-arguments
-  "ANN",  # flake8-annotations
-  "B",  # flake8-bugbear
-  "BLE",  # flake8-blind-except
-  "C4",  # flake8-comprehensions
-  "C90",  # mccabe
-  "E",  # pycodestyle error
-  "EXE",  # flake8-executable
-  "F",  # Pyflakes
-  "FBT",  # flake8-boolean-trap
-  "FLY",  # flynt
-  "FURB",  # refurb
-  "G",  # flake8-logging-format
-  "I",  # isort
-  "ICN",  # flake8-import-conventions
-  "ISC",  # flake8-implicit-str-concat
-  "LOG",  # flake8-logging
-  "N",  # pep8-naming
-  "NPY",  # NumPy-specific rules
-  "PERF",  # Perflint
-  "PIE",  # flake8-pie
-  "PGH",  # pygrep-hooks
-  "PL",  # Pylint
-  "PTH",  # flake8-use-pathlib
-  "Q",  # flake8-quotes
-  "RET",  # flake8-return
-  "RSE",  # flake8-raise
-  "RUF",  # Ruff-specific rules
-  "S",  # flake8-bandit
-  "SIM",  # flake8-simplify
-  "SLF",  # flake8-slots
-  "T10",  # flake8-debugger
-  "TC",  # flake8-type-checking
-  "TD",  # flake8-todos
-  "TID",  # flake8-tidy-imports
-  "UP",  # pyupgrade
-  "W",  # pycodestyle warning
+  "correctness",
+  "suspicious",
+  "complexity",
+  "performance",
+  "style",
+  "security",
+  "formatting",
+  "pedantic",
+  "banned-module-level-imports",
+]
+ignore = [
+  "docstring-missing-exception",
+  "docstring-missing-returns",
+  "f-string-in-exception",
+  "incorrect-blank-line-before-class",
+  "missing-copyright-notice",
+  "missing-trailing-comma",
+  "multi-line-summary-second-line",
+  "raise-vanilla-args",
+  "raw-string-in-exception",
+  "undocumented-magic-method",
+  "undocumented-public-function",
+  "undocumented-public-init",
+  "undocumented-public-module",
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*.py" = ["S101", "RUF069"]
+"tests/*.py" = ["float-equality-comparison"]
+"scripts/*.py" = ["implicit-namespace-package"]
+"paper/*.py" = ["implicit-namespace-package"]
 
 [tool.ruff.lint.flake8-tidy-imports]
 banned-module-level-imports = ["discophon.abx"]
@@ -137,17 +120,12 @@ banned-module-level-imports = ["discophon.abx"]
 [tool.ruff.lint.pylint]
 allow-magic-value-types = ["int", "str"]
 max-args = 10
-max-statements = 75
 
 [tool.ruff.lint.pep8-naming]
 extend-ignore-names = ["F"]  # from torch.nn import functional as F
 
 [tool.ty]
-src.exclude = [
-  "scripts/replication",
-  "paper/interactive_plots.py",
-  "tests/test_batching.py"
-]
+src.exclude = ["scripts/replication", "paper/interactive_plots.py", "tests/test_batching.py"]
 
 [tool.typos.default.extend-words]
 interm = "interm"
@@ -158,7 +136,4 @@ Charis = "Charis"
 extend-exclude = ["*.html"]
 
 [tool.uv.workspace]
-members = [
-  "paper",
-  "scripts/replication",
-]
+members = ["paper", "scripts/replication/"]

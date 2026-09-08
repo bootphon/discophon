@@ -61,6 +61,7 @@ def phone_error_rate(predicted_phones_from_units: Phones, gold_phones: Phones, *
 
     Returns:
         Phone error rate. Multiply it by 100 to get a percentage.
+
     """
     results = Parallel(n_jobs=n_jobs)(
         delayed(_edit_distance_and_length)(predicted_phones_from_units[fileid], gold_phones[fileid])

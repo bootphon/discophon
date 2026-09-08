@@ -36,8 +36,10 @@ def validate_first_two_arguments_same_keys[R, **P](func: Callable[P, R]) -> Call
 
 
 class DatasetError(ValueError):
+    """Raised when the structure is wrong."""
+
     def __init__(self) -> None:
-        super().__init__("Invalid phoneme_discovery dataset structure. Verify your file structure!")
+        super().__init__("Invalid discophon dataset structure. Verify your file structure!")
 
 
 def validate_dataset_structure(path: str | Path) -> None:

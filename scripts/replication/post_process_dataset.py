@@ -29,8 +29,9 @@ def read_annotations(path: str | Path) -> list[Annotation]:
 
 
 def map_segment_to_silences(original: Annotation, processed: Annotation) -> dict[Segment, Timeline]:
-    """Maps each speech segment in the processed annotation to the silences
-    occurring within the corresponding segment in the original annotation.
+    """Map each speech segment in the processed annotation.
+
+    They are mapped to the silences occurring within the corresponding segment in the original annotation.
     """
     mapping = defaultdict(list)
     silences_in_processed = processed.extrude(Timeline(original.itersegments()))
@@ -45,9 +46,11 @@ def split_by_silence(
     min_duration_on: float | None,
     max_duration_on: float,
 ) -> Timeline:
-    """Recursively split `segment` using the longest silence in `silences` until
-    all resulting segments are shorter than `max_duration_on`. Segments shorter than
-    `min_duration_on` are discarded."""
+    """Recursively split `segment` using the longest silence in `silences`.
+
+    Repeat until all resulting segments are shorter than `max_duration_on`. Segments shorter than
+    `min_duration_on` are discarded.
+    """
     timeline = Timeline([segment])
     if min_duration_on is not None and timeline.duration() <= min_duration_on:  # Remove too short segments
         return Timeline([])

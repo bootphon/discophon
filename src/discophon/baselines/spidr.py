@@ -36,7 +36,7 @@ from discophon.baselines.utils import (
 from discophon.data import units_filename
 
 
-def finetune_spidr(  # noqa: PLR0914
+def finetune_spidr(  # ruff: ignore[too-many-locals, too-many-statements]
     name: str,
     project: str,
     workdir: Path,
@@ -51,6 +51,7 @@ def finetune_spidr(  # noqa: PLR0914
         workdir: Working directory for checkpoints and Wandb logs
         checkpoint: Path to the pretrained checkpoint
         manifest: Path to the manifest
+
     """
     cfg = ft_optimizer_config()
     with ExitStack() as stack:
@@ -225,6 +226,7 @@ def extract_spidr_discrete_units(
         split: Dataset split to process.
         checkpoint: Path to the SpidR checkpoint.
         layers: Layers to extract. If `None`, all layers with a codebook are used.
+
     """
     path_units = Path(path_units)
     dataset = DiscophonAudioDataset(path_dataset, language, split, normalize=True)
@@ -267,6 +269,7 @@ def extract_spidr_continuous_features(
         split: Dataset split to process.
         checkpoint: Path to the SpidR checkpoint.
         layers: Layers to extract. If `None`, all student layers are used.
+
     """
     path_features = Path(path_features)
     dataset = DiscophonAudioDataset(path_dataset, language, split, normalize=True)

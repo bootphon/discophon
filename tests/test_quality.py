@@ -48,7 +48,7 @@ def test_pnmi_partial_overlap_is_between_zero_and_one() -> None:
 
 
 def _legacy_pnmi(cooccurrence: DataArray) -> float:
-    """The original epsilon-based PNMI, kept as a reference oracle for the well-defined regime."""
+    """Original epsilon-based PNMI, kept as a reference oracle for the well-defined regime."""
     count = cooccurrence.values
     eps = 1e-10
     proba = count / count.sum()

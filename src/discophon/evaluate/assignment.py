@@ -77,6 +77,7 @@ def cooccurrence_matrix(
     Returns:
         2D array for which the element (`i`, `j`) is the number of times the unit `j` has appeared where the
             underlying phoneme is `i`. The phonemes are sorted by frequency.
+
     """
     n_phonemes = infer_number_of_phonemes(n_phonemes, language)
     n_phonemes_with_sil = n_phonemes + 1
@@ -193,6 +194,7 @@ def phone_assignments(units: Units, cooccurrence: DataArray, *, kind: Literal["m
 
     Returns:
         Assigned phones with this `kind` of mapping
+
     """
     match kind:
         case "many-to-one":

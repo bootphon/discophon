@@ -234,9 +234,11 @@ def read_gold_annotations(source: str | Path, *, step_in_ms: int = STEP_PHONES) 
 
     Arguments:
         source: Path to the annotations file
+        step_in_ms: Step in ms between each phone.
 
     Returns:
         Mapping between file ids and phones
+
     """
     phones_per_seconds = 1000 // step_in_ms
     if step_in_ms * phones_per_seconds != 1000:
@@ -268,6 +270,7 @@ def read_submitted_units(source: str | Path) -> Units:
 
     Returns:
         Mapping between file ids and units
+
     """
     return {
         audio: row[UNITS]

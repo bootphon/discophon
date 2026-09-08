@@ -12,7 +12,7 @@ from .test_validate import build_valid_dataset
 
 
 def _write_tiny_prediction(tmp_path: Path) -> tuple[Path, Path]:
-    """A 2-phone alignment (10 ms phones) and matching units (20 ms step), perfectly aligned."""
+    """2-phone alignment (10 ms phones) and matching units (20 ms step), perfectly aligned."""
     alignment = tmp_path / "alignment.txt"
     alignment.write_text("#file onset offset #phone\nf 0 0.02 a\nf 0.02 0.04 b\n", encoding="utf-8")
     units = tmp_path / "units.jsonl"

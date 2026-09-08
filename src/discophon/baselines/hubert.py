@@ -59,7 +59,7 @@ def fit_kmeans_from_checkpoint(
     return kmeans
 
 
-def finetune_hubert(  # noqa: PLR0914
+def finetune_hubert(  # ruff: ignore[too-many-locals, too-many-statements]
     name: str,
     project: str,
     workdir: Path,
@@ -79,6 +79,7 @@ def finetune_hubert(  # noqa: PLR0914
         manifest: Path to the manifest
         n_clusters: Number of clusters
         target_layer: Target layer
+
     """
     cfg = ft_optimizer_config()
     with ExitStack() as stack:
@@ -206,6 +207,7 @@ def extract_hubert_discrete_units(
             quantize that layer.
         layers: Layers to extract. If `None`, all encoder layers are used. Only layers present
             in both `layers` and `kmeans_by_layer` are written.
+
     """
     path_units = Path(path_units)
     dataset = DiscophonAudioDataset(path_dataset, language, split, normalize=True)
@@ -247,6 +249,7 @@ def extract_hubert_continuous_features(
         split: Dataset split to process.
         pretrained_model_name_or_path: HuBERT checkpoint or HuggingFace model identifier.
         layers: Layers to extract. If `None`, all encoder layers are used.
+
     """
     path_features = Path(path_features)
     dataset = DiscophonAudioDataset(path_dataset, language, split, normalize=True)
