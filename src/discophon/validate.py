@@ -61,11 +61,15 @@ def validate_dataset_structure(path: str | Path) -> None:
         | {"speakers.jsonl"}
     ):
         raise DatasetError
-    if {p.name for p in (root / "audio").glob("*")} != {lang.iso_639_3 for lang in languages}:
+    audio_languages = list((root / "audio").glob("*"))
+    if {p.name for p in audio_languages} != {lang.iso_639_3 for lang in languages} or not all(
+        p.is_dir() for p in audio_languages
+    ):
         raise DatasetError
     splits = {"all", "dev", "test", "train-10h", "train-10min", "train-1h"}
     for lang in languages:
-        if {p.stem for p in (root / "audio" / lang.iso_639_3).glob("*")} != splits:
+        audio_splits = list((root / "audio" / lang.iso_639_3).glob("*"))
+        if {p.name for p in audio_splits} != splits or not all(p.is_dir() for p in audio_splits):
             raise DatasetError
 
 

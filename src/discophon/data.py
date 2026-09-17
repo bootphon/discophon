@@ -191,7 +191,7 @@ def num_invalid_rows(df: pl.DataFrame, *, step_in_ms: int) -> int:
         df.with_columns(pl.col(OFFSET).shift(1).over(FILE).alias(f"prev_{OFFSET}"))
         .with_columns(
             pl.when(pl.col(f"prev_{OFFSET}").is_null())
-            .then(pl.col(ONSET) != 0)
+            .then((pl.col(ONSET) != 0) | incorrect_duration)
             .otherwise((pl.col(ONSET) != pl.col(f"prev_{OFFSET}")) | incorrect_duration)
             .alias("invalid")
         )["invalid"]

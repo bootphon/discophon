@@ -92,7 +92,7 @@ def build_valid_dataset(root: Path) -> Path:
         audio = root / "audio" / lang.iso_639_3
         audio.mkdir(parents=True, exist_ok=True)
         for split in ["all", "dev", "test", "train-10h", "train-10min", "train-1h"]:
-            (audio / f"{split}.wav").touch()
+            (audio / split).mkdir()
     return root
 
 
@@ -116,6 +116,15 @@ def test_validate_dataset_structure_rejects_unexpected_extra_file(tmp_path: Path
 
 def test_validate_dataset_structure_rejects_missing_audio_split(tmp_path: Path) -> None:
     root = build_valid_dataset(tmp_path)
-    next((root / "audio").glob("*/all.wav")).unlink()
+    next((root / "audio").glob("*/all")).rmdir()
+    with pytest.raises(DatasetError):
+        validate_dataset_structure(root)
+
+
+def test_validate_dataset_structure_rejects_audio_split_file(tmp_path: Path) -> None:
+    root = build_valid_dataset(tmp_path)
+    split = next((root / "audio").glob("*/all"))
+    split.rmdir()
+    split.touch()
     with pytest.raises(DatasetError):
         validate_dataset_structure(root)

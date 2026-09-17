@@ -35,6 +35,7 @@ from discophon.baselines.utils import (
     hubert_ft_data_config,
     patch_manifest_with_paths,
     patch_manifest_with_units,
+    read_completed_fileids,
     tristage_scheduler,
 )
 from discophon.data import units_filename
@@ -94,10 +95,17 @@ def finetune_hubert(  # ruff: ignore[too-many-locals, too-many-statements]
         device = torch.device("cuda")
 
         # HuBERT data setup
-        temp_manifest = stack.enter_context(NamedTemporaryFile(suffix=".jsonl"))
+        temp_manifest = stack.enter_context(NamedTemporaryFile(suffix=".csv"))
         temp_features = stack.enter_context(TemporaryDirectory(prefix="features-", dir=rundir))
         patch_manifest_with_paths(manifest, temp_manifest.name)
-        kmeans = fit_kmeans_from_checkpoint(manifest, checkpoint, temp_features, target_layer, n_clusters, SEED)
+        kmeans = fit_kmeans_from_checkpoint(
+            temp_manifest.name,
+            checkpoint,
+            temp_features,
+            target_layer,
+            n_clusters,
+            SEED,
+        )
         joblib.dump(kmeans, rundir / "kmeans.joblib")
         new_manifest = rundir / "manifest-with-units.jsonl"
         patch_manifest_with_units(temp_manifest.name, new_manifest, temp_features, kmeans)
@@ -213,17 +221,25 @@ def extract_hubert_discrete_units(
     dataset = DiscophonAudioDataset(path_dataset, language, split, normalize=True)
     model = HuBERT.from_pretrained(pretrained_model_name_or_path).eval().cuda()
     layers = get_target_layers(layers, [i + 1 for i in range(len(model.encoder.layers))])
+    outputs = {
+        layer: path_units / f"{layer}" / units_filename(dataset.language, dataset.split)
+        for layer in layers & kmeans_by_layer.keys()
+    }
+    completed = {layer: read_completed_fileids(path) for layer, path in outputs.items()}
     for fileid, waveform in tqdm(dataset, desc=f"{dataset.language.iso_639_3}-{dataset.split}"):
+        if all(fileid in completed[layer] for layer in outputs):
+            continue
         all_features = model.get_intermediate_outputs(waveform.unsqueeze(0).cuda())
-        for layer, features in enumerate(all_features):
-            if layer + 1 not in layers or layer + 1 not in kmeans_by_layer:
+        for layer, features in enumerate(all_features, start=1):
+            if layer not in outputs or fileid in completed[layer]:
                 continue
-            units = kmeans_by_layer[layer + 1].predict(features.squeeze().cpu().numpy()).tolist()
+            units = kmeans_by_layer[layer].predict(features.squeeze().cpu().numpy()).tolist()
             entry = {"file": fileid, "units": units}
-            jsonl = path_units / f"{layer + 1}" / units_filename(dataset.language, dataset.split)
+            jsonl = outputs[layer]
             jsonl.parent.mkdir(exist_ok=True, parents=True)
             with jsonl.open("ab") as f:
                 f.write(orjson.dumps(entry, option=orjson.OPT_APPEND_NEWLINE))
+            completed[layer].add(fileid)
 
 
 @torch.inference_mode()

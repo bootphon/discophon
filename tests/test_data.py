@@ -107,6 +107,13 @@ def test_read_gold_annotations_rejects_unaligned(tmp_path: Path) -> None:
         read_gold_annotations(path)
 
 
+def test_read_gold_annotations_rejects_zero_duration_first_entry(tmp_path: Path) -> None:
+    path = tmp_path / "bad.txt"
+    path.write_text("#file onset offset #phone\nf 0.00 0.00 a\nf 0.00 0.02 b\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="Invalid annotations"):
+        read_gold_annotations(path)
+
+
 def test_read_submitted_units_roundtrip(tmp_path: Path) -> None:
     path = tmp_path / "units.jsonl"
     path.write_text('{"file": "a", "units": [1, 2, 3]}\n{"file": "b", "units": [4, 5]}\n', encoding="utf-8")

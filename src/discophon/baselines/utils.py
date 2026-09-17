@@ -1,3 +1,4 @@
+import json
 import math
 from collections.abc import Iterable
 from pathlib import Path
@@ -22,6 +23,15 @@ from discophon.languages import get_language
 SEED = 0
 SAVE_INTERVAL = 1_000
 LOG_INTERVAL = 200
+
+
+def read_completed_fileids(path: str | Path) -> set[str]:
+    """Read file IDs already present in an append-only JSONL output."""
+    path = Path(path)
+    if not path.is_file():
+        return set()
+    with path.open(encoding="utf-8") as lines:
+        return {json.loads(line)["file"] for line in lines if line.strip()}
 
 
 class DiscophonAudioDataset(Dataset):

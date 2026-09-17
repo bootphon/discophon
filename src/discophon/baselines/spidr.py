@@ -30,6 +30,7 @@ from discophon.baselines.utils import (
     ft_optimizer_config,
     get_target_layers,
     patch_manifest_with_paths,
+    read_completed_fileids,
     spidr_ft_data_config,
     tristage_scheduler,
 )
@@ -231,19 +232,24 @@ def extract_spidr_discrete_units(
     path_units = Path(path_units)
     dataset = DiscophonAudioDataset(path_dataset, language, split, normalize=True)
     model = build_model(model_type="spidr", checkpoint=checkpoint).eval().cuda()
-    available = [len(model.student.layers) - model.num_codebooks + i + 1 for i in range(len(model.student.layers))]
+    available = [len(model.student.layers) - model.num_codebooks + i + 1 for i in range(model.num_codebooks)]
     layers = get_target_layers(layers, available)
+    outputs = {layer: path_units / f"{layer}" / units_filename(dataset.language, dataset.split) for layer in layers}
+    completed = {layer: read_completed_fileids(path) for layer, path in outputs.items()}
     for fileid, waveform in tqdm(dataset, desc=f"{dataset.language.iso_639_3}-{dataset.split}"):
+        if all(fileid in completed[layer] for layer in outputs):
+            continue
         all_features = model.get_codebooks(waveform.unsqueeze(0).cuda())
-        for layer, features in enumerate(all_features):
-            if features is None or layer + 1 not in layers:
+        for layer, features in enumerate(all_features, start=1):
+            if features is None or layer not in outputs or fileid in completed[layer]:
                 continue
             units = features.squeeze().argmax(dim=-1).cpu().numpy().tolist()
             entry = {"file": fileid, "units": units}
-            jsonl = path_units / f"{layer + 1}" / units_filename(dataset.language, dataset.split)
+            jsonl = outputs[layer]
             jsonl.parent.mkdir(exist_ok=True, parents=True)
             with jsonl.open("ab") as f:
                 f.write(orjson.dumps(entry, option=orjson.OPT_APPEND_NEWLINE))
+            completed[layer].add(fileid)
 
 
 @torch.inference_mode()
