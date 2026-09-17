@@ -29,6 +29,7 @@ from discophon.baselines.utils import (
     DiscophonAudioDataset,
     ft_optimizer_config,
     get_target_layers,
+    link_best_checkpoint,
     patch_manifest_with_paths,
     read_completed_fileids,
     spidr_ft_data_config,
@@ -180,25 +181,23 @@ def validate_all_spidr_checkpoints(
     with NamedTemporaryFile(suffix=".csv") as tempfile:
         patch_manifest_with_paths(manifest, tempfile.name)
         loader = build_dataloader(spidr_ft_data_config(tempfile.name), MaskingConfig())
-    paths = sorted(Path(checkpoints).glob("*.pt"))
+    paths = sorted(Path(checkpoints).glob("step_*.pt"))
+    if not paths:
+        raise ValueError(f"No step checkpoints found in {checkpoints}")
     group = Path(manifest).stem.removeprefix("manifest-")
+    results = []
     for path in tqdm(paths):
-        if path.name == "final.pt":
-            continue
         step = int(path.stem.removeprefix("step_"))
         model = build_model(model_type="spidr", checkpoint=path).to(device)
         losses = validate_spidr(model, loader, device, dtype)
+        results.append({"step": step, "group": group} | losses)
         with Path(output).open("ab") as f:
             f.write(orjson.dumps({"step": step, "group": group} | losses, option=orjson.OPT_APPEND_NEWLINE))
 
     best_step = (
-        pl.read_ndjson(output)
-        .sort("step")
-        .filter(pl.col("loss") == pl.col("loss").min())
-        .tail(1)
-        .to_dicts()[0]["step"]
+        pl.DataFrame(results).sort("step").filter(pl.col("loss") == pl.col("loss").min()).tail(1).to_dicts()[0]["step"]
     )
-    (Path(checkpoints) / "best.pt").symlink_to(f"step_{best_step}.pt")
+    link_best_checkpoint(Path(checkpoints), f"step_{best_step}.pt")
 
 
 @torch.inference_mode()

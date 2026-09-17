@@ -94,7 +94,7 @@ def cooccurrence_matrix(
                     f"Found more than {n_phonemes_with_sil} distinct phones (phonemes plus silence); "
                     f"increase n_phonemes (currently {n_phonemes})."
                 )
-            if unit >= n_units:
+            if not 0 <= unit < n_units:
                 raise IndexError(f"Found unit {unit}, but n_units is {n_units}; units must be in [0, {n_units}).")
             phone_indices.append(phone_to_index[phone])
             unit_indices.append(unit)

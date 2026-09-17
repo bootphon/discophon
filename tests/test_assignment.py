@@ -75,9 +75,10 @@ def test_cooccurrence_pads_missing_phonemes() -> None:
     assert any("missing" in str(p) for p in cooc["phone"].values)
 
 
-def test_cooccurrence_raises_when_unit_out_of_range() -> None:
+@pytest.mark.parametrize("unit", [-1, 5])
+def test_cooccurrence_raises_when_unit_out_of_range(unit: int) -> None:
     with pytest.raises(IndexError):
-        cooccurrence_matrix({"f": [0, 5]}, {"f": ["a", "a", "b", "b"]}, n_units=2, n_phonemes=2)
+        cooccurrence_matrix({"f": [0, unit]}, {"f": ["a", "a", "b", "b"]}, n_units=2, n_phonemes=2)
 
 
 def test_cooccurrence_raises_when_too_many_phonemes() -> None:

@@ -30,8 +30,33 @@ def read_completed_fileids(path: str | Path) -> set[str]:
     path = Path(path)
     if not path.is_file():
         return set()
+    completed = set()
     with path.open(encoding="utf-8") as lines:
-        return {json.loads(line)["file"] for line in lines if line.strip()}
+        for number, line in enumerate(lines, start=1):
+            try:
+                entry = json.loads(line)
+            except ValueError as error:
+                raise ValueError(f"Corrupt units file {path}, line {number}: {error}") from error
+            if (
+                not isinstance(entry, dict)
+                or not isinstance(entry.get("file"), str)
+                or not isinstance(entry.get("units"), list)
+                or any(type(unit) is not int or unit < 0 for unit in entry["units"])
+            ):
+                raise ValueError(
+                    f"Corrupt units file {path}, line {number}: "
+                    "expected a file string and a list of nonnegative integer units"
+                )
+            completed.add(entry["file"])
+    return completed
+
+
+def link_best_checkpoint(directory: Path, target: str) -> None:
+    """Create or update best.pt without overwriting a regular checkpoint file."""
+    link = directory / "best.pt"
+    if link.is_symlink():
+        link.unlink()
+    link.symlink_to(target)
 
 
 class DiscophonAudioDataset(Dataset):

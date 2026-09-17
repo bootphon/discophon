@@ -33,6 +33,7 @@ from discophon.baselines.utils import (
     ft_optimizer_config,
     get_target_layers,
     hubert_ft_data_config,
+    link_best_checkpoint,
     patch_manifest_with_paths,
     patch_manifest_with_units,
     read_completed_fileids,
@@ -184,6 +185,7 @@ def finetune_hubert(  # ruff: ignore[too-many-locals, too-many-statements]
                 ckpt.save(step, epoch)
                 profiler.step()
         ckpt.save_final(step, epoch)
+        link_best_checkpoint(rundir, "final.pt")
 
 
 @torch.inference_mode()

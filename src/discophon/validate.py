@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from functools import wraps
+from inspect import signature
 from itertools import product, starmap
 from pathlib import Path
 
@@ -23,12 +24,19 @@ class ValidateSameKeysError(ValueError):
 
 def validate_first_two_arguments_same_keys[R, **P](func: Callable[P, R]) -> Callable[P, R]:
     """Decoractor that checks that the first two arguments of the function are dictionaries with the same keys."""
+    sig = signature(func)
+    names = list(sig.parameters)[:2]
 
     @wraps(func)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-        if len(args) < 2:
-            raise ArgumentsError
-        if not isinstance(args[0], dict) or not isinstance(args[1], dict) or set(args[0]) != set(args[1]):
+        if len(args) >= 2:
+            first, second = args[:2]
+        else:
+            bound = sig.bind_partial(*args, **kwargs)
+            if len(names) < 2 or any(name not in bound.arguments for name in names):
+                raise ArgumentsError
+            first, second = (bound.arguments[name] for name in names)
+        if not isinstance(first, dict) or not isinstance(second, dict) or first.keys() != second.keys():
             raise ValidateSameKeysError
         return func(*args, **kwargs)
 

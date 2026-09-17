@@ -29,6 +29,13 @@ def test_accepts_dicts_with_same_keys() -> None:
     assert _compare({"x": 1, "y": 2}, {"x": 9, "y": 8}) == "ok"
 
 
+def test_accepts_keyword_and_mixed_arguments() -> None:
+    assert _compare(_a={"x": 1}, _b={"x": 2}) == "ok"
+    assert _compare({"x": 1}, _b={"x": 2}) == "ok"
+    with pytest.raises(ValidateSameKeysError):
+        _compare(_a={"x": 1}, _b={"y": 2})
+
+
 def test_rejects_too_few_arguments() -> None:
     with pytest.raises(ArgumentsError):
         _compare({"x": 1})  # ty: ignore[missing-argument]
