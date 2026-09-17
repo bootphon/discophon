@@ -70,7 +70,6 @@ omit = ["src/discophon/paper.py"]
 source = "vcs"
 
 [tool.pytest]
-filterwarnings = ["ignore::numba.core.errors.NumbaPendingDeprecationWarning"]
 markers = [
   "requires_dataset: mark test as requiring a path to the dataset",
   "requires_tipa_output: mark test as requiring an output path for the TIPA mapping plot",

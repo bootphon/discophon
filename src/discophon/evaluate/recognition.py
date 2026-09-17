@@ -1,7 +1,7 @@
 """Phone recognition."""
 
 from collections.abc import Iterable, Sequence
-from itertools import groupby
+from itertools import chain, groupby
 
 import numba
 import numpy as np
@@ -12,7 +12,7 @@ from discophon.validate import validate_first_two_arguments_same_keys
 
 
 def deduplicate[T](seq: Iterable[T]) -> list[T]:
-    """Deduplicate consecutive values into a numba typed list (so it can be passed to `edit_distance`)."""
+    """Deduplicate consecutive values."""
     deduplicated = [key for key, _ in groupby(seq)]
     if len(deduplicated) == 0:
         raise ValueError("Empty sequence found while deduplicating")
@@ -20,7 +20,10 @@ def deduplicate[T](seq: Iterable[T]) -> list[T]:
 
 
 @numba.jit(nopython=True, nogil=True)
-def edit_distance[T](hypothesis: Sequence[T], target: Sequence[T]) -> int:  # pragma: no cover
+def edit_distance(
+    hypothesis: np.ndarray[tuple[int], np.dtype[np.int64]],
+    target: np.ndarray[tuple[int], np.dtype[np.int64]],
+) -> int:  # pragma: no cover
     """Edit distance.
 
     Based on the torchaudio implementation:
@@ -44,7 +47,10 @@ def edit_distance[T](hypothesis: Sequence[T], target: Sequence[T]) -> int:  # pr
 
 def _edit_distance_and_length(predicted: Sequence[str], gold: Sequence[str]) -> tuple[int, int]:
     hypothesis, target = deduplicate(predicted), deduplicate(gold)
-    return edit_distance(hypothesis, target), len(target)
+    index = {phone: i for i, phone in enumerate(chain(hypothesis, target))}
+    hypothesis_ids = np.fromiter((index[phone] for phone in hypothesis), dtype=np.int64)
+    target_ids = np.fromiter((index[phone] for phone in target), dtype=np.int64)
+    return edit_distance(hypothesis_ids, target_ids), len(target)
 
 
 @validate_first_two_arguments_same_keys
