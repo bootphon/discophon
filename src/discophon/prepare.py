@@ -1,61 +1,52 @@
 """Download and prepare the DiscoPhon benchmark dataset."""
 
 import argparse
+import contextlib
 import hashlib
-import math
+import io
 import os
+import re
+import sys
 import tarfile
-from pathlib import Path
-from typing import Literal, get_args
+from collections.abc import Iterator
+from pathlib import Path, PurePosixPath
+from typing import IO
 
-import fsspec
 import polars as pl
+import requests
 import soundfile as sf
 import soxr
+from datacollective import DatasetDetails, download_dataset, list_datasets
 from tqdm import tqdm
 
-from discophon.data import SAMPLE_RATE, Splits, manifest_filename
+from discophon.data import SAMPLE_RATE, manifest_filename
 from discophon.languages import ISO6393_TO_CV, Language, commonvoice_languages, get_language
 
-__all__ = ["download_benchmark", "prepare_commonvoice_datasets"]
+__all__ = ["MissingClipsError", "check_commonvoice", "download_benchmark", "prepare_commonvoice"]
+
+BENCHMARK_URL = "https://cognitive-ml.fr/downloads/phoneme-discovery/discophon_data.tar.gz"
+BENCHMARK_SHA256 = "358dbc61e9e74e9b922e2ae38ec989d3ad4e101c9fd57b60e2ea3c0332b2502c"
+BENCHMARK_SIZE = 5374865887
+MDC_API_URL = "https://mozilladatacollective.com/api"
+COMMONVOICE_RELEASE = re.compile(r"^Common Voice Scripted Speech (\d+)\.(\d+) - ")
 
 
-def split_across_slurm_array(n_total: int) -> tuple[int, int]:
-    if "SLURM_NTASKS" not in os.environ:
-        return 0, n_total
-    if "SLURM_ARRAY_TASK_ID" in os.environ:
-        array_id, num_arrays = int(os.environ["SLURM_ARRAY_TASK_ID"]), int(os.environ["SLURM_ARRAY_TASK_COUNT"])
-        if os.environ["SLURM_ARRAY_TASK_MIN"] != "0" or int(os.environ["SLURM_ARRAY_TASK_MAX"]) != num_arrays - 1:
-            raise ValueError(
-                f"Inside a SLURM array, but {os.environ['SLURM_ARRAY_TASK_MIN']=} and "
-                f"{os.environ['SLURM_ARRAY_TASK_MAX']=} are not consistent with "
-                f"{os.environ['SLURM_ARRAY_TASK_COUNT']=}."
-            )
-    else:
-        array_id, num_arrays = 0, 1
-    n_per_array = math.ceil(n_total / num_arrays)
-    start = array_id * n_per_array
-    end = min(start + n_per_array, n_total)
-    return start, end
+class MissingClipsError(ValueError):
+    """Raised when a Common Voice release does not contain all the clips needed by DiscoPhon."""
 
-
-def download_file(url: str, dest: str | Path, *, chunk_size: int = 2**20, byte_size: int | None = None) -> str:
-    """Download `url` to `dest` in chunks and return the SHA-256 checksum of the downloaded file."""
-    digest = hashlib.sha256()
-    with (
-        fsspec.open(url, "rb", block_size=0) as src,
-        Path(dest).open("wb") as dst,
-        tqdm(total=byte_size, unit_scale=True, unit_divisor=1024, unit="B") as progress,
-    ):
-        while chunk := src.read(chunk_size):
-            dst.write(chunk)
-            digest.update(chunk)
-            progress.update(len(chunk))
-    return digest.hexdigest()
+    def __init__(self, missing: set[str], n_needed: int, release: str) -> None:
+        self.missing = sorted(missing)
+        super().__init__(
+            f"\n{'!' * 80}\n"
+            f"{len(missing)} of the {n_needed} clips needed by DiscoPhon are missing from {release}.\n"
+            "The DiscoPhon dataset cannot be rebuilt from this release. Missing clips:\n"
+            + "\n".join(f"  {clip}" for clip in self.missing)
+            + f"\n{'!' * 80}"
+        )
 
 
 def download_benchmark(path_dataset: str | Path) -> None:
-    """Download and extract the DiscoPhon dataset.
+    """Download and extract the DiscoPhon assets: manifests, alignments, items, and the audio we distribute.
 
     Arguments:
         path_dataset: Target path to the DiscoPhon dataset.
@@ -64,18 +55,23 @@ def download_benchmark(path_dataset: str | Path) -> None:
     path_dataset = Path(path_dataset)
     path_dataset.mkdir(exist_ok=True, parents=True)
     archive = path_dataset / "discophon_data.tar.gz"
-    expected = "358dbc61e9e74e9b922e2ae38ec989d3ad4e101c9fd57b60e2ea3c0332b2502c"
-    actual = download_file(
-        "https://cognitive-ml.fr/downloads/phoneme-discovery/discophon_data.tar.gz",
-        archive,
-        byte_size=5374865887,
-    )
-    if actual != expected:
-        archive.unlink(missing_ok=True)
-        raise ValueError(f"Checksum mismatch for {archive}: expected {expected}, got {actual}.")
+    digest = hashlib.sha256()
+    with (
+        requests.get(BENCHMARK_URL, stream=True, timeout=60) as response,
+        archive.open("wb") as f,
+        tqdm(total=BENCHMARK_SIZE, unit_scale=True, unit_divisor=1024, unit="B", desc="Downloading") as progress,
+    ):
+        response.raise_for_status()
+        for chunk in response.iter_content(2**20):
+            f.write(chunk)
+            digest.update(chunk)
+            progress.update(len(chunk))
+    if digest.hexdigest() != BENCHMARK_SHA256:
+        archive.unlink()
+        raise ValueError(f"Checksum mismatch for {archive}: expected {BENCHMARK_SHA256}, got {digest.hexdigest()}.")
     try:
         with tarfile.open(archive, "r:gz") as tar:
-            for member in tar:
+            for member in tqdm(tar, desc="Extracting", unit=" files"):
                 root, parts = member.name.split("/", 1)
                 if root != "discophon_data":
                     raise ValueError(f"Unexpected tarfile: root is {root} but should be 'discophon_data'")
@@ -85,83 +81,190 @@ def download_benchmark(path_dataset: str | Path) -> None:
         archive.unlink(missing_ok=True)
 
 
-def resample(
-    inp: str | Path,
-    output: str | Path,
-    *,
-    output_sample_rate: int,
-    quality: Literal["vhq", "hq", "mq", "lq"] = "vhq",
-) -> None:
-    audio, input_sample_rate = sf.read(inp)
-    resampled = soxr.resample(audio, input_sample_rate, output_sample_rate, quality)
-    sf.write(output, resampled, output_sample_rate)
+def needed_clips(path_dataset: Path, language: Language) -> set[str]:
+    """Return the identifiers of all the files of `language` listed in the manifests."""
+    manifests = list((path_dataset / "manifest").glob(manifest_filename(language, "*")))
+    if not manifests:
+        raise FileNotFoundError(f"No manifest for {language.name} in {path_dataset / 'manifest'}. Download first.")
+    return set(pl.concat([pl.read_csv(path) for path in manifests])["fileid"].to_list())
 
 
-def get_filenames(manifests: Path, language: Language, *, split: Splits) -> list[str]:
-    if split not in get_args(Splits):
-        raise ValueError(f"Invalid {split=}. Must be in {get_args(Splits)}")
-    if split != "all":
-        manifest = pl.read_csv(manifests / manifest_filename(language, split))
-    else:
-        manifest = pl.concat([pl.read_csv(path) for path in manifests.glob(manifest_filename(language, "*"))])
-    return sorted(manifest["fileid"].unique().to_list())
+def latest_release(language: Language) -> DatasetDetails:
+    """Find the latest Common Voice Scripted Speech release of `language` on Mozilla Data Collective."""
+    cv_code = ISO6393_TO_CV[language.iso_639_3]
+    releases = {}
+    for dataset in list_datasets("Common Voice Scripted Speech", locale=cv_code, results_per_page=50).items:
+        if dataset.locale == cv_code and (match := COMMONVOICE_RELEASE.match(dataset.name or "")):
+            releases[int(match[1]), int(match[2])] = dataset
+    if not releases:
+        raise ValueError(f"No Common Voice Scripted Speech release found for locale {cv_code}.")
+    return releases[max(releases)]
 
 
-def prepare_commonvoice_datasets(path_dataset: str | Path, language: str) -> None:
-    """Prepare the Common Voice datasets needed for DiscoPhon by resampling and copying the audio files.
+def mp3_to_wav(mp3: bytes, wav: Path) -> None:
+    """Resample an MP3 clip to 16 kHz and write it to `wav`, atomically to resume safely if interrupted."""
+    audio, sample_rate = sf.read(io.BytesIO(mp3))
+    tmp = wav.with_suffix(".wav.part")
+    sf.write(tmp, soxr.resample(audio, sample_rate, SAMPLE_RATE, "VHQ"), SAMPLE_RATE, format="WAV")
+    tmp.replace(wav)
 
-    The specific Common Voice data should exist in `path_dataset/raw`: the audio files are expected to be
-    in `path_dataset/raw/${cv_code}/clips` where `cv_code` is the Common Voice specific language code of `language`.
+
+def stream_clips(archive: IO[bytes], wanted: set[str]) -> Iterator[tuple[str, bytes]]:
+    """Read a Common Voice `.tar.gz` stream, and find the clips in `wanted`.
+
+    Yields:
+        The identifier and the MP3 content of each clip found.
+
+    """
+    with tarfile.open(fileobj=archive, mode="r|gz") as tar:
+        for member in tqdm(tar, desc="Reading archive", unit=" files"):
+            path = PurePosixPath(member.name)
+            if not (member.isfile() and path.parent.name == "clips" and path.suffix == ".mp3" and path.stem in wanted):
+                continue
+            if (clip := tar.extractfile(member)) is not None:
+                yield path.stem, clip.read()
+
+
+def prepare_commonvoice(path_dataset: str | Path, language: str) -> None:
+    """Download the latest Common Voice release of `language`, and convert the clips needed by DiscoPhon to WAV.
+
+    The clips are resampled to 16 kHz directly from the archive, and written to `path_dataset/audio/${code}/all`.
+    Requires the `MDC_API_KEY` environment variable, and to have accepted the release terms on Mozilla Data Collective.
+
+    This function can be resumed if interrupted: the download restarts where it stopped, and existing WAV files
+    are skipped. The archive is kept in `path_dataset/raw` until all clips are processed.
 
     Arguments:
-        path_dataset: Path to the DiscoPhon dataset.
-        language: Name of the language of the Common Voice dataset under consideration.
-                  Also works with ISO-639-3 code or Common Voice code.
+        path_dataset: Path to the DiscoPhon dataset. Must already contain the manifests.
+        language: Name, ISO 639-3 code, or Common Voice code of the language.
+
+    Raises:
+        MissingClipsError: If some clips listed in the manifests are not in the release. The other clips are converted.
+
+    """
+    path_dataset, resolved = Path(path_dataset), get_language(language)
+    dest = path_dataset / "audio" / resolved.iso_639_3 / "all"
+    needed = needed_clips(path_dataset, resolved)
+    todo = {fileid for fileid in needed if not (dest / f"{fileid}.wav").is_file()}
+    if not todo:
+        return
+    release = latest_release(resolved)
+    archive = download_dataset(release.id, download_directory=str(path_dataset / "raw"))
+    with archive.open("rb") as f:
+        checksum = hashlib.file_digest(f, "sha256").hexdigest()
+    if release.checksum is not None and checksum != release.checksum:
+        archive.unlink()
+        raise ValueError(f"Checksum mismatch for {archive}: expected {release.checksum}, got {checksum}.")
+    dest.mkdir(exist_ok=True, parents=True)
+    with archive.open("rb") as f:
+        for fileid, mp3 in stream_clips(f, todo):
+            mp3_to_wav(mp3, dest / f"{fileid}.wav")
+            todo.remove(fileid)
+            if not todo:
+                break
+    archive.unlink()
+    with contextlib.suppress(OSError):  # Other languages may still be downloading there
+        archive.parent.rmdir()
+    if todo:
+        raise MissingClipsError(todo, len(needed), release.name or release.id)
+
+
+def check_commonvoice(path_dataset: str | Path, language: str) -> DatasetDetails:
+    """Check that the latest Common Voice release of `language` contains all the clips needed by DiscoPhon.
+
+    The release is streamed, and nothing is written to disk.
+    Requires the `MDC_API_KEY` environment variable, and to have accepted the release terms on Mozilla Data Collective.
+
+    Arguments:
+        path_dataset: Path to the DiscoPhon dataset. Must already contain the manifests.
+        language: Name, ISO 639-3 code, or Common Voice code of the language.
+
+    Returns:
+        The details of the checked release.
+
+    Raises:
+        MissingClipsError: If some clips listed in the manifests are not in the release.
 
     """
     resolved = get_language(language)
-    src = Path(path_dataset) / "raw" / ISO6393_TO_CV[resolved.iso_639_3] / "clips"
-    dest = Path(path_dataset) / "audio" / resolved.iso_639_3 / "all"
-    if not src.is_dir():
-        raise ValueError(f"Directory {src} does not exist.")
-    dest.mkdir(exist_ok=True, parents=True)
-    filenames = get_filenames(Path(path_dataset) / "manifest", resolved, split="all")
-    filenames = filenames[slice(*split_across_slurm_array(len(filenames)))]
-    for filename in tqdm(filenames, desc="Resampling and converting to WAV"):
-        resample(
-            src / Path(filename).with_suffix(".mp3"),
-            dest / Path(filename).with_suffix(".wav"),
-            output_sample_rate=SAMPLE_RATE,
-        )
+    needed = needed_clips(Path(path_dataset), resolved)
+    release = latest_release(resolved)
+    if not (api_key := os.environ.get("MDC_API_KEY")):
+        raise ValueError("Missing API key. Set `MDC_API_KEY` to your Mozilla Data Collective key.")
+    session = requests.post(
+        f"{MDC_API_URL}/datasets/{release.id}/download",
+        headers={"Authorization": f"Bearer {api_key}"},
+        timeout=60,
+    )
+    if session.status_code == 403:
+        raise PermissionError(f"Access denied to {release.name} ({release.id}): {session.text}")
+    session.raise_for_status()
+    found = set()
+    with requests.get(session.json()["downloadUrl"], stream=True, timeout=60) as response:
+        response.raise_for_status()
+        for fileid, _ in stream_clips(response.raw, needed):
+            found.add(fileid)
+            if found == needed:
+                break
+    if missing := needed - found:
+        raise MissingClipsError(missing, len(needed), release.name or release.id)
+    return release
 
 
 def cli(argv: list[str] | None = None) -> None:
     """Command-line entry point for dataset download and preparation."""
-    parser = argparse.ArgumentParser(description="Prepare Phoneme Discovery benchmark")
+    parser = argparse.ArgumentParser(description="Prepare the DiscoPhon benchmark data")
     subparsers = parser.add_subparsers(dest="command", required=True, help="command to run")
     parser_download = subparsers.add_parser(
         "download",
-        description="Download benchmark data",
-        help="download benchmark data",
+        description="Download the manifests, alignments, items, and the audio distributed with DiscoPhon",
+        help="download the benchmark assets",
     )
-    parser_download.add_argument("data", help="path to data directory", type=Path)
-    parser_audio = subparsers.add_parser(
+    parser_download.add_argument("data", type=Path, help="path to data directory")
+    parser_cv = subparsers.add_parser(
         "commonvoice",
-        description="Prepare Common Voice data",
-        help="prepare Common Voice data",
+        description="Download the latest Common Voice releases and convert the clips needed by DiscoPhon to WAV. "
+        "Can be resumed if interrupted. Requires the MDC_API_KEY environment variable.",
+        help="download and prepare Common Voice audio",
     )
-    parser_audio.add_argument("data", help="path to data directory", type=Path)
-    parser_audio.add_argument(
-        "code",
-        help="CommonVoice language ISO 639-3 code",
-        choices=[lang.iso_639_3 for lang in commonvoice_languages()],
+    parser_cv.add_argument("data", type=Path, help="path to data directory")
+    codes = [lang.iso_639_3 for lang in commonvoice_languages()]
+    parser_cv.add_argument(
+        "languages",
+        nargs="*",
+        choices=codes,
+        metavar="LANG",
+        help=f"languages, among {codes} (all if none given)",
+    )
+    parser_cv.add_argument(
+        "--check-only",
+        action="store_true",
+        help="only check that the releases contain all the needed clips, by streaming them without writing to disk",
     )
     args = parser.parse_args(argv)
     match args.command:
         case "download":
             download_benchmark(args.data)
         case "commonvoice":
-            prepare_commonvoice_datasets(args.data, args.code)
+            failures = []
+            for code in args.languages or codes:
+                try:
+                    if args.check_only:
+                        print(f"{code}: all clips found in {check_commonvoice(args.data, code).name}")
+                    else:
+                        prepare_commonvoice(args.data, code)
+                        print(f"{code}: all clips prepared")
+                except MissingClipsError as error:
+                    failures.append(f"{code}: {error}")
+                except PermissionError as error:
+                    failures.append(
+                        f"{code}: accept the terms of the latest release on Mozilla Data Collective. {error}"
+                    )
+            if failures:
+                sys.exit(
+                    f"\n{'#' * 80}\nCOMMON VOICE FAILED for {len(failures)} language(s)\n{'#' * 80}\n"
+                    + "\n".join(failures)
+                )
         case _:
             parser.error("Invalid command")
 

@@ -1,8 +1,10 @@
 # Data preparation
 
-To download the benchmark data, you only need the `discophon` package installed. Audio
-pre-processing (resampling) is done in-process via the `soxr` dependency, so there is no
-external binary to install.
+To download the benchmark data, install the `discophon` package with the `prepare` extra:
+
+```bash
+pip install "discophon[prepare]"
+```
 
 Let's call `$DATA` the directory where you want to install the benchmark data.
 
@@ -26,45 +28,51 @@ If you prefer, you can manually download the data from: https://cognitive-ml.fr/
 
 ## Download and process Common Voice data
 
-Download the following datasets from [Common Voice Scripted](https://datacollective.mozillafoundation.org/organization/cmfh0j9o10006ns07jq45h7xk):
+The audio for the other languages comes from [Common Voice Scripted Speech](https://datacollective.mozillafoundation.org/organization/cmfh0j9o10006ns07jq45h7xk), distributed by Mozilla Data Collective:
 
 - Dev languages: *Swahili* (22 GB), *Tamil* (9 GB), *Thai* (9 GB), *Turkish* (3 GB), *Ukrainian* (3 GB)
-- Test languages: *Basque* (15 GB), *Chinese (China)* (12 GB), *Japanese* (22 GB)
+- Test languages: *Basque* (15 GB), *Chinese (China)* (23 GB), *Japanese* (15 GB)
 
-Since only the latest version is distributed, we cannot provide direct download links.
-You can use their API or [their python package](https://github.com/Mozilla-Data-Collective/datacollective-python).
+Before downloading:
 
-Extract each archive, with something like `tar --strip-components=1 -xvfz ...`, and move the output to `$DATA/raw`.
-You can delete the archives afterwards. You should have the following structure:
+1. Create an API key in your Mozilla Data Collective account and export it as `MDC_API_KEY`.
+2. On the Mozilla Data Collective website, read and accept the terms of the latest *Common Voice Scripted Speech*
+   release for each of these languages. Each new Common Voice release is a new dataset, so you have to accept
+   its terms again.
 
-```bash
-❯ tree -L 2 $DATA
-$DATA
-└── raw
-    ├── eu
-    ├── ja
-    ├── sw
-    ├── ta
-    ├── th
-    ├── tr
-    ├── uk
-    └── zh-CN
-```
-
-Now resample audio files and convert them to WAV with the command:
+Then run:
 
 ```bash
-for code in swa tam tha tur ukr cmn eus jpn; do
-    python -m discophon.prepare commonvoice $DATA $code
-done
+export MDC_API_KEY=...
+python -m discophon.prepare commonvoice $DATA
 ```
 
-This will create directories `$DATA/audio/cmn/all`, `$DATA/audio/eus/all`, `$DATA/audio/jpn/all`, etc., with
-resampled audio files for the Common Voice languages (`cmn`, `eus`, `jpn`, `swa`, `tam`, `tha`, `tur`, `ukr`).
-The directories for `deu`, `eng`, `fra`, and `wol` were already created by the asset download above. The
-directories corresponding to each split contain symlinks to those files.
+For each language, this downloads the latest release to `$DATA/raw`, verifies its checksum, and converts the clips
+listed in the manifests to 16 kHz WAV files in `$DATA/audio/{code}/all`, directly from the archive. The archive is
+deleted afterwards. The directories `$DATA/audio/{code}/{split}` already contain symlinks to those files.
 
-You should parallelize this loop if you can to speed things up. If you are in a SLURM cluster, you should also parallelize each dataset
-processing across tasks or array jobs. The `discophon.prepare` package will automatically distribute the files to process to each job.
+The command can be resumed if interrupted: the download restarts where it stopped, and the WAV files already written
+are skipped. Languages that are fully prepared are skipped without downloading anything.
 
-You can delete the `$DATA/raw` folder afterwards.
+You can also prepare only some languages, for example to run them in parallel:
+
+```bash
+python -m discophon.prepare commonvoice $DATA swa tam
+```
+
+If a clip listed in the manifests is missing from the latest release, the command converts all the other clips,
+and then fails with the list of missing clips. In that case, the dataset cannot be rebuilt from the current
+Common Voice release: please [open an issue](https://github.com/bootphon/discophon/issues).
+
+## Check the Common Voice releases
+
+To check that the latest Common Voice releases still contain all the clips listed in the manifests, without
+writing anything to disk, run:
+
+```bash
+python -m discophon.prepare commonvoice $DATA --check-only
+```
+
+Each release is streamed and only the names of its files are read. This still downloads the whole archives, but
+stops early once all the clips of a language are found. The command exits with an error and lists the missing clips
+if any language is incomplete. It only needs the manifests from the asset download above.

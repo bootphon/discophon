@@ -19,7 +19,6 @@ classifiers = [
 ]
 dependencies = [
   "filelock>=3.20.2",
-  "fsspec[http]>=2026.2.0",
   "joblib>=1.5.3",
   "numba>=0.63.1",
   "numpy>=2.3.5",
@@ -27,7 +26,6 @@ dependencies = [
   "praat-textgrids>=1.4.0",
   "scipy>=1.17.0",
   "soundfile>=0.13.1",
-  "soxr>=1.0.0",
   "tqdm>=4.67.1",
   "xarray>=2025.12.0",
 ]
@@ -40,6 +38,11 @@ abx = [
 baselines = [
   "minimal-hubert>=0.0.5",
   "spidr[train]>=0.1.3",
+]
+prepare = [
+  "datacollective>=0.6.4",
+  "requests>=2.32.5",
+  "soxr>=1.0.0",
 ]
 
 [dependency-groups]
