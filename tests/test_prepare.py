@@ -246,9 +246,10 @@ def test_cli_commonvoice_checks_all_languages_and_fails_loudly(
         if code == "swa":
             raise prepare.MissingClipsError({"gone"}, 3, RELEASE)
         if code == "jpn":
-            raise PermissionError("Access denied")
+            raise prepare.MissingClipsError({"lost"}, 4, f"release of {code}")
         return SimpleNamespace(name=f"release of {code}")
 
+    monkeypatch.setattr(prepare, "inaccessible_releases", lambda _: [])
     monkeypatch.setattr(prepare, "check_commonvoice", check)
     with pytest.raises(SystemExit) as error:
         prepare.cli(["commonvoice", str(dataset), "--check-only"])
@@ -257,10 +258,34 @@ def test_cli_commonvoice_checks_all_languages_and_fails_loudly(
     assert "COMMON VOICE FAILED for 2 language(s)" in message
     assert "swa:" in message
     assert "gone" in message
-    assert "jpn: accept the terms" in message
+    assert "jpn:" in message
+    assert "lost" in message
     assert "tam: all clips found in release of tam" in capsys.readouterr().out
 
 
+def test_inaccessible_releases_lists_releases_with_missing_terms(served_release: SimpleNamespace) -> None:
+    assert prepare.inaccessible_releases(["swa"]) == []
+    served_release.status_code = 403
+    assert [release.name for release in prepare.inaccessible_releases(["swa"])] == [RELEASE]
+
+
+@pytest.mark.parametrize("check_only", [False, True])
+def test_cli_commonvoice_fails_fast_on_missing_terms(
+    dataset: Path, mdc: FakeMDC, monkeypatch: pytest.MonkeyPatch, *, check_only: bool
+) -> None:
+    def deny(languages: list[str]) -> list[DatasetDetails]:
+        assert languages == ["swa", "tam"]
+        return [DatasetDetails(id="new", name=RELEASE, datasetUrl="https://mdc/datasets/new")]
+
+    monkeypatch.setattr(prepare, "inaccessible_releases", deny)
+    monkeypatch.setattr(prepare, "check_commonvoice", lambda *_: pytest.fail("checked before terms"))
+    with pytest.raises(SystemExit) as error:
+        prepare.cli(["commonvoice", str(dataset), "swa", "tam", *(["--check-only"] if check_only else [])])
+    assert f"{RELEASE}: https://mdc/datasets/new" in str(error.value.code)
+    assert mdc.downloads == 0
+
+
+@pytest.mark.usefixtures("served_release")
 def test_cli_commonvoice_prepares_selected_languages(dataset: Path, mdc: FakeMDC) -> None:
     prepare.cli(["commonvoice", str(dataset), "swa"])
     assert mdc.downloads == 1

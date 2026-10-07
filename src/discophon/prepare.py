@@ -101,6 +101,33 @@ def latest_release(language: Language) -> DatasetDetails:
     return releases[max(releases)]
 
 
+def download_session(release: DatasetDetails) -> dict:
+    """Open a download session for `release` on Mozilla Data Collective, without downloading anything."""
+    if not (api_key := os.environ.get("MDC_API_KEY")):
+        raise ValueError("Missing API key. Set `MDC_API_KEY` to your Mozilla Data Collective key.")
+    response = requests.post(
+        f"{MDC_API_URL}/datasets/{release.id}/download",
+        headers={"Authorization": f"Bearer {api_key}"},
+        timeout=60,
+    )
+    if response.status_code == 403:
+        raise PermissionError(f"Access denied to {release.name} ({release.id}): {response.text}")
+    response.raise_for_status()
+    return response.json()
+
+
+def inaccessible_releases(languages: list[str]) -> list[DatasetDetails]:
+    """Return the latest Common Voice releases of `languages` whose terms have not been accepted."""
+    denied = []
+    for language in languages:
+        release = latest_release(get_language(language))
+        try:
+            download_session(release)
+        except PermissionError:
+            denied.append(release)
+    return denied
+
+
 def mp3_to_wav(mp3: bytes, wav: Path) -> None:
     """Resample an MP3 clip to 16 kHz and write it to `wav`, atomically to resume safely if interrupted."""
     audio, sample_rate = sf.read(io.BytesIO(mp3))
@@ -189,18 +216,8 @@ def check_commonvoice(path_dataset: str | Path, language: str) -> DatasetDetails
     resolved = get_language(language)
     needed = needed_clips(Path(path_dataset), resolved)
     release = latest_release(resolved)
-    if not (api_key := os.environ.get("MDC_API_KEY")):
-        raise ValueError("Missing API key. Set `MDC_API_KEY` to your Mozilla Data Collective key.")
-    session = requests.post(
-        f"{MDC_API_URL}/datasets/{release.id}/download",
-        headers={"Authorization": f"Bearer {api_key}"},
-        timeout=60,
-    )
-    if session.status_code == 403:
-        raise PermissionError(f"Access denied to {release.name} ({release.id}): {session.text}")
-    session.raise_for_status()
     found = set()
-    with requests.get(session.json()["downloadUrl"], stream=True, timeout=60) as response:
+    with requests.get(download_session(release)["downloadUrl"], stream=True, timeout=60) as response:
         response.raise_for_status()
         for fileid, _ in stream_clips(response.raw, needed):
             found.add(fileid)
@@ -246,8 +263,14 @@ def cli(argv: list[str] | None = None) -> None:
         case "download":
             download_benchmark(args.data)
         case "commonvoice":
+            languages = args.languages or codes
+            if denied := inaccessible_releases(languages):
+                sys.exit(
+                    "Accept the terms of these releases on Mozilla Data Collective, then rerun:\n"
+                    + "\n".join(f"  {release.name}: {release.datasetUrl}" for release in denied)
+                )
             failures = []
-            for code in args.languages or codes:
+            for code in languages:
                 try:
                     if args.check_only:
                         print(f"{code}: all clips found in {check_commonvoice(args.data, code).name}")
@@ -256,10 +279,6 @@ def cli(argv: list[str] | None = None) -> None:
                         print(f"{code}: all clips prepared")
                 except MissingClipsError as error:
                     failures.append(f"{code}: {error}")
-                except PermissionError as error:
-                    failures.append(
-                        f"{code}: accept the terms of the latest release on Mozilla Data Collective. {error}"
-                    )
             if failures:
                 sys.exit(
                     f"\n{'#' * 80}\nCOMMON VOICE FAILED for {len(failures)} language(s)\n{'#' * 80}\n"
