@@ -125,7 +125,9 @@
   // document$ replays the current page on subscription and emits again after every instant navigation.
   document$.subscribe(() => {
     const data = window.DISCOPHON_LEADERBOARD;
-    if (!data) return;
-    document.querySelectorAll("[data-leaderboard]").forEach((root) => init(root, data));
+    document.querySelectorAll("[data-leaderboard]").forEach((root) => {
+      if (data) init(root, data);
+      else root.textContent = "Missing leaderboard data: run `python -m discophon.leaderboard build`.";
+    });
   });
 })();

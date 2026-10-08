@@ -28,13 +28,13 @@ DiscoPhon requires **Python ≥ 3.12** and has no system dependencies.
 ## References
 
 ```bibtex
-@misc{poli2026discophon,
-  title={{DiscoPhon}: Benchmarking the Unsupervised Discovery of Phoneme Inventories With Discrete Speech Units},
-  author={Maxime Poli and Manel Khentout and Angelo Ortiz Tandazo and Ewan Dunbar and Emmanuel Chemla and Emmanuel Dupoux},
-  year={2026},
-  eprint={2603.18612},
-  archivePrefix={arXiv},
-  primaryClass={cs.CL},
-  url={https://arxiv.org/abs/2603.18612},
+@inproceedings{poli2026discophon,
+  title     = {{DiscoPhon: Benchmarking the Unsupervised Discovery of Phoneme Inventories With Discrete Speech Units}},
+  author    = {Maxime Poli and Manel Khentout and Angelo {Ortiz Tandazo} and Ewan Dunbar and Emmanuel Chemla and Emmanuel Dupoux},
+  year      = {2026},
+  booktitle = {{Interspeech 2026}},
+  pages     = {6664--6669},
+  doi       = {10.21437/Interspeech.2026-2791},
+  issn      = {2958-1796},
 }
 ```

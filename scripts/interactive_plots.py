@@ -8,13 +8,8 @@ import polars as pl
 
 from discophon.data import read_gold_annotations_as_dataframe, read_scores
 from discophon.languages import all_languages
+from discophon.leaderboard import read_models
 
-MODELS = {
-    "spidr-mmsulab": "SpidR MMS-ulab",
-    "spidr-vp20": "SpidR VP-20",
-    "hubert-mmsulab-it2": "HuBERT MMS-ulab",
-    "hubert-vp20-it2": "HuBERT VP-20",
-}
 LANGUAGES = [lang.iso_639_3 for lang in all_languages()]
 LANGUAGE_NAMES = {"avg-test": "Average over test languages", "avg-dev": "Average over dev languages"} | {
     lang.iso_639_3: lang.name for lang in all_languages()
@@ -132,7 +127,6 @@ def _baseline_layers(
         color=alt.Color(
             "model:N",
             title="Model",
-            sort=list(MODELS.values()),
             legend=alt.Legend(columns=2, direction="horizontal", titleAnchor="middle", orient="top"),
         ),
         opacity=alt.condition(legend_select, alt.value(1), alt.value(0.1)),
@@ -162,7 +156,7 @@ def _baseline_layers(
     return fg, rules, points
 
 
-def baseline_scores(artifacts: Path) -> pl.DataFrame:
+def baseline_scores(artifacts: Path, baselines: dict[str, str]) -> pl.DataFrame:
     """Scores (in %) of the baselines on the test split, for each language and averaged over dev and test languages.
 
     Finetuned models are evaluated on their finetuning language. The best layer of each model and duration
@@ -173,7 +167,7 @@ def baseline_scores(artifacts: Path) -> pl.DataFrame:
         .filter(
             pl.col("split") == "test",
             pl.col("ft_lang").is_null() | (pl.col("ft_lang") == pl.col("language")),
-            pl.col("model").is_in(MODELS),
+            pl.col("model").is_in(baselines),
             pl.col("folder").is_in(["many_to_one", "continuous"]),
             pl.col("metric").is_in(METRICS),
         )
@@ -199,7 +193,7 @@ def baseline_scores(artifacts: Path) -> pl.DataFrame:
     )
     return (
         pl.concat([df.select(columns), averages.select(columns)])
-        .with_columns(pl.col("model").replace_strict(MODELS), pl.col("score").round(2))
+        .with_columns(pl.col("model").replace_strict(baselines), pl.col("score").round(2))
         .sort("model", "duration", "layer", "language", "metric")
     )
 
@@ -449,8 +443,12 @@ if __name__ == "__main__":
     parser.add_argument("dataset", type=Path, help="Path to the benchmark dataset")
     parser.add_argument("artifacts", type=Path, help="Path to the artifacts dataset")
     parser.add_argument("destination", type=Path, help="Path to the assets directory in docs")
+    parser.add_argument("--leaderboard", type=Path, default=Path("../leaderboard"), help="Path to the leaderboard")
     args = parser.parse_args()
-    scores = baseline_scores(args.artifacts)
+    baselines = {
+        key: entry["label"] for key, entry in read_models(args.leaderboard).items() if entry["category"] == "baseline"
+    }
+    scores = baseline_scores(args.artifacts, baselines)
 
     def write(chart: alt.Chart | alt.LayerChart | alt.FacetChart, name: str) -> None:
         (args.destination / name).write_text(to_html(chart), encoding="utf-8")

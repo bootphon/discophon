@@ -42,9 +42,15 @@ def artifacts(model_dir: Path, layers: dict[str, dict[str, int]]) -> Path:
     return model_dir
 
 
+def read_data(path: Path) -> dict:
+    text = path.read_text(encoding="utf-8")
+    return json.loads(text.removeprefix("window.DISCOPHON_LEADERBOARD = ").removesuffix(";\n"))
+
+
 def test_repository_leaderboard_is_valid(tmp_path: Path) -> None:
     build(ROOT, tmp_path / "data.js")
-    assert (tmp_path / "data.js").read_text().startswith("window.DISCOPHON_LEADERBOARD = {")
+    data = read_data(tmp_path / "data.js")
+    assert [model["key"] for model in data["models"]] == list(read_models(ROOT))
 
 
 def test_export(tmp_path: Path) -> None:
@@ -66,12 +72,20 @@ def test_export(tmp_path: Path) -> None:
         {"step_units": 20, "layers": {"many_to_one-k1024": {"0": 1}}},
         {"step_units": 20, "layers": {"many_to_one": {"1h": 1}}},
         {"step_units": 20, "layers": {"many_to_one": {}}},
+        {"step_units": 20, "layers": {"many_to_one": {"0": True}}},
     ],
 )
 def test_invalid_info(tmp_path: Path, info: dict) -> None:
     (tmp_path / "info.json").write_text(json.dumps(info))
     with pytest.raises(ValueError, match=r"info\.json"):
         export(tmp_path)
+
+
+def test_export_from_model_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    model_dir = artifacts(tmp_path / "my-model", {"many_to_one": {"0": 2}})
+    monkeypatch.chdir(model_dir)
+    cli(["export", ".", "--root", str(tmp_path / "leaderboard")])
+    assert (tmp_path / "leaderboard" / "scores" / "many_to_one" / "my-model.jsonl").is_file()
 
 
 def test_export_missing_scores(tmp_path: Path) -> None:
@@ -87,6 +101,9 @@ def test_export_then_build(tmp_path: Path) -> None:
     for _ in range(2):  # exporting again overwrites
         cli(["export", str(model_dir), "--root", str(root)])
     cli(["build", "--root", str(root), "--output", str(tmp_path / "data.js")])
+    data = read_data(tmp_path / "data.js")
+    assert data["models"][0]["tracks"] == ["many_to_one", "one_to_one"]
+    assert len(data["rows"]) == 2 * len(all_languages()) * sum(len(metrics) for metrics in TRACKS.values())
     models = read_models(root)
     scores = read_leaderboard_scores(root, models)
     validate(scores, models)
@@ -95,19 +112,30 @@ def test_export_then_build(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "entry",
+    ("entry", "match"),
     [
-        '[My_Model]\nlabel = "x"\ncategory = "submission"\nurl = "x"',
-        '[my-model]\nlabel = "x"\ncategory = "submission"',
-        '[my-model]\nlabel = "x"\ncategory = "other"\nurl = "x"',
-        '[my-model]\nlabel = "x"\ncategory = "submission"\nurl = "x"\nauthors = "x"',
-        '[my-model]\nlabel = "x"\ncategory = "submission"\nurl = "x"\npartial = "yes"',
+        ('[My_Model]\nlabel = "x"\ncategory = "submission"\nurl = "https://x"', "keys must be"),
+        ('[my-model]\nlabel = "x"\ncategory = "submission"', "missing fields"),
+        ('[my-model]\nlabel = "x"\ncategory = "other"\nurl = "https://x"', "category"),
+        ('[my-model]\nlabel = "x"\ncategory = "submission"\nurl = "https://x"\nauthors = "x"', "unknown fields"),
+        ('[my-model]\nlabel = "x"\ncategory = "submission"\nurl = "https://x"\npartial = "yes"', "expected bool"),
+        ('[my-model]\nlabel = "x"\ncategory = "submission"\nurl = "javascript:alert(1)"', "url"),
     ],
 )
-def test_invalid_registry(tmp_path: Path, entry: str) -> None:
+def test_invalid_registry(tmp_path: Path, entry: str, match: str) -> None:
     (tmp_path / "models.toml").write_text(entry)
-    with pytest.raises((ValueError, TypeError)):
+    with pytest.raises((ValueError, TypeError), match=match):
         read_models(tmp_path)
+
+
+def test_registry_and_scores_mismatch(tmp_path: Path) -> None:
+    (tmp_path / "models.toml").write_text(MODEL)
+    with pytest.raises(ValueError, match=r"Models without scores: \['my-model'\]"):
+        read_leaderboard_scores(tmp_path, read_models(tmp_path))
+    (tmp_path / "scores" / "many_to_one").mkdir(parents=True)
+    (tmp_path / "scores" / "many_to_one" / "other-model.jsonl").touch()
+    with pytest.raises(ValueError, match=r"Scores without models: \['other-model'\]"):
+        read_leaderboard_scores(tmp_path, read_models(tmp_path))
 
 
 def test_invalid_scores(tmp_path: Path) -> None:
@@ -124,3 +152,11 @@ def test_invalid_scores(tmp_path: Path) -> None:
         validate(df.with_columns(layer=pl.int_range(pl.len())), models)
     with pytest.raises(ValueError, match="invalid metrics"):
         validate(df.with_columns(track=pl.lit("one_to_one")), models)
+    with pytest.raises(ValueError, match="Invalid track"):
+        validate(df.with_columns(track=pl.lit("continuous")), models)
+    with pytest.raises(ValueError, match="Invalid duration"):
+        validate(df.with_columns(duration=pl.lit("1h")), models)
+    with pytest.raises(ValueError, match="Invalid language"):
+        validate(df.with_columns(language=pl.lit("xxx")), models)
+    with pytest.raises(ValueError, match="null values"):
+        validate(df.with_columns(score=None), models)

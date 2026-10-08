@@ -5,6 +5,7 @@ from pathlib import Path
 import polars as pl
 
 from discophon.data import read_scores
+from discophon.leaderboard import read_models
 
 METRICS = {
     "per": r"\bf PER $\downarrow$",
@@ -12,13 +13,6 @@ METRICS = {
     "f1": r"$F_1$ $\uparrow$",
     "pnmi": r"PNMI $\uparrow$",
     "triphone_abx_continuous": r"ABX c. $\downarrow$",
-}
-
-MODELS = {
-    "spidr-mmsulab": "SpidR MMS-ulab",
-    "spidr-vp20": "SpidR VP-20",
-    "hubert-mmsulab-it2": "HuBERT MMS-ulab",
-    "hubert-vp20-it2": "HuBERT VP-20",
 }
 
 
@@ -39,7 +33,7 @@ def average(scores: pl.DataFrame, folders: list[str], metrics: Iterable[str]) ->
 
 
 def format_row(entry: dict, metrics: Iterable[str], *, with_layer: bool) -> str:
-    row = rf"{MODELS[entry['model']]} (L{entry['layer']}) & " if with_layer else rf"{MODELS[entry['model']]} & "
+    row = rf"{entry['model']} (L{entry['layer']}) & " if with_layer else rf"{entry['model']} & "
     for lang_set in ["dev", "test"]:
         for metric in metrics:
             score = entry["score_{" + f'"{lang_set}","{metric}"' + "}"]
@@ -81,7 +75,11 @@ def get_tabular(df: pl.DataFrame, metrics: dict[str, str], *, with_layer: bool =
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("artifacts", type=Path, help="Path to the artifacts dataset")
+    parser.add_argument("--leaderboard", type=Path, default=Path("../leaderboard"), help="Path to the leaderboard")
     args = parser.parse_args()
+    baselines = {
+        key: entry["label"] for key, entry in read_models(args.leaderboard).items() if entry["category"] == "baseline"
+    }
 
     scores = (
         read_scores(args.artifacts)
@@ -89,9 +87,9 @@ if __name__ == "__main__":
             pl.col("split") == "test",
             pl.col("ft_lang").is_null() | (pl.col("ft_lang") == pl.col("language")),
             pl.col("duration").is_in(["0", "10h"]),
-            pl.col("model").is_in(MODELS),
+            pl.col("model").is_in(baselines),
         )
-        .with_columns(pl.col("score") * 100)
+        .with_columns(pl.col("model").replace_strict(baselines), pl.col("score") * 100)
         .sort("model", "duration", "layer", "language")
     )
     best = (  # Layer with the lowest continuous ABX on dev languages, for each model and duration

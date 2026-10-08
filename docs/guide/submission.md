@@ -40,8 +40,9 @@ my-model/
 ```
 
 The `continuous/` directory holds the continuous ABX scores, computed on features rather than units, which are
-reported in the many-to-one track. The benchmark appends its results to the output file, so all the evaluations
-of a run go to the same `scores.jsonl`:
+reported in the many-to-one track. The features of a layer are stored in `{language}/{split}/` subdirectories
+(see [Evaluate](evaluate.md#abx)). The benchmark appends its results to the output file, so all the evaluations
+of a run go to the same `scores.jsonl`. Delete it before running them again, otherwise the scores are duplicated:
 
 ```console
 ❯ d=my-model/zero-shot/many_to_one/6
@@ -53,8 +54,8 @@ of a run go to the same `scores.jsonl`:
 ```
 
 Pass `--step-units` if your units are not 20 ms apart.
-Finally, write `info.json` with the step between units and the submitted layers, by track and condition
-(`"0"` for zero-shot, `"10h"` for finetuned on 10h):
+Finally, write `info.json` with the step between units in ms (recorded for the users of your units), and the
+submitted layers, by track and condition (`"0"` for zero-shot, `"10h"` for finetuned on 10h):
 
 ```json
 {
@@ -80,11 +81,12 @@ leaving out the lock files written by the benchmark:
 
 ## 3. Export the leaderboard scores
 
-`discophon.leaderboard export` reads the submitted layers from your model directory, and writes the leaderboard
-scores to `leaderboard/scores/{track}/{key}.jsonl` for each track in `info.json`:
+Clone the [GitHub repository](https://github.com/bootphon/discophon). `discophon.leaderboard export` reads the
+submitted layers from your model directory, and writes the leaderboard scores to
+`leaderboard/scores/{track}/{key}.jsonl` in your clone, for each track in `info.json`:
 
 ```console
-❯ python -m discophon.leaderboard export my-model/
+❯ python -m discophon.leaderboard export my-model/ --root /path/to/discophon/leaderboard
 ```
 
 ## 4. Register your model
@@ -99,7 +101,7 @@ url = "https://huggingface.co/org/my-model"  # checkpoint or paper
 description = "One or two sentences on the architecture and training data."
 ```
 
-Check that the leaderboard is valid and renders as expected:
+From the root of your clone, check that the leaderboard is valid and renders as expected:
 
 ```console
 ❯ python -m discophon.leaderboard build

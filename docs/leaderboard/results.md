@@ -1,6 +1,6 @@
 # Detailed results
 
-We provide below the complete results for the baseline models: every layer, metric, language, and finetuning
+We provide below the many-to-one results for the baseline models: every layer, metric, language, and finetuning
 duration, on the test split. Select a language, or the average over the dev or test languages.
 The units and scores are available in the [artifacts dataset](https://huggingface.co/datasets/coml/discophon-artifacts).
 

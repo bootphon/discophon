@@ -15,7 +15,8 @@ per model:
         ├── units-{lang}-{split}.jsonl    # folder: many_to_one, one_to_one, many_to_one-k{N}, continuous
         └── scores.jsonl
 
-`export` reads the leaderboard scores from such a directory, for the layers given in `info.json`.
+`export` reads the leaderboard scores from such a directory, for the layers given in `info.json`. The step between
+units (in ms) is only recorded for the users of the artifacts.
 """
 
 import argparse
@@ -62,8 +63,8 @@ def read_info(model_dir: Path) -> dict:
     for track, layers in info["layers"].items():
         if track not in TRACKS or not layers or layers.keys() - DURATIONS.keys():
             raise ValueError(f"{model_dir}/info.json: invalid layers for {track!r}: {layers}.")
-        if not all(isinstance(layer, int) for layer in layers.values()):
-            raise TypeError(f"{model_dir}/info.json: layers must be integers, got {layers}.")
+        if not all(type(layer) is int for layer in layers.values()):  # not bool
+            raise ValueError(f"{model_dir}/info.json: layers must be integers, got {layers}.")
     return info
 
 
@@ -108,6 +109,8 @@ def read_models(root: Path) -> dict[str, dict]:
                 raise TypeError(f"[{key}] {field}: expected {expected.__name__}, got {type(value).__name__}.")
         if entry["category"] not in CATEGORIES:
             raise ValueError(f"[{key}] category: must be one of {list(CATEGORIES)}.")
+        if not entry["url"].startswith("https://"):
+            raise ValueError(f"[{key}] url: must start with https://.")
     return models
 
 

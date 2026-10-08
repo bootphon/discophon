@@ -305,7 +305,7 @@ def read_scores(root: str | Path) -> pl.DataFrame:
             language is a dev or test language), `metric`, and `score`, as stored (not in %).
 
     """
-    root = Path(root)
+    root = Path(root).resolve()  # the model name is read from the path, so `.` must be resolved
     model_dirs = [root] if (root / "info.json").exists() else sorted(p.parent for p in root.glob("*/info.json"))
     paths = [p for model_dir in model_dirs for p in sorted(model_dir.glob("*/*/*/scores.jsonl"))]
     if not paths:
@@ -332,8 +332,8 @@ def read_scores(root: str | Path) -> pl.DataFrame:
         )
     )
     keys = [c for c in scores.columns if c != "score"]
-    if scores.select(keys).is_duplicated().any():
-        raise ValueError(f"Duplicate scores in {root}.")
+    if not (duplicates := scores.filter(scores.select(keys).is_duplicated())).is_empty():
+        raise ValueError(f"Duplicate scores in {root}: {duplicates.row(0, named=True)}.")
     speakers = r"^(.+_abx_(?:discrete|continuous))_(?:within|across)_speaker(.*)$"
     averaged = (
         scores.filter(pl.col("metric").str.contains(speakers))
