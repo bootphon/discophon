@@ -3,6 +3,7 @@
 import functools
 import hashlib
 import io
+import re
 import shutil
 import tarfile
 import threading
@@ -10,6 +11,7 @@ from collections.abc import Iterator
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from types import SimpleNamespace
+from typing import ClassVar
 
 import numpy as np
 import polars as pl
@@ -186,6 +188,26 @@ class QuietHandler(SimpleHTTPRequestHandler):
         """Do not log requests."""
 
 
+class RangeHandler(QuietHandler):
+    """Static file server that honors `Range: bytes={start}-` requests, like the server hosting the benchmark."""
+
+    honor_range: ClassVar[bool] = True
+    requested_ranges: ClassVar[list[str]] = []
+
+    def do_GET(self) -> None:
+        """Send the requested range of the file if any, otherwise the whole file."""
+        requested = self.headers.get("Range", "")
+        self.requested_ranges.append(requested)
+        if not (self.honor_range and (match := re.fullmatch(r"bytes=(\d+)-", requested))):
+            super().do_GET()
+            return
+        data = Path(self.translate_path(self.path)).read_bytes()[int(match[1]) :]
+        self.send_response(206)
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+
 @pytest.fixture
 def served_release(mdc: FakeMDC, monkeypatch: pytest.MonkeyPatch) -> Iterator[SimpleNamespace]:
     """Serve the release over HTTP, and answer the download session request like Mozilla Data Collective.
@@ -306,8 +328,9 @@ def served_benchmark(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterato
         info = tarfile.TarInfo("discophon_data/manifest/speakers.jsonl")
         info.size = 2
         tar.addfile(info, io.BytesIO(b"{}"))
-    server = ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(QuietHandler, directory=archive.parent))
+    server = ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(RangeHandler, directory=archive.parent))
     threading.Thread(target=server.serve_forever, daemon=True).start()
+    monkeypatch.setattr(RangeHandler, "requested_ranges", [])
     monkeypatch.setattr(prepare, "BENCHMARK_URL", f"http://127.0.0.1:{server.server_port}/{archive.name}")
     monkeypatch.setattr(prepare, "BENCHMARK_SHA256", hashlib.sha256(archive.read_bytes()).hexdigest())
     monkeypatch.setattr(prepare, "BENCHMARK_SIZE", archive.stat().st_size)
@@ -329,3 +352,39 @@ def test_download_benchmark_rejects_corrupted_archive(tmp_path: Path, monkeypatc
     with pytest.raises(ValueError, match="Checksum mismatch"):
         prepare.download_benchmark(tmp_path / "data")
     assert not any((tmp_path / "data").iterdir())
+
+
+def test_download_benchmark_resumes_interrupted_download(tmp_path: Path, served_benchmark: Path) -> None:
+    half = served_benchmark.stat().st_size // 2
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "discophon_data.tar.gz").write_bytes(served_benchmark.read_bytes()[:half])
+    prepare.download_benchmark(tmp_path / "data")
+    assert RangeHandler.requested_ranges == [f"bytes={half}-"]
+    assert (tmp_path / "data" / "manifest" / "speakers.jsonl").read_text() == "{}"
+    assert not (tmp_path / "data" / "discophon_data.tar.gz").exists()
+
+
+@pytest.mark.usefixtures("served_benchmark")
+def test_download_benchmark_restarts_without_range_support(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(RangeHandler, "honor_range", False)
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "discophon_data.tar.gz").write_bytes(b"garbage")
+    prepare.download_benchmark(tmp_path / "data")
+    assert (tmp_path / "data" / "manifest" / "speakers.jsonl").read_text() == "{}"
+
+
+@pytest.mark.usefixtures("served_benchmark")
+def test_download_benchmark_keeps_archive_when_extraction_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def fail(*_: object, **__: object) -> None:
+        raise OSError("No space left on device")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(tarfile.TarFile, "extract", fail)
+        with pytest.raises(OSError, match="No space left"):
+            prepare.download_benchmark(tmp_path / "data")
+    assert (tmp_path / "data" / "discophon_data.tar.gz").is_file()
+    prepare.download_benchmark(tmp_path / "data")  # the complete archive is extracted without downloading it again
+    assert len(RangeHandler.requested_ranges) == 1
+    assert (tmp_path / "data" / "manifest" / "speakers.jsonl").read_text() == "{}"

@@ -55,30 +55,39 @@ def download_benchmark(path_dataset: str | Path) -> None:
     path_dataset = Path(path_dataset)
     path_dataset.mkdir(exist_ok=True, parents=True)
     archive = path_dataset / "discophon_data.tar.gz"
-    digest = hashlib.sha256()
-    with (
-        requests.get(BENCHMARK_URL, stream=True, timeout=60) as response,
-        archive.open("wb") as f,
-        tqdm(total=BENCHMARK_SIZE, unit_scale=True, unit_divisor=1024, unit="B", desc="Downloading") as progress,
-    ):
-        response.raise_for_status()
-        for chunk in response.iter_content(2**20):
-            f.write(chunk)
-            digest.update(chunk)
-            progress.update(len(chunk))
-    if digest.hexdigest() != BENCHMARK_SHA256:
+    offset = archive.stat().st_size if archive.is_file() else 0  # Resume an interrupted download
+    if offset < BENCHMARK_SIZE:
+        with requests.get(BENCHMARK_URL, headers={"Range": f"bytes={offset}-"}, stream=True, timeout=60) as response:
+            response.raise_for_status()
+            if response.status_code != 206:  # Range not supported by the server, restart from scratch
+                offset = 0
+            with (
+                archive.open("ab" if offset else "wb") as f,
+                tqdm(
+                    total=BENCHMARK_SIZE,
+                    initial=offset,
+                    unit_scale=True,
+                    unit_divisor=1024,
+                    unit="B",
+                    desc="Downloading",
+                ) as progress,
+            ):
+                for chunk in response.iter_content(2**20):
+                    f.write(chunk)
+                    progress.update(len(chunk))
+    with archive.open("rb") as f:
+        checksum = hashlib.file_digest(f, "sha256").hexdigest()
+    if checksum != BENCHMARK_SHA256:
         archive.unlink()
-        raise ValueError(f"Checksum mismatch for {archive}: expected {BENCHMARK_SHA256}, got {digest.hexdigest()}.")
-    try:
-        with tarfile.open(archive, "r:gz") as tar:
-            for member in tqdm(tar, desc="Extracting", unit=" files"):
-                root, parts = member.name.split("/", 1)
-                if root != "discophon_data":
-                    raise ValueError(f"Unexpected tarfile: root is {root} but should be 'discophon_data'")
-                member.name = parts
-                tar.extract(member, path=path_dataset, filter="data")
-    finally:
-        archive.unlink(missing_ok=True)
+        raise ValueError(f"Checksum mismatch for {archive}: expected {BENCHMARK_SHA256}, got {checksum}.")
+    with tarfile.open(archive, "r:gz") as tar:
+        for member in tqdm(tar, desc="Extracting", unit=" files"):
+            root, parts = member.name.split("/", 1)
+            if root != "discophon_data":
+                raise ValueError(f"Unexpected tarfile: root is {root} but should be 'discophon_data'")
+            member.name = parts
+            tar.extract(member, path=path_dataset, filter="data")
+    archive.unlink()
 
 
 def needed_clips(path_dataset: Path, language: Language) -> set[str]:
