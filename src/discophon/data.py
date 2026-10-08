@@ -19,12 +19,17 @@ __all__ = [
     "Phones",
     "Units",
     "alignment_filename",
+    "df_to_textgrids",
     "item_filename",
     "manifest_filename",
     "read_gold_annotations",
+    "read_rttm",
     "read_scores",
     "read_submitted_units",
+    "read_textgrid",
+    "rttm_to_textgrids",
     "units_filename",
+    "write_textgrids",
 ]
 
 Splits = Literal["all", "train-10min", "train-1h", "train-10h", "dev", "test"]
@@ -70,6 +75,7 @@ def manifest_filename(language: Language, split: str) -> str:
 
 
 def read_rttm(source: str | Path) -> pl.DataFrame:
+    """Read an RTTM file, with one column per field of the format."""
     return pl.read_csv(
         source,
         has_header=False,
@@ -160,6 +166,10 @@ def df_to_textgrids(
     label_col: str,
     tier_name: str,
 ) -> None:
+    """Write the intervals of a DataFrame as TextGrid files in `outdir`, one per file and in the tier `tier_name`.
+
+    If a TextGrid file already exists, the tier is added to it.
+    """
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
     for (file,), subdf in df.group_by(file_col, maintain_order=True):
@@ -174,6 +184,7 @@ def df_to_textgrids(
 
 
 def rttm_to_textgrids(source: str | Path, outdir: str | Path, *, tier_name: str) -> None:
+    """Write the speaker turns of an RTTM file as TextGrid files in `outdir`, in the tier `tier_name`."""
     df_to_textgrids(
         read_rttm(source).with_columns((pl.col("Turn Onset") + pl.col("Turn Duration")).alias("Turn Offset")),
         outdir,

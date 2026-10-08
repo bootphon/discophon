@@ -192,6 +192,8 @@ def cli(argv: list[str] | None = None) -> None:
     parser_build.add_argument("--root", type=Path, default=Path("leaderboard"))
     parser_build.add_argument("--output", type=Path, default=Path("docs/javascripts/leaderboard-data.js"))
     args = parser.parse_args(argv)
+    if not (args.root / "models.toml").is_file():
+        parser.error(f"No models.toml in {args.root}: run this from the root of the repository, or set --root.")
     if args.command == "export":
         for track, df in export(args.model).items():
             output = args.root / "scores" / track / f"{args.model.resolve().name}.jsonl"

@@ -83,9 +83,22 @@ def test_invalid_info(tmp_path: Path, info: dict) -> None:
 
 def test_export_from_model_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     model_dir = artifacts(tmp_path / "my-model", {"many_to_one": {"0": 2}})
+    (tmp_path / "leaderboard").mkdir()
+    (tmp_path / "leaderboard" / "models.toml").write_text(MODEL)
     monkeypatch.chdir(model_dir)
     cli(["export", ".", "--root", str(tmp_path / "leaderboard")])
     assert (tmp_path / "leaderboard" / "scores" / "many_to_one" / "my-model.jsonl").is_file()
+
+
+@pytest.mark.parametrize("command", ["export .", "build"])
+def test_cli_requires_the_leaderboard_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], command: str
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(SystemExit):
+        cli(command.split())
+    assert "run this from the root of the discophon repository" in capsys.readouterr().err
+    assert not any(tmp_path.iterdir())
 
 
 def test_export_missing_scores(tmp_path: Path) -> None:
