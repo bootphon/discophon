@@ -37,7 +37,12 @@ abx = [
 ]
 baselines = [
   "minimal-hubert>=0.0.8",
+  "orjson>=3.11.5",
+  "scikit-learn>=1.8.0",
   "spidr[train]>=0.2.0",
+  "torch>=2.13.0",
+  "torchcodec>=0.16.0",
+  "wandb>=0.19.10",
 ]
 prepare = [
   "datacollective>=0.6.4",
@@ -47,7 +52,7 @@ prepare = [
 
 [dependency-groups]
 dev = [
-  "prek>=0.3.6",
+  "prek>=0.5.5",
 ]
 docs = [
   "mkdocstrings-python>=2.0.3",

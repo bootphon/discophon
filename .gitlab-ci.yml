@@ -17,8 +17,8 @@ deploy:
   only:
     - main
   script:
-    - UV_CACHE_DIR=".uv-cache" uv run -m discophon.leaderboard build
-    - UV_CACHE_DIR=".uv-cache" uv run --group docs zensical build --clean
-    - mkdir -p $DOCS
-    - rm -rf $DOCS/*
-    - cp -R site/* $DOCS/
+    - UV_CACHE_DIR=".uv-cache" uv run --locked -m discophon.leaderboard build
+    - UV_CACHE_DIR=".uv-cache" uv run --locked --group docs zensical build --clean --strict
+    - mkdir -p "${DOCS:?}"
+    - rm -rf "${DOCS:?}"/*
+    - cp -R site/* "${DOCS:?}"/
