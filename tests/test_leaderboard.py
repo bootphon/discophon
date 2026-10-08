@@ -97,7 +97,7 @@ def test_cli_requires_the_leaderboard_root(
     monkeypatch.chdir(tmp_path)
     with pytest.raises(SystemExit):
         cli(command.split())
-    assert "run this from the root of the discophon repository" in capsys.readouterr().err
+    assert "run this from the root of the repository" in capsys.readouterr().err
     assert not any(tmp_path.iterdir())
 
 

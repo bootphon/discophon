@@ -29,7 +29,7 @@ class ValidateSameKeysError(ValueError):
 
 
 def validate_first_two_arguments_same_keys[R, **P](func: Callable[P, R]) -> Callable[P, R]:
-    """Decoractor that checks that the first two arguments of the function are dictionaries with the same keys."""
+    """Check that the first two arguments of the function are dictionaries with the same keys."""
     sig = signature(func)
     names = list(sig.parameters)[:2]
 
