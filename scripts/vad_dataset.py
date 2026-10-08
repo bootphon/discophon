@@ -7,11 +7,10 @@ from datasets import disable_progress_bars, load_dataset
 from filelock import FileLock
 from pyannote.audio import Model
 from pyannote.audio.pipelines import VoiceActivityDetection
+from slurm import split_across_slurm_array
 from tqdm import tqdm
 
 from discophon.data import SAMPLE_RATE
-
-from .slurm import split_across_slurm_array
 
 
 def vad_dataset(path_dataset: str, path_rttm: str, *, model: str, token: str | None = None) -> None:

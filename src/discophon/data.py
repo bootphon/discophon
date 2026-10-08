@@ -10,7 +10,7 @@ import numpy as np
 import polars as pl
 import textgrids
 
-from discophon.languages import Language
+from discophon.languages import Language, all_languages
 
 __all__ = [
     "DEFAULT_N_UNITS",
@@ -22,6 +22,7 @@ __all__ = [
     "item_filename",
     "manifest_filename",
     "read_gold_annotations",
+    "read_scores",
     "read_submitted_units",
     "units_filename",
 ]
@@ -281,3 +282,65 @@ def read_submitted_units(source: str | Path) -> Units:
             .items()
         )
     }
+
+
+def read_scores(root: str | Path) -> pl.DataFrame:
+    """Read the scores of the [artifacts dataset](https://huggingface.co/datasets/coml/discophon-artifacts).
+
+    Reads every `{model}/{condition}/{folder}/{layer}/scores.jsonl` in the dataset, or in one model directory if
+    `root` holds an `info.json`. The condition is `zero-shot` or `ft-{language}-{duration}`, and the folder is
+    `many_to_one`, `one_to_one`, `continuous`, or `many_to_one-k{N}`.
+
+    ABX scores within and across speakers are also averaged, under the name of the metric without the speaker
+    condition. For example, `triphone_abx_continuous` averages `triphone_abx_continuous_within_speaker` and
+    `triphone_abx_continuous_across_speaker`, and `phoneme_abx_discrete_any_context` averages
+    `phoneme_abx_discrete_within_speaker_any_context` and `phoneme_abx_discrete_across_speaker_any_context`.
+
+    Arguments:
+        root: Path to the artifacts dataset, or to one model directory in it
+
+    Returns:
+        DataFrame with one row per score and columns `model`, `folder`, `ft_lang` (null for zero-shot),
+            `duration` (`"0"` for zero-shot), `layer`, `split`, `language`, `language_split` (whether the
+            language is a dev or test language), `metric`, and `score`, as stored (not in %).
+
+    """
+    root = Path(root)
+    model_dirs = [root] if (root / "info.json").exists() else sorted(p.parent for p in root.glob("*/info.json"))
+    paths = [p for model_dir in model_dirs for p in sorted(model_dir.glob("*/*/*/scores.jsonl"))]
+    if not paths:
+        raise ValueError(f"No scores in {root}.")
+    scores = (
+        pl.concat(
+            [
+                pl.read_ndjson(p).with_columns(
+                    model=pl.lit(p.parts[-5]),
+                    condition=pl.lit(p.parts[-4]),
+                    folder=pl.lit(p.parts[-3]),
+                    layer=pl.lit(int(p.parts[-2]), dtype=pl.Int64),
+                )
+                for p in paths
+            ]
+        )
+        .with_columns(
+            ft_lang=pl.col("condition").str.extract(r"^ft-([a-z]{3})-"),
+            duration=pl.col("condition").str.extract(r"^ft-[a-z]{3}-(.+)$").fill_null("0"),
+            language_split=pl.col("language").replace_strict({lang.iso_639_3: lang.split for lang in all_languages()}),
+        )
+        .select(
+            "model", "folder", "ft_lang", "duration", "layer", "split", "language", "language_split", "metric", "score"
+        )
+    )
+    keys = [c for c in scores.columns if c != "score"]
+    if scores.select(keys).is_duplicated().any():
+        raise ValueError(f"Duplicate scores in {root}.")
+    speakers = r"^(.+_abx_(?:discrete|continuous))_(?:within|across)_speaker(.*)$"
+    averaged = (
+        scores.filter(pl.col("metric").str.contains(speakers))
+        .with_columns(pl.col("metric").str.replace(speakers, "${1}${2}"))
+        .group_by(keys, maintain_order=True)
+        .agg(pl.mean("score"), n=pl.len())
+    )
+    if not averaged.filter(pl.col("n") != 2).is_empty():
+        raise ValueError(f"ABX within speaker without across speaker (or the opposite) in {root}.")
+    return pl.concat([scores, averaged.drop("n")]).sort(keys)

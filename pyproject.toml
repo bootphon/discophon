@@ -67,7 +67,6 @@ build-backend = "hatchling.build"
 
 [tool.coverage.run]
 branch = true
-omit = ["src/discophon/paper.py"]
 
 [tool.hatch.version]
 source = "vcs"
@@ -115,7 +114,6 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/*.py" = ["float-equality-comparison"]
 "scripts/*.py" = ["implicit-namespace-package"]
-"paper/*.py" = ["implicit-namespace-package"]
 
 [tool.ruff.lint.flake8-tidy-imports]
 banned-module-level-imports = ["discophon.abx"]
@@ -128,7 +126,13 @@ max-args = 10
 extend-ignore-names = ["F"]  # from torch.nn import functional as F
 
 [tool.ty]
-src.exclude = ["scripts/replication", "paper/interactive_plots.py", "tests/test_batching.py"]
+src.exclude = [
+  "scripts/interactive_plots.py",
+  "scripts/post_process_dataset.py",
+  "scripts/segment_dataset.py",
+  "scripts/vad_dataset.py",
+  "tests/test_batching.py",
+]
 
 [tool.typos.default.extend-words]
 interm = "interm"
@@ -139,4 +143,4 @@ Charis = "Charis"
 extend-exclude = ["*.html"]
 
 [tool.uv.workspace]
-members = ["paper", "scripts/replication/"]
+members = ["scripts"]

@@ -1,9 +1,3 @@
-# /// script
-# requires-python = ">=3.14"
-# dependencies = [
-#     "altair>=6.2.1",
-# ]
-# ///
 import argparse
 import json
 from collections.abc import Iterable
@@ -11,11 +5,9 @@ from pathlib import Path
 
 import altair as alt
 import polars as pl
-import polars.selectors as cs
 
-from discophon.data import read_gold_annotations_as_dataframe
+from discophon.data import read_gold_annotations_as_dataframe, read_scores
 from discophon.languages import all_languages
-from discophon.paper import merge_metrics, read_scores
 
 MODELS = {
     "spidr-mmsulab": "SpidR MMS-ulab",
@@ -24,6 +16,9 @@ MODELS = {
     "hubert-vp20-it2": "HuBERT VP-20",
 }
 LANGUAGES = [lang.iso_639_3 for lang in all_languages()]
+LANGUAGE_NAMES = {"avg-test": "Average over test languages", "avg-dev": "Average over dev languages"} | {
+    lang.iso_639_3: lang.name for lang in all_languages()
+}
 METRICS = {
     "per": "PER",
     "pnmi": "PNMI",
@@ -33,9 +28,14 @@ METRICS = {
     "triphone_abx_discrete": "ABX d.",
 }
 MANIFEST_SPLITS = ["train-10min", "train-1h", "train-10h", "dev", "test"]
+DURATION_MINUTES = {"0": 1, "10min": 10, "1h": 60, "10h": 600}
 
 LANG_NAME_EXPR = (
     " : ".join(f"lang_sel.language == '{lang.iso_639_3}' ? '{lang.name}'" for lang in all_languages())
+    + " : lang_sel.language"
+)
+SCORES_LANG_NAME_EXPR = (
+    " : ".join(f"lang_sel.language == '{iso}' ? '{name}'" for iso, name in LANGUAGE_NAMES.items())
     + " : lang_sel.language"
 )
 METRIC_NAME_EXPR = (
@@ -48,35 +48,37 @@ def common_selectors() -> tuple[alt.Selection, alt.Selection, alt.Selection, alt
     metric_select = alt.selection_point(
         name="metric_sel",
         fields=["metric"],
-        bind=alt.binding_radio(options=list(METRICS.keys()), labels=list(METRICS.values()), name="Metric: "),
+        bind=alt.binding_radio(options=list(METRICS.keys()), labels=list(METRICS.values()), name="Metric"),
         value=next(iter(METRICS.keys())),
     )
-    split_select = alt.selection_point(
-        name="split_sel",
-        fields=["split"],
-        bind=alt.binding_radio(options=["dev", "test"], name="Split: "),
-        value="test",
+    language_select = alt.selection_point(
+        name="lang_sel",
+        fields=["language"],
+        bind=alt.binding_select(
+            options=list(LANGUAGE_NAMES.keys()), labels=list(LANGUAGE_NAMES.values()), name="Language"
+        ),
+        value="avg-test",
     )
     finetuning_select = alt.selection_point(
         name="ft_sel",
         fields=["duration"],
-        bind=alt.binding_radio(options=["0", "10min", "1h", "10h"], name="Finetuning: "),
+        bind=alt.binding_radio(options=["0", "10min", "1h", "10h"], name="Finetuning"),
         value="10h",
     )
     legend_select = alt.selection_point(fields=["model"], bind="legend", toggle="true")
-    return metric_select, split_select, finetuning_select, legend_select
+    return metric_select, language_select, finetuning_select, legend_select
 
 
-def _language_select(value: str = "deu", *, field: str = "language") -> alt.Selection:
+def _language_select(value: str = "deu") -> alt.Selection:
     return alt.selection_point(
         name="lang_sel",
-        fields=[field],
-        bind=alt.binding_radio(options=LANGUAGES, name="Language: "),
+        fields=["language"],
+        bind=alt.binding_radio(options=LANGUAGES, name="Language"),
         value=value,
     )
 
 
-def _split_select(options: list[str], value: str, *, name: str = "Split: ") -> alt.Selection:
+def _split_select(options: list[str], value: str, *, name: str = "Split") -> alt.Selection:
     return alt.selection_point(
         name="split_sel",
         fields=["split"],
@@ -101,9 +103,9 @@ def _read_manifests(root: Path) -> pl.DataFrame:
 
 _LAYER_X = ("layer", alt.X("layer:Q", title="Layer", axis=alt.Axis(grid=False, format="d")))
 _DURATION_X = (
-    "duration_val",
+    "duration_minutes",
     alt.X(
-        "duration_val:Q",
+        "duration_minutes:Q",
         title="Finetuning duration",
         scale=alt.Scale(type="log", base=10),
         axis=alt.Axis(
@@ -160,101 +162,86 @@ def _baseline_layers(
     return fg, rules, points
 
 
-def plot_baselines_by_split(data_url: str) -> alt.LayerChart | alt.FacetChart:
-    metric_select, split_select, finetuning_select, legend_select = common_selectors()
-    language_select = alt.selection_point(
-        name="lang_sel",
-        fields=["test_split"],
-        bind=alt.binding_radio(options=["dev", "test"], name="Languages: "),
-        value="test",
+def baseline_scores(artifacts: Path) -> pl.DataFrame:
+    """Scores (in %) of the baselines on the test split, for each language and averaged over dev and test languages.
+
+    Finetuned models are evaluated on their finetuning language. The best layer of each model and duration
+    minimizes the continuous ABX on dev languages.
+    """
+    df = (
+        read_scores(artifacts)
+        .filter(
+            pl.col("split") == "test",
+            pl.col("ft_lang").is_null() | (pl.col("ft_lang") == pl.col("language")),
+            pl.col("model").is_in(MODELS),
+            pl.col("folder").is_in(["many_to_one", "continuous"]),
+            pl.col("metric").is_in(METRICS),
+        )
+        .with_columns(pl.col("score") * 100, duration_minutes=pl.col("duration").replace_strict(DURATION_MINUTES))
     )
-    base = alt.Chart(alt.UrlData(url=data_url, format=alt.CsvDataFormat()))
-    bg = (
-        base.mark_point(opacity=0, size=0)
-        .encode(y=alt.Y("score:Q", scale=alt.Scale(zero=False)))
-        .transform_filter(metric_select)
+    best = (
+        df.filter(pl.col("metric") == "triphone_abx_continuous", pl.col("language_split") == "dev")
+        .group_by("model", "duration", "layer")
+        .agg(pl.mean("score"))
+        .sort("score", "layer")
+        .group_by("model", "duration")
+        .first()
+        .select("model", "duration", "layer", best_layer=pl.lit(value=True))
     )
-    fg, rules, points = _baseline_layers(
-        base, [language_select, split_select, finetuning_select, metric_select], legend_select
+    df = df.join(best, on=["model", "duration", "layer"], how="left").with_columns(
+        pl.col("best_layer").fill_null(value=False)
     )
-    title_expr = (
-        f"({METRIC_NAME_EXPR}) + ' — ' + lang_sel.test_split + ' languages — ' "
-        f"+ split_sel.split + ' split — ' + ({FT_NAME_EXPR})"
+    columns = ["model", "layer", "duration", "duration_minutes", "language", "metric", "score", "best_layer"]
+    averages = (
+        df.group_by("model", "layer", "duration", "duration_minutes", "metric", "best_layer", "language_split")
+        .agg(pl.mean("score"))
+        .with_columns(language="avg-" + pl.col("language_split"))
     )
     return (
-        alt.layer(bg, fg, points, rules)
-        .add_params(split_select, finetuning_select, metric_select, language_select)
-        .properties(width="container", height=300, title=alt.Title(text={"expr": title_expr}))
+        pl.concat([df.select(columns), averages.select(columns)])
+        .with_columns(pl.col("model").replace_strict(MODELS), pl.col("score").round(2))
+        .sort("model", "duration", "layer", "language", "metric")
     )
 
 
-def plot_baselines_by_lang(data_url: str) -> alt.LayerChart | alt.FacetChart:
-    metric_select, split_select, finetuning_select, legend_select = common_selectors()
-    language_select = _language_select(LANGUAGES[0])
-    share_y = alt.param(name="share_y", bind=alt.binding_checkbox(name="y-axis shared: "), value=False)
+def inline_csv(df: pl.DataFrame) -> alt.InlineData:
+    return alt.InlineData(values=df.write_csv(), format=alt.CsvDataFormat(type="csv"))
 
-    base = alt.Chart(alt.UrlData(url=data_url, format=alt.CsvDataFormat()))
+
+def plot_across_layers(scores: pl.DataFrame) -> alt.LayerChart:
+    metric_select, language_select, finetuning_select, legend_select = common_selectors()
+    share_y = alt.param(name="share_y", bind=alt.binding_checkbox(name="Shared y-axis"), value=False)
+
+    base = alt.Chart(inline_csv(scores.drop("best_layer")))
     bg_encoding = base.mark_point(opacity=0, size=0).encode(y=alt.Y("score:Q", scale=alt.Scale(zero=False)))
     bg_shared = bg_encoding.transform_filter(metric_select).transform_filter("share_y")
     bg_local = (
         bg_encoding.transform_filter(metric_select).transform_filter(language_select).transform_filter("!share_y")
     )
-    fg, rules, points = _baseline_layers(
-        base, [metric_select, finetuning_select, language_select, split_select], legend_select
-    )
-    title_expr = (
-        f"({METRIC_NAME_EXPR}) + ' — ' + ({LANG_NAME_EXPR}) + ' — ' + split_sel.split + ' split — ' + ({FT_NAME_EXPR})"
-    )
+    fg, rules, points = _baseline_layers(base, [metric_select, finetuning_select, language_select], legend_select)
+    title_expr = f"({METRIC_NAME_EXPR}) + ' — ' + ({SCORES_LANG_NAME_EXPR}) + ' — ' + ({FT_NAME_EXPR})"
     return (
         alt.layer(bg_shared, bg_local, fg, points, rules)
-        .add_params(share_y, split_select, finetuning_select, metric_select, language_select)
+        .add_params(share_y, finetuning_select, metric_select, language_select)
         .properties(width="container", height=300, title=alt.Title(text={"expr": title_expr}))
     )
 
 
-def plot_best_layer_by_ft_by_split(data_url: str) -> alt.LayerChart | alt.FacetChart:
-    metric_select, split_select, _, legend_select = common_selectors()
-    language_select = alt.selection_point(
-        name="lang_sel",
-        fields=["test_split"],
-        bind=alt.binding_radio(options=["dev", "test"], name="Languages: "),
-        value="test",
-    )
-    base = alt.Chart(alt.UrlData(url=data_url, format=alt.CsvDataFormat()))
-    bg = (
-        base.mark_point(opacity=0, size=0)
-        .encode(y=alt.Y("score:Q", scale=alt.Scale(zero=False)))
-        .transform_filter(metric_select)
-    )
-    fg, rules, points = _baseline_layers(
-        base, [language_select, split_select, metric_select], legend_select, x=_DURATION_X
-    )
-    title_expr = f"({METRIC_NAME_EXPR}) + ' — ' + lang_sel.test_split + ' languages — ' + split_sel.split + ' split'"
-    return (
-        alt.layer(bg, fg, points, rules)
-        .add_params(split_select, metric_select, language_select)
-        .properties(width="container", height=200, title=alt.Title(text={"expr": title_expr}))
-    )
+def plot_best_layer(scores: pl.DataFrame) -> alt.LayerChart:
+    metric_select, language_select, _, legend_select = common_selectors()
+    share_y = alt.param(name="share_y", bind=alt.binding_checkbox(name="Shared y-axis"), value=False)
 
-
-def plot_best_layer_by_ft_by_lang(data_url: str) -> alt.LayerChart | alt.FacetChart:
-    metric_select, split_select, _, legend_select = common_selectors()
-    language_select = _language_select(LANGUAGES[0])
-    share_y = alt.param(name="share_y", bind=alt.binding_checkbox(name="y-axis shared: "), value=False)
-
-    base = alt.Chart(alt.UrlData(url=data_url, format=alt.CsvDataFormat()))
+    base = alt.Chart(inline_csv(scores.filter("best_layer").drop("best_layer")))
     bg_encoding = base.mark_point(opacity=0, size=0).encode(y=alt.Y("score:Q", scale=alt.Scale(zero=False)))
     bg_shared = bg_encoding.transform_filter(metric_select).transform_filter("share_y")
     bg_local = (
         bg_encoding.transform_filter(metric_select).transform_filter(language_select).transform_filter("!share_y")
     )
-    fg, rules, points = _baseline_layers(
-        base, [metric_select, language_select, split_select], legend_select, x=_DURATION_X
-    )
-    title_expr = f"({METRIC_NAME_EXPR}) + ' — ' + ({LANG_NAME_EXPR}) + ' — ' + split_sel.split + ' split'"
+    fg, rules, points = _baseline_layers(base, [metric_select, language_select], legend_select, x=_DURATION_X)
+    title_expr = f"({METRIC_NAME_EXPR}) + ' — ' + ({SCORES_LANG_NAME_EXPR})"
     return (
         alt.layer(bg_shared, bg_local, fg, points, rules)
-        .add_params(share_y, split_select, metric_select, language_select)
+        .add_params(share_y, metric_select, language_select)
         .properties(width="container", height=200, title=alt.Title(text={"expr": title_expr}))
     )
 
@@ -427,61 +414,49 @@ def plot_phone_distribution(root: Path) -> alt.Chart:
     )
 
 
-def to_html(chart: alt.Chart | alt.LayerChart | alt.FacetChart, css: str) -> str:
-    return chart.to_html(embed_options={"actions": False}).replace(
-        "</style>", f'</style>\n  <link rel="stylesheet" href="{css}">', 1
+HTML_TEMPLATE = """<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:400,500&display=fallback">
+  <link rel="stylesheet" href="{root}/stylesheets/vega.css">
+  <script src="https://cdn.jsdelivr.net/npm/vega@{vega}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@{vegalite}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@{vegaembed}"></script>
+</head>
+<body>
+  <div id="vis"></div>
+  <script>window.spec = {spec};</script>
+  <script src="{root}/javascripts/vega-figure.js"></script>
+</body>
+</html>
+"""
+
+
+def to_html(chart: alt.Chart | alt.LayerChart | alt.FacetChart, root: str = "..") -> str:
+    """Standalone HTML of a figure, styled like the documentation (see docs/javascripts/vega-figure.js)."""
+    return HTML_TEMPLATE.format(
+        root=root,
+        vega=alt.VEGA_VERSION,
+        vegalite=alt.VEGALITE_VERSION,
+        vegaembed=alt.VEGAEMBED_VERSION,
+        spec=chart.to_json(indent=None),
     )
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("dataset", type=Path, help="Path to the benchmark dataset")
-    parser.add_argument("scores", type=Path, help="Path to the baseline scores")
+    parser.add_argument("artifacts", type=Path, help="Path to the artifacts dataset")
     parser.add_argument("destination", type=Path, help="Path to the assets directory in docs")
     args = parser.parse_args()
-
-    by_lang = (
-        merge_metrics(read_scores(args.scores), ["triphone_abx_discrete", "triphone_abx_continuous"])
-        .filter(
-            pl.col("native").is_null().or_(pl.col("native")),
-            pl.col("model").is_in(MODELS),
-            pl.col("metric").is_in(METRICS),
-        )
-        .with_columns(pl.col("model").replace_strict(MODELS))
-        .select(
-            "split",
-            "model",
-            "layer",
-            "duration",
-            "duration_val",
-            "language",
-            "test_split",
-            "metric",
-            "score",
-            "best_layer",
-        )
-    )
-    by_split = by_lang.group_by(cs.exclude("language", "score"), maintain_order=True).agg(pl.mean("score"))
-    by_lang.drop("best_layer").with_columns(pl.col("score").round(2)).write_csv(
-        args.destination / "scores_by_lang.csv"
-    )
-    by_split.drop("best_layer").with_columns(pl.col("score").round(2)).write_csv(
-        args.destination / "scores_by_split.csv"
-    )
-    by_lang.filter("best_layer").drop("best_layer").with_columns(pl.col("score").round(2)).write_csv(
-        args.destination / "scores_best_layer_by_lang.csv"
-    )
-    by_split.filter("best_layer").drop("best_layer").with_columns(pl.col("score").round(2)).write_csv(
-        args.destination / "scores_best_layer_by_split.csv"
-    )
+    scores = baseline_scores(args.artifacts)
 
     def write(chart: alt.Chart | alt.LayerChart | alt.FacetChart, name: str) -> None:
-        (args.destination / name).write_text(to_html(chart, "../stylesheets/vega.css"), encoding="utf-8")
+        (args.destination / name).write_text(to_html(chart), encoding="utf-8")
 
-    write(plot_baselines_by_lang("scores_by_lang.csv"), "baseline_across_layers_by_lang.html")
-    write(plot_baselines_by_split("scores_by_split.csv"), "baseline_across_layers_by_split.html")
-    write(plot_best_layer_by_ft_by_lang("scores_best_layer_by_lang.csv"), "baseline_best_layer_by_ft_by_lang.html")
-    write(plot_best_layer_by_ft_by_split("scores_best_layer_by_split.csv"), "baseline_best_layer_by_ft_by_split.html")
+    write(plot_across_layers(scores), "baseline_across_layers.html")
+    write(plot_best_layer(scores), "baseline_best_layer.html")
     write(plot_datasets_stats(args.dataset / "manifest"), "dataset_stats.html")
     write(plot_speakers_stats(args.dataset / "manifest"), "speaker_stats.html")
     write(plot_phone_distribution(args.dataset / "alignment"), "phone_distribution.html")

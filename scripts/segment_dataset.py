@@ -4,12 +4,11 @@ from pathlib import Path
 
 import polars as pl
 from datasets import disable_progress_bars, load_dataset
+from slurm import split_across_slurm_array
 from torchcodec.encoders import AudioEncoder
 from tqdm import tqdm
 
 from discophon.data import SAMPLE_RATE, read_rttm
-
-from .slurm import split_across_slurm_array
 
 
 def segment_dataset(path_dataset: str, path_rttm: str, path_output: str, *, num_zeros: int = 5) -> None:

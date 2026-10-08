@@ -1,30 +1,15 @@
 # Detailed results
 
-We provide below the complete results for the baseline models:
-every layer, metric, language, and finetuning duration.
+We provide below the complete results for the baseline models: every layer, metric, language, and finetuning
+duration, on the test split. Select a language, or the average over the dev or test languages.
+The units and scores are available in the [artifacts dataset](https://huggingface.co/datasets/coml/discophon-artifacts).
 
 ## Across layers
-
-The chart below shows the scores averaged across dev or test languages, for the four baseline models, every layer,
-and finetuning duration:
 
 <iframe
   title="Baseline results across layers"
   style="border: none; width: 100%;"
-  src="../assets/baseline_across_layers_by_split.html"
-  onload="
-    var f = this;
-    var resize = function() { f.style.height = f.contentDocument.body.scrollHeight + 'px'; };
-    new ResizeObserver(resize).observe(f.contentDocument.body);
-  ">
-</iframe>
-
-And this one for a specific language:
-
-<iframe
-  title="Baseline results across layers, for a specific language"
-  style="border: none; width: 100%;"
-  src="../assets/baseline_across_layers_by_lang.html"
+  src="../assets/baseline_across_layers.html"
   onload="
     var f = this;
     var resize = function() { f.style.height = f.contentDocument.body.scrollHeight + 'px'; };
@@ -34,25 +19,12 @@ And this one for a specific language:
 
 ## Best layer, by finetuning duration
 
-This one only displays the scores for the best layer, averaged across dev or test languages:
+The best layer of each model and finetuning duration minimizes the continuous ABX on dev languages.
 
 <iframe
   title="Baseline results for the best layer, by finetuning duration"
   style="border: none; width: 100%;"
-  src="../assets/baseline_best_layer_by_ft_by_split.html"
-  onload="
-    var f = this;
-    var resize = function() { f.style.height = f.contentDocument.body.scrollHeight + 'px'; };
-    new ResizeObserver(resize).observe(f.contentDocument.body);
-  ">
-</iframe>
-
-And this one for a specific language:
-
-<iframe
-  title="Baseline results for the best layer, by finetuning duration, for a specific language"
-  style="border: none; width: 100%;"
-  src="../assets/baseline_best_layer_by_ft_by_lang.html"
+  src="../assets/baseline_best_layer.html"
   onload="
     var f = this;
     var resize = function() { f.style.height = f.contentDocument.body.scrollHeight + 'px'; };

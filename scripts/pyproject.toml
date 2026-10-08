@@ -1,0 +1,18 @@
+[project]
+name = "discophon-scripts"
+version = "0.1.0"
+description = "Scripts to build the DiscoPhon datasets, figures, and tables"
+requires-python = ">=3.12"
+dependencies = ["discophon"]
+
+[dependency-groups]
+figures = ["altair>=6.2.1"]
+replication = [
+  "datasets>=4.8.3",
+  "pyannote-audio>=4.0.4",
+  "pyannote-core>=6.0.1",
+  "torchcodec>=0.10.0",
+]
+
+[tool.uv.sources]
+discophon = { workspace = true }

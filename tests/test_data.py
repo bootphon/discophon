@@ -20,6 +20,7 @@ from discophon.data import (
     manifest_filename,
     num_invalid_rows,
     read_gold_annotations,
+    read_scores,
     read_submitted_units,
     textgrid_array_from_sequence,
     units_filename,
@@ -118,3 +119,62 @@ def test_read_submitted_units_roundtrip(tmp_path: Path) -> None:
     path = tmp_path / "units.jsonl"
     path.write_text('{"file": "a", "units": [1, 2, 3]}\n{"file": "b", "units": [4, 5]}\n', encoding="utf-8")
     assert read_submitted_units(path) == {"a": [1, 2, 3], "b": [4, 5]}
+
+
+def write_scores(path: Path, rows: list[tuple[str, float]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    pl.DataFrame(
+        [{"language": "deu", "split": "test", "metric": metric, "score": score} for metric, score in rows],
+        orient="row",
+    ).write_ndjson(path)
+    (path.parents[3] / "info.json").write_text("{}")
+
+
+def test_read_scores_averages_abx_and_keeps_individual_scores(tmp_path: Path) -> None:
+    write_scores(
+        tmp_path / "my-model" / "zero-shot" / "continuous" / "6" / "scores.jsonl",
+        [
+            ("triphone_abx_continuous_within_speaker", 0.1),
+            ("triphone_abx_continuous_across_speaker", 0.2),
+            ("phoneme_abx_continuous_within_speaker_within_context", 0.3),
+            ("phoneme_abx_continuous_across_speaker_within_context", 0.4),
+            ("phoneme_abx_continuous_within_speaker_any_context", 0.5),
+            ("phoneme_abx_continuous_across_speaker_any_context", 0.6),
+        ],
+    )
+    write_scores(tmp_path / "my-model" / "ft-eng-1h" / "many_to_one" / "12" / "scores.jsonl", [("per", 0.7)])
+    df = read_scores(tmp_path)
+    scores = dict(df.select("metric", "score").iter_rows())
+    assert len(scores) == len(df) == 10
+    assert scores["triphone_abx_continuous"] == pytest.approx(0.15)
+    assert scores["phoneme_abx_continuous_within_context"] == pytest.approx(0.35)
+    assert scores["phoneme_abx_continuous_any_context"] == pytest.approx(0.55)
+    assert scores["phoneme_abx_continuous_across_speaker_any_context"] == 0.6  # ruff: ignore[magic-value-comparison]
+    per = df.filter(metric="per").row(0, named=True)
+    assert (per["model"], per["folder"], per["ft_lang"], per["duration"], per["layer"]) == (
+        "my-model",
+        "many_to_one",
+        "eng",
+        "1h",
+        12,
+    )
+    assert per["language_split"] == GERMAN.split
+    assert df.filter(metric="triphone_abx_continuous")["ft_lang"].item() is None
+    assert read_scores(tmp_path / "my-model").equals(df)
+
+
+def test_read_scores_rejects_missing_speaker_condition(tmp_path: Path) -> None:
+    write_scores(
+        tmp_path / "m" / "zero-shot" / "continuous" / "1" / "scores.jsonl",
+        [("triphone_abx_continuous_within_speaker", 0.1)],
+    )
+    with pytest.raises(ValueError, match="within speaker without across speaker"):
+        read_scores(tmp_path)
+
+
+def test_read_scores_rejects_duplicates_and_empty(tmp_path: Path) -> None:
+    write_scores(tmp_path / "m" / "zero-shot" / "many_to_one" / "1" / "scores.jsonl", [("per", 0.1), ("per", 0.2)])
+    with pytest.raises(ValueError, match="Duplicate"):
+        read_scores(tmp_path)
+    with pytest.raises(ValueError, match="No scores"):
+        read_scores(tmp_path / "missing")

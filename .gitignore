@@ -8,6 +8,6 @@ tipa-mapping-*.pdf
 *.out
 /typos
 /site
-/paper/scores
 /wip
 .coverage
+/docs/javascripts/leaderboard-data.js

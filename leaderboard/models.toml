@@ -1,0 +1,28 @@
+# Leaderboard registry: one table per model, keyed by the model key.
+# The scores of each model are in scores/{track}/{key}.jsonl. See docs/guide/submission.md.
+#
+# Fields:
+#   label        display name (required)
+#   category     "submission", "baseline" or "topline" (required)
+#   url          link to the checkpoint or paper (required)
+#   description  one or two sentences, shown on hover (optional)
+#   partial      allow incomplete scores; averages are only shown when complete (optional)
+[hubert-mmsulab-it2]
+label = "HuBERT MMS-ulab"
+category = "baseline"
+url = "https://huggingface.co/coml/hubert-base-mmsulab"
+
+[hubert-vp20-it2]
+label = "HuBERT VP-20"
+category = "baseline"
+url = "https://huggingface.co/coml/hubert-base-vp20"
+
+[spidr-mmsulab]
+label = "SpidR MMS-ulab"
+category = "baseline"
+url = "https://huggingface.co/coml/spidr-mmsulab"
+
+[spidr-vp20]
+label = "SpidR VP-20"
+category = "baseline"
+url = "https://huggingface.co/coml/spidr-vp20"

@@ -1,101 +1,105 @@
-/* ── Page ── */
-body {
-  font-family: "Roboto", "Segoe UI", system-ui, -apple-system, sans-serif;
-  background: transparent;
-  color: #1e1e2e;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  justify-content: center;
+/* Documentation figures (docs/assets/*.html), embedded in iframes. vega-figure.js copies the colors of the parent
+   page into these variables; the values below are the light ones, for a figure opened on its own. */
+:root {
+  --md-default-fg-color: rgba(0, 0, 0, 0.87);
+  --md-default-fg-color--light: rgba(0, 0, 0, 0.54);
+  --md-default-fg-color--lighter: rgba(0, 0, 0, 0.32);
+  --md-default-fg-color--lightest: rgba(0, 0, 0, 0.07);
+  --md-default-bg-color: #fff;
+  --md-primary-fg-color: #4051b5;
+  --md-primary-bg-color: #fff;
 }
 
-/* ── Vega container ── */
+body {
+  margin: 0;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  color: var(--md-default-fg-color);
+  background: transparent;
+}
+
 #vis.vega-embed {
   width: 100%;
   display: flex;
   flex-direction: column;
-  padding: 0;
 }
 
-/* ── Binding panel (all controls) ── */
-.vega-bindings {
+/* Controls above the figure, as in the leaderboard */
+.vega-embed .vega-bindings {
+  order: -1;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem 0.75rem;
-  padding: 0.75rem 0;
+  align-items: flex-end;
+  gap: 0.75rem 1.25rem;
+  margin-bottom: 0.75rem;
 }
 
-/* Each binding row */
-.vega-bind {
+/* Name above the control. Radio buttons are not wrapped in a label, the other controls are */
+.vega-bind,
+.vega-bind > label {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 0.25rem;
-  margin-right: 1rem;
 }
 
-/* ── Labels ── */
 .vega-bind-name {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #666;
-  margin-right: 0.1rem;
-  white-space: nowrap;
+  color: var(--md-default-fg-color--light);
 }
 
-/* ── Radio buttons ── */
+.vega-bind select {
+  font: inherit;
+  padding: 0.25rem 0.5rem;
+  color: inherit;
+  background: var(--md-default-bg-color);
+  border: 1px solid var(--md-default-fg-color--lighter);
+  border-radius: 0.2rem;
+}
+
+/* Radio buttons as a segmented control */
+.vega-bind-radio {
+  display: inline-flex;
+  flex-wrap: wrap;
+  border: 1px solid var(--md-default-fg-color--lighter);
+  border-radius: 0.2rem;
+  overflow: hidden;
+}
+
 .vega-bind input[type="radio"] {
-  -webkit-appearance: none;
-  appearance: none;
+  position: absolute;
   width: 0;
   height: 0;
   margin: 0;
-  padding: 0;
-  position: absolute;
   opacity: 0;
 }
 
 .vega-bind label:has(input[type="radio"]) {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.2rem 0.5rem;
-  font-size: 0.8rem;
-  color: #888;
+  padding: 0.25rem 0.6rem;
+  color: var(--md-default-fg-color--light);
   cursor: pointer;
-  border-radius: 3px;
-  transition: color 0.15s ease, background 0.15s ease;
   user-select: none;
+  transition: color 0.15s ease, background 0.15s ease;
 }
 
 .vega-bind label:has(input[type="radio"]):hover {
-  color: #333;
-  background: #f0f0f0;
+  color: var(--md-default-fg-color);
+  background: var(--md-default-fg-color--lightest);
 }
 
 .vega-bind label:has(input[type="radio"]:checked) {
-  color: #fff;
-  background: var(--md-typeset-a-color, #4051b5);
-  font-weight: 500;
+  color: var(--md-primary-bg-color);
+  background: var(--md-primary-fg-color);
 }
 
-/* ── Checkbox ── */
-.vega-bind:has(input[type="checkbox"]) {
+/* Checkbox next to its name */
+.vega-bind > label:has(> input[type="checkbox"]) {
+  flex-direction: row;
   align-items: center;
+  padding-bottom: 0.3rem;
 }
 
 .vega-bind input[type="checkbox"] {
-  accent-color: var(--md-typeset-a-color, #4051b5);
-  cursor: pointer;
   margin: 0;
-}
-
-/* ── Legend ── */
-.vega-legend {
+  accent-color: var(--md-primary-fg-color);
   cursor: pointer;
-}
-
-.vega-legend-title {
-  font-size: 0.82rem;
-  font-weight: 500;
-  fill: #424242;
 }
