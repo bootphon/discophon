@@ -46,6 +46,11 @@ def test_rejects_different_keys() -> None:
         _compare({"x": 1}, {"y": 2})
 
 
+def test_different_keys_are_reported() -> None:
+    with pytest.raises(ValidateSameKeysError, match=r"1 keys only in `_a`, such as \['x'\]. 2 keys only in `_b`"):
+        _compare({"x": 1, "y": 2}, {"y": 2, "z": 3, "w": 4})
+
+
 def test_rejects_non_dict_arguments() -> None:
     with pytest.raises(ValidateSameKeysError):
         _compare([1], [2])  # ty:ignore[invalid-argument-type]
@@ -117,8 +122,15 @@ def test_validate_dataset_structure_rejects_missing_top_level_dir(tmp_path: Path
 def test_validate_dataset_structure_rejects_unexpected_extra_file(tmp_path: Path) -> None:
     root = build_valid_dataset(tmp_path)
     (root / "manifest" / "unexpected.csv").touch()
-    with pytest.raises(DatasetError):
+    with pytest.raises(DatasetError, match=str(root.resolve() / "manifest")):
         validate_dataset_structure(root)
+
+
+def test_validate_dataset_structure_ignores_hidden_files(tmp_path: Path) -> None:
+    root = build_valid_dataset(tmp_path)
+    for directory in [root, root / "manifest", root / "audio", root / "audio" / "deu"]:
+        (directory / ".DS_Store").touch()
+    validate_dataset_structure(root)
 
 
 def test_validate_dataset_structure_rejects_missing_audio_split(tmp_path: Path) -> None:

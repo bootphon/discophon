@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from functools import wraps
 from inspect import signature
 from itertools import product, starmap
@@ -18,8 +18,14 @@ class ArgumentsError(ValueError):
 class ValidateSameKeysError(ValueError):
     """To be raised in the decorator below."""
 
-    def __init__(self) -> None:
-        super().__init__("The first two arguments must be dictionaries with the same keys")
+    def __init__(
+        self, first: object = None, second: object = None, names: Sequence[str] = ("first", "second")
+    ) -> None:
+        message = "The first two arguments must be dictionaries with the same keys"
+        if isinstance(first, dict) and isinstance(second, dict):
+            for name, only in [(names[0], first.keys() - second.keys()), (names[1], second.keys() - first.keys())]:
+                message += f". {len(only)} keys only in `{name}`, such as {sorted(map(str, only))[:5]}"
+        super().__init__(message)
 
 
 def validate_first_two_arguments_same_keys[R, **P](func: Callable[P, R]) -> Callable[P, R]:
@@ -37,7 +43,7 @@ def validate_first_two_arguments_same_keys[R, **P](func: Callable[P, R]) -> Call
                 raise ArgumentsError
             first, second = (bound.arguments[name] for name in names)
         if not isinstance(first, dict) or not isinstance(second, dict) or first.keys() != second.keys():
-            raise ValidateSameKeysError
+            raise ValidateSameKeysError(first, second, names)
         return func(*args, **kwargs)
 
     return wrapper
@@ -46,39 +52,40 @@ def validate_first_two_arguments_same_keys[R, **P](func: Callable[P, R]) -> Call
 class DatasetError(ValueError):
     """Raised when the structure is wrong."""
 
-    def __init__(self) -> None:
-        super().__init__("Invalid discophon dataset structure. Verify your file structure!")
+    def __init__(self, directory: Path) -> None:
+        super().__init__(f"Invalid discophon dataset structure in {directory}. Verify your file structure!")
 
 
 def validate_dataset_structure(path: str | Path) -> None:
     root = Path(path).resolve()
+    visible = "[!.]*"  # Ignore hidden files such as .DS_Store
     languages = all_languages()
-    if {p.name for p in root.glob("*")} != {"alignment", "audio", "item", "manifest"}:
-        raise DatasetError
-    if {p.name for p in (root / "alignment").glob("*")} != set(
+    if {p.name for p in root.glob(visible)} != {"alignment", "audio", "item", "manifest"}:
+        raise DatasetError(root)
+    if {p.name for p in (root / "alignment").glob(visible)} != set(
         starmap(alignment_filename, product(languages, ["dev", "test"]))
     ):
-        raise DatasetError
-    if {p.name for p in (root / "item").glob("*")} != {
+        raise DatasetError(root / "alignment")
+    if {p.name for p in (root / "item").glob(visible)} != {
         item_filename(lang, split, kind=kind)
         for kind, lang, split in product(["triphone", "phoneme"], languages, ["dev", "test"])
     }:
-        raise DatasetError
-    if {p.name for p in (root / "manifest").glob("*")} != (
+        raise DatasetError(root / "item")
+    if {p.name for p in (root / "manifest").glob(visible)} != (
         set(starmap(manifest_filename, product(languages, ["dev", "test", "train-10h", "train-10min", "train-1h"])))
         | {"speakers.jsonl"}
     ):
-        raise DatasetError
-    audio_languages = list((root / "audio").glob("*"))
+        raise DatasetError(root / "manifest")
+    audio_languages = list((root / "audio").glob(visible))
     if {p.name for p in audio_languages} != {lang.iso_639_3 for lang in languages} or not all(
         p.is_dir() for p in audio_languages
     ):
-        raise DatasetError
+        raise DatasetError(root / "audio")
     splits = {"all", "dev", "test", "train-10h", "train-10min", "train-1h"}
     for lang in languages:
-        audio_splits = list((root / "audio" / lang.iso_639_3).glob("*"))
+        audio_splits = list((root / "audio" / lang.iso_639_3).glob(visible))
         if {p.name for p in audio_splits} != splits or not all(p.is_dir() for p in audio_splits):
-            raise DatasetError
+            raise DatasetError(root / "audio" / lang.iso_639_3)
 
 
 class NumberPhonemesError(ValueError):

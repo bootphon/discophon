@@ -10,8 +10,8 @@ There are two interfaces to evaluate your predicted units:
 
 All evaluation runs at a fixed frame rate. By default, units are assumed to be at **50 Hz, i.e. one
 unit every 20 ms**. This is controlled by `step_units` (the `--step-units` flag on the CLI), with
-`frequency = 1000 // step_units`. The gold phone annotations are resampled to match this resolution
-automatically.
+`frequency = 1000 // step_units`. The gold phone annotations have one phone every 10 ms, and each unit is
+repeated automatically to match them, so for phoneme discovery `step_units` must be a multiple of 10.
 
 If your model emits frames at a different rate, you **must** set `step_units` accordingly. Otherwise
 your units and the gold phones are misaligned and every metric is wrong:
@@ -20,7 +20,7 @@ your units and the gold phones are misaligned and every metric is wrong:
 |------------------|--------------|-------------|
 | 50 Hz (20 ms)    | 20 (default) | 50          |
 | 100 Hz (10 ms)   | 10           | 100         |
-| 40 Hz (25 ms)    | 25           | 40          |
+| 25 Hz (40 ms)    | 40           | 25          |
 
 Each unit (or feature frame) is taken to span exactly `step_units` ms, in order, starting from the
 beginning of the file.
@@ -159,7 +159,7 @@ Or via the CLI:
 
 ```console
 ❯ python -m discophon.evaluate --help
-usage: discophon.evaluate [-h] [--language LANGUAGE] [--n-phonemes N_PHONEMES] --n-units N_UNITS
+usage: discophon.evaluate [-h] [--language LANGUAGE] [--n-phonemes N_PHONEMES] [--n-units N_UNITS]
                           [--kind {many-to-one,one-to-one}] [--step-units STEP_UNITS]
                           units phones
 
@@ -174,7 +174,8 @@ options:
   --language LANGUAGE   Evaluated language. Either use this or `--n-phonemes` (default: None)
   --n-phonemes N_PHONEMES
                         Number of phonemes. Either use this or `--language` (default: None)
-  --n-units N_UNITS     Required. Number of units (default: None)
+  --n-units N_UNITS     Number of units. Defaults to 256 for many-to-one, and to the number of phonemes
+                        plus one for one-to-one (default: None)
   --kind {many-to-one,one-to-one}
                         Kind of assignment (either many-to-one, or one-to-one) (default: many-to-
                         one)

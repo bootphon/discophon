@@ -4,8 +4,9 @@ import argparse
 import json
 from pathlib import Path
 
-from discophon.data import read_gold_annotations, read_submitted_units
+from discophon.data import DEFAULT_N_UNITS, STEP_UNITS, read_gold_annotations, read_submitted_units
 from discophon.evaluate.discovery import phoneme_discovery
+from discophon.validate import infer_number_of_phonemes
 
 
 def cli(argv: list[str] | None = None) -> None:
@@ -19,7 +20,12 @@ def cli(argv: list[str] | None = None) -> None:
     parser.add_argument("phones", type=Path, help="Path to gold alignments")
     parser.add_argument("--language", type=str, help="Evaluated language. Either use this or `--n-phonemes`")
     parser.add_argument("--n-phonemes", type=int, help="Number of phonemes. Either use this or `--language`")
-    parser.add_argument("--n-units", type=int, required=True, help="Required. Number of units")
+    parser.add_argument(
+        "--n-units",
+        type=int,
+        help=f"Number of units. Defaults to {DEFAULT_N_UNITS} for many-to-one, and to the number of phonemes "
+        "plus one for one-to-one",
+    )
     parser.add_argument(
         "--kind",
         type=str,
@@ -27,8 +33,12 @@ def cli(argv: list[str] | None = None) -> None:
         default="many-to-one",
         help="Kind of assignment (either many-to-one, or one-to-one)",
     )
-    parser.add_argument("--step-units", type=int, default=20, help="Step between units (in ms)")
+    parser.add_argument("--step-units", type=int, default=STEP_UNITS, help="Step between units (in ms)")
     args = parser.parse_args(argv)
+    if args.n_units is None and args.kind == "many-to-one":
+        args.n_units = DEFAULT_N_UNITS
+    elif args.n_units is None:
+        args.n_units = infer_number_of_phonemes(args.n_phonemes, args.language) + 1
     print(
         json.dumps(
             phoneme_discovery(

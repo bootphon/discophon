@@ -2,10 +2,14 @@
 
 import json
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
+from discophon.baselines import __main__ as baselines_main
+from discophon.baselines.__main__ import cli as baselines_cli
 from discophon.benchmark import cli as benchmark_cli
+from discophon.evaluate import __main__ as evaluate_main
 from discophon.evaluate.__main__ import cli as evaluate_cli
 
 from .test_validate import build_valid_dataset
@@ -26,6 +30,37 @@ def test_evaluate_cli_prints_discovery_metrics(tmp_path: Path, capsys: pytest.Ca
     scores = json.loads(capsys.readouterr().out)
     assert set(scores) == {"pnmi", "per", "f1", "r_val"}
     assert all(isinstance(v, float) for v in scores.values())
+
+
+@pytest.mark.parametrize(
+    ("kind", "args", "n_units"),
+    [("many-to-one", ["--n-phonemes", "2"], 256), ("one-to-one", ["--language", "deu"], 42)],
+)
+def test_evaluate_cli_infers_number_of_units(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, kind: str, args: list[str], n_units: int
+) -> None:
+    units, alignment = _write_tiny_prediction(tmp_path)
+    called = MagicMock(return_value={})
+    monkeypatch.setattr(evaluate_main, "phoneme_discovery", called)
+    evaluate_cli([str(units), str(alignment), "--kind", kind, *args])
+    assert called.call_args.kwargs["n_units"] == n_units
+    assert called.call_args.kwargs["step_units"] == 20
+
+
+def test_baselines_cli_dispatches_finetuning(monkeypatch: pytest.MonkeyPatch) -> None:
+    hubert, spidr = MagicMock(), MagicMock()
+    monkeypatch.setattr(baselines_main, "finetune_hubert", hubert)
+    monkeypatch.setattr(baselines_main, "finetune_spidr", spidr)
+    common = ["name", "project", "workdir", "ckpt.pt", "manifest.csv"]
+    baselines_cli(["spidr", *common])
+    spidr.assert_called_once_with("name", "project", Path("workdir"), Path("ckpt.pt"), "manifest.csv")
+    baselines_cli(["hubert", *common, "--n-clusters", "500", "--layer", "9"])
+    hubert.assert_called_once_with(
+        "name", "project", Path("workdir"), Path("ckpt.pt"), "manifest.csv", n_clusters=500, target_layer=9
+    )
+    with pytest.raises(SystemExit):
+        baselines_cli(["hubert", *common, "--layer", "9"])
+    assert hubert.call_count == 1
 
 
 def test_benchmark_cli_writes_output_file(tmp_path: Path) -> None:

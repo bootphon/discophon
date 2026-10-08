@@ -12,7 +12,6 @@ from typing import Literal, TypedDict, overload
 try:
     from fastabx import Dataset, Score, Subsampler, Task
     from fastabx.distance import DistanceName
-    from fastabx.zerospeech import InvalidSpeakerOrContextError
 except ImportError as error:
     raise ImportError(
         "fastabx is required for ABX evaluation. "
@@ -52,7 +51,7 @@ def abx(
         case ("across", "any"):
             by, across = None, ["speaker"]
         case _:
-            raise InvalidSpeakerOrContextError
+            raise ValueError(f"Invalid speaker {speaker!r} or context {context!r}.")
     subsampler = Subsampler(max_size_group=500 if context == "any" else None, max_x_across=5, seed=seed)
     task = Task(dataset, on="#phone", by=by, across=across, subsampler=subsampler)
     levels = ([("next-phone", "prev-phone")] if context == "within" else []) + ["speaker"]

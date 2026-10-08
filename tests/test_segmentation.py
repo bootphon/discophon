@@ -81,7 +81,7 @@ def test_add_identity_element() -> None:
 
 
 def test_add_rejects_other_types() -> None:
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(TypeError):
         _ = SegmentationEvaluation(1, 1, 1) + 5
 
 

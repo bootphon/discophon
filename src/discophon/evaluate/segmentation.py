@@ -79,7 +79,7 @@ class SegmentationEvaluation:
 
     def __add__(self, other: object) -> "SegmentationEvaluation":
         if not isinstance(other, SegmentationEvaluation):
-            raise NotImplementedError
+            return NotImplemented
         return SegmentationEvaluation(
             true_positives=self.true_positives + other.true_positives,
             false_positives=self.false_positives + other.false_positives,

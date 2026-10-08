@@ -20,7 +20,7 @@ from discophon.data import (
     units_filename,
 )
 from discophon.evaluate import phoneme_discovery
-from discophon.languages import Language, get_language
+from discophon.languages import Language, all_languages, get_language
 from discophon.validate import validate_dataset_structure
 
 __all__ = ["benchmark_abx_continuous", "benchmark_abx_discrete", "benchmark_discovery"]
@@ -35,7 +35,8 @@ def available_languages_and_splits_for_units(
 ) -> list[tuple[Language, str]]:
     """List of languages and splits for which units are available."""
     found = [n.split("-") for n in sorted(p.stem for p in Path(path_units).glob(f"{prefix}*.jsonl"))]
-    return [(get_language(p), "-".join(q)) for _, p, *q in found]
+    codes = {language.iso_639_3 for language in all_languages()}  # Skip files of unknown languages
+    return [(get_language(p), "-".join(q)) for _, p, *q in found if p in codes]
 
 
 def available_languages_and_splits_for_features(path_features: str | Path) -> list[tuple[Language, str]]:
