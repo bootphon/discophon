@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from discophon.baselines import spidr
+from discophon.baselines import hubert, spidr
 from discophon.baselines.utils import link_best_checkpoint, read_completed_fileids
 
 
@@ -65,6 +65,43 @@ def test_spidr_validation_reruns_ignore_aliases_and_old_scores(
         spidr.validate_all_spidr_checkpoints(output, tmp_path, tmp_path / "manifest-deu-dev.csv")
         assert (tmp_path / "best.pt").readlink() == Path("step_2000.pt")
     assert [call.kwargs["checkpoint"].name for call in build.call_args_list] == [
+        "step_1000.pt",
+        "step_2000.pt",
+        "step_1000.pt",
+        "step_2000.pt",
+    ]
+
+
+def test_hubert_validation_reruns_ignore_aliases_and_old_scores(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    for name in (
+        "set_seed",
+        "setup_pytorch",
+        "setup_environment",
+        "patch_manifest_with_paths",
+        "compute_and_save_hubert_features",
+        "patch_manifest_with_units",
+        "build_dataloader_with_labels",
+    ):
+        monkeypatch.setattr(hubert, name, MagicMock())
+    monkeypatch.setattr(hubert.joblib, "load", MagicMock())
+    monkeypatch.setattr(hubert.torch.cuda, "get_device_capability", lambda: (8, 0))
+    build = MagicMock()
+    monkeypatch.setattr(hubert.HuBERTPretrain, "from_pretrained", build)
+    monkeypatch.setattr(hubert, "validate_hubert", MagicMock(side_effect=[{"loss": 2.0}, {"loss": 1.0}] * 2))
+    for filename in ("step_1000.pt", "step_2000.pt", "final.pt"):
+        (tmp_path / filename).touch()
+    link_best_checkpoint(tmp_path, "final.pt")
+    output = tmp_path / "scores.jsonl"
+    output.write_text(
+        '{"step": 9999, "group": "other", "loss": 0.0}\n{"step": 1000, "group": "deu-dev", "loss": 0.0}\n',
+        encoding="utf-8",
+    )
+    for _ in range(2):
+        hubert.validate_all_hubert_checkpoints(output, tmp_path, tmp_path / "manifest-deu-dev.csv", "it2.pt", 11)
+        assert (tmp_path / "best.pt").readlink() == Path("step_2000.pt")
+    assert [call.args[0].name for call in build.call_args_list] == [
         "step_1000.pt",
         "step_2000.pt",
         "step_1000.pt",

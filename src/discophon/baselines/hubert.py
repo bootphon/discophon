@@ -9,6 +9,7 @@ from typing import Literal
 
 import joblib
 import orjson
+import polars as pl
 import torch
 import wandb
 from minimal_hubert import HuBERT, HuBERTPretrain
@@ -23,6 +24,7 @@ from spidr.tools import AverageMeters, profiler_context
 from torch import GradScaler
 from torch.nn.utils import clip_grad_norm_
 from torch.optim import AdamW
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from discophon.baselines.utils import (
@@ -185,7 +187,71 @@ def finetune_hubert(  # ruff: ignore[too-many-locals, too-many-statements]
                 ckpt.save(step, epoch)
                 profiler.step()
         ckpt.save_final(step, epoch)
-        link_best_checkpoint(rundir, "final.pt")
+
+
+@torch.no_grad()
+def validate_hubert(
+    model: HuBERTPretrain, loader: DataLoader, device: torch.device, dtype: torch.dtype
+) -> dict[str, float]:
+    model.eval()
+    total_loss = torch.zeros(1, device=device)
+    total_feature_loss = torch.zeros(1, device=device)
+    for waveforms, labels, attn_mask, mask in loader:
+        with torch.autocast("cuda", dtype):
+            loss, outputs = model(
+                waveforms.to(device),
+                labels.to(device),
+                mask=mask.to(device),
+                attention_mask=attn_mask.to(device) if attn_mask is not None else None,
+            )
+        total_loss += loss.mean()
+        total_feature_loss += outputs["feature_loss"]
+    total_loss /= len(loader)
+    total_feature_loss /= len(loader)
+    return {"loss": total_loss.item(), "feature_loss": total_feature_loss.item()}
+
+
+def validate_all_hubert_checkpoints(
+    output: str | Path,
+    checkpoints: str | Path,
+    manifest: str | Path,
+    pretrained: str | Path,
+    target_layer: int,
+    *,
+    seed: int = 0,
+) -> None:
+    set_seed(seed)
+    setup_pytorch(use_deterministic=False)
+    setup_environment()
+    device = torch.device("cuda")
+    dtype = torch.bfloat16 if torch.cuda.get_device_capability() >= (8, 0) else torch.float16
+    kmeans = joblib.load(Path(checkpoints) / "kmeans.joblib")
+    with (
+        NamedTemporaryFile(suffix=".csv") as temp_manifest,
+        NamedTemporaryFile(suffix=".jsonl") as new_manifest,
+        TemporaryDirectory(prefix="features-", dir=checkpoints) as temp_features,
+    ):
+        patch_manifest_with_paths(manifest, temp_manifest.name)
+        compute_and_save_hubert_features(temp_manifest.name, temp_features, pretrained, target_layer)
+        patch_manifest_with_units(temp_manifest.name, new_manifest.name, temp_features, kmeans)
+        loader = build_dataloader_with_labels(hubert_ft_data_config(new_manifest.name), MaskingConfig())
+    paths = sorted(Path(checkpoints).glob("step_*.pt"))
+    if not paths:
+        raise ValueError(f"No step checkpoints found in {checkpoints}")
+    group = Path(manifest).stem.removeprefix("manifest-")
+    results = []
+    for path in tqdm(paths):
+        step = int(path.stem.removeprefix("step_"))
+        model = HuBERTPretrain.from_pretrained(path).to(device)
+        losses = validate_hubert(model, loader, device, dtype)
+        results.append({"step": step, "group": group} | losses)
+        with Path(output).open("ab") as f:
+            f.write(orjson.dumps({"step": step, "group": group} | losses, option=orjson.OPT_APPEND_NEWLINE))
+
+    best_step = (
+        pl.DataFrame(results).sort("step").filter(pl.col("loss") == pl.col("loss").min()).tail(1).to_dicts()[0]["step"]
+    )
+    link_best_checkpoint(Path(checkpoints), f"step_{best_step}.pt")
 
 
 @torch.inference_mode()
