@@ -159,7 +159,7 @@ def finetune_hubert(  # ruff: ignore[too-many-locals, too-many-statements]
                         waveforms.to(device),
                         labels.to(device),
                         mask=mask.to(device),
-                        attention_mask=attn_mask.to(device),
+                        attention_mask=attn_mask.to(device) if attn_mask is not None else None,
                     )
                 loss = loss.mean()
                 scaler.scale(loss).backward()

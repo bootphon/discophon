@@ -108,14 +108,14 @@ def finetune_spidr(  # ruff: ignore[too-many-locals, too-many-statements]
         while step < cfg.max_steps:
             epoch += 1
             loader.batch_sampler.set_epoch(epoch)  # ty: ignore[unresolved-attribute]
-            for waveforms, attn_mask, mask in loader:
+            for waveforms, attn_mask, mask_indices in loader:
                 if step >= cfg.max_steps:
                     break
                 with torch.autocast("cuda", dtype):
                     loss, outputs = model(
                         waveforms.to(device),
-                        mask=mask.to(device),
-                        attention_mask=attn_mask.to(device),
+                        mask_indices=mask_indices.to(device),
+                        attention_mask=attn_mask.to(device) if attn_mask is not None else None,
                     )
                 loss = loss.mean()
                 scaler.scale(loss).backward()
@@ -150,12 +150,12 @@ def validate_spidr(model: DinoSR, loader: DataLoader, device: torch.device, dtyp
     total_loss = torch.zeros(1, device=device)
     total_pred_ppl = torch.zeros(1, device=device)
     total_target_ppl = torch.zeros(1, device=device)
-    for waveforms, attn_mask, mask in loader:
+    for waveforms, attn_mask, mask_indices in loader:
         with torch.autocast("cuda", dtype):
             loss, outputs = model(
                 waveforms.to(device),
-                mask=mask.to(device),
-                attention_mask=attn_mask.to(device),
+                mask_indices=mask_indices.to(device),
+                attention_mask=attn_mask.to(device) if attn_mask is not None else None,
             )
         total_loss += loss.mean()
         total_target_ppl += outputs["target_ppl"]
