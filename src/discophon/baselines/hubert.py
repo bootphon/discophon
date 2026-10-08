@@ -32,6 +32,7 @@ from discophon.baselines.utils import (
     SAVE_INTERVAL,
     SEED,
     DiscophonAudioDataset,
+    build_inference_dataloader,
     ft_optimizer_config,
     get_target_layers,
     hubert_ft_data_config,
@@ -43,7 +44,7 @@ from discophon.baselines.utils import (
 )
 from discophon.data import units_filename
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 def fit_kmeans_from_checkpoint(
@@ -97,21 +98,24 @@ def finetune_hubert(  # ruff: ignore[too-many-locals, too-many-statements]
         stack.callback(wandb.finish)
         device = torch.device("cuda")
 
-        # HuBERT data setup
-        temp_manifest = stack.enter_context(NamedTemporaryFile(suffix=".csv"))
-        temp_features = stack.enter_context(TemporaryDirectory(prefix="features-", dir=rundir))
-        patch_manifest_with_paths(manifest, temp_manifest.name)
-        kmeans = fit_kmeans_from_checkpoint(
-            temp_manifest.name,
-            checkpoint,
-            temp_features,
-            target_layer,
-            n_clusters,
-            SEED,
-        )
-        joblib.dump(kmeans, rundir / "kmeans.joblib")
+        # HuBERT data setup. When resuming, keep the targets the checkpoints were trained on.
         new_manifest = rundir / "manifest-with-units.jsonl"
-        patch_manifest_with_units(temp_manifest.name, new_manifest, temp_features, kmeans)
+        if not new_manifest.is_file():
+            temp_manifest = stack.enter_context(NamedTemporaryFile(suffix=".csv"))
+            temp_features = stack.enter_context(TemporaryDirectory(prefix="features-", dir=rundir))
+            patch_manifest_with_paths(manifest, temp_manifest.name)
+            kmeans = fit_kmeans_from_checkpoint(
+                temp_manifest.name,
+                checkpoint,
+                temp_features,
+                target_layer,
+                n_clusters,
+                SEED,
+            )
+            joblib.dump(kmeans, rundir / "kmeans.joblib")
+            partial_manifest = new_manifest.with_suffix(".part")
+            patch_manifest_with_units(temp_manifest.name, partial_manifest, temp_features, kmeans)
+            partial_manifest.replace(new_manifest)
         loader = build_dataloader_with_labels(hubert_ft_data_config(str(new_manifest)), MaskingConfig())
 
         # HuBERT
@@ -243,6 +247,8 @@ def validate_all_hubert_checkpoints(
     for path in tqdm(paths):
         step = int(path.stem.removeprefix("step_"))
         model = HuBERTPretrain.from_pretrained(path).to(device)
+        # Same masks and crops for every checkpoint
+        loader.generator.manual_seed(seed)  # ty: ignore[unresolved-attribute]
         losses = validate_hubert(model, loader, device, dtype)
         results.append({"step": step, "group": group} | losses)
         with Path(output).open("ab") as f:
@@ -273,8 +279,7 @@ def extract_hubert_discrete_units(
 
     Args:
         path_dataset: Path to the DiscoPhon dataset.
-        path_units: Output path used as a template. Its parent directory and filename stem
-            determine where the per-layer JSONL files are written.
+        path_units: Output directory under which the per-layer JSONL files are written.
         language: Language identifier resolved by [`get_language`][discophon.languages.get_language],
             either name or ISO 639-3 code.
         split: Dataset split to process.
@@ -294,14 +299,18 @@ def extract_hubert_discrete_units(
         for layer in layers & kmeans_by_layer.keys()
     }
     completed = {layer: read_completed_fileids(path) for layer, path in outputs.items()}
-    for fileid, waveform in tqdm(dataset, desc=f"{dataset.language.iso_639_3}-{dataset.split}"):
-        if all(fileid in completed[layer] for layer in outputs):
-            continue
-        all_features = model.get_intermediate_outputs(waveform.unsqueeze(0).cuda())
+    pending = [any(fileid not in completed[layer] for layer in outputs) for fileid in dataset.manifest["fileid"]]
+    dataset.manifest = dataset.manifest.filter(pl.Series(pending, dtype=pl.Boolean))
+    if dataset.manifest.is_empty():
+        return
+    # One file per batch: HuBERT is not batch invariant, as padding changes the statistics of its GroupNorm
+    loader = build_inference_dataloader(dataset, 1)
+    for [fileid], waveforms, _, _ in tqdm(loader, desc=f"{dataset.language.iso_639_3}-{dataset.split}"):
+        all_features = model.get_intermediate_outputs(waveforms.cuda())
         for layer, features in enumerate(all_features, start=1):
             if layer not in outputs or fileid in completed[layer]:
                 continue
-            units = kmeans_by_layer[layer].predict(features.squeeze().cpu().numpy()).tolist()
+            units = kmeans_by_layer[layer].predict(features.squeeze(0).cpu().numpy()).tolist()
             entry = {"file": fileid, "units": units}
             jsonl = outputs[layer]
             jsonl.parent.mkdir(exist_ok=True, parents=True)
@@ -334,16 +343,30 @@ def extract_hubert_continuous_features(
         pretrained_model_name_or_path: HuBERT checkpoint or HuggingFace model identifier.
         layers: Layers to extract. If `None`, all encoder layers are used.
 
+    Files whose features already exist for all requested layers are skipped, so the extraction can be resumed.
+
     """
     path_features = Path(path_features)
     dataset = DiscophonAudioDataset(path_dataset, language, split, normalize=True)
     model = HuBERT.from_pretrained(pretrained_model_name_or_path).eval().cuda()
     layers = get_target_layers(layers, [i + 1 for i in range(len(model.encoder.layers))])
-    for fileid, waveform in tqdm(dataset, desc=f"{dataset.language.iso_639_3}-{dataset.split}"):
-        all_features = model.get_intermediate_outputs(waveform.unsqueeze(0).cuda())
+    directories = {layer: path_features / f"{layer}" / dataset.language.iso_639_3 / dataset.split for layer in layers}
+    pending = [
+        any(not (directory / f"{fileid}.pt").is_file() for directory in directories.values())
+        for fileid in dataset.manifest["fileid"]
+    ]
+    dataset.manifest = dataset.manifest.filter(pl.Series(pending, dtype=pl.Boolean))
+    if dataset.manifest.is_empty():
+        return
+    # One file per batch: HuBERT is not batch invariant, as padding changes the statistics of its GroupNorm
+    loader = build_inference_dataloader(dataset, 1)
+    for [fileid], waveforms, _, _ in tqdm(loader, desc=f"{dataset.language.iso_639_3}-{dataset.split}"):
+        all_features = model.get_intermediate_outputs(waveforms.cuda())
         for layer, features in enumerate(all_features):
             if layer + 1 not in layers:
                 continue
-            path = path_features / f"{layer + 1}" / dataset.language.iso_639_3 / dataset.split / f"{fileid}.pt"
+            path = directories[layer + 1] / f"{fileid}.pt"
             path.parent.mkdir(exist_ok=True, parents=True)
-            torch.save(features.squeeze().cpu(), path)
+            partial = path.with_suffix(".pt.part")  # Written atomically to resume safely if interrupted
+            torch.save(features.squeeze(0).cpu(), partial)
+            partial.replace(path)

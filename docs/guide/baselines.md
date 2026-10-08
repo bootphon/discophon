@@ -32,16 +32,18 @@ pip install discophon[baselines]
 import joblib
 from spidr.models import SpidR
 from torch.hub import load_state_dict_from_url
+from torch.nn import functional as F
 from torchcodec.decoders import WavDecoder
 
 state_dict = load_state_dict_from_url("https://huggingface.co/coml/spidr-vp20/resolve/main/final.pt")
 model = SpidR().eval()
 model.load_state_dict(state_dict)
-wav = WavDecoder("/path/to/file.wav").get_all_samples().data
+wav = WavDecoder("/path/to/file.wav").get_all_samples().data  # (1, num_samples), 16 kHz mono
+wav = F.layer_norm(wav, wav.shape)  # Normalized like in the extraction functions of discophon
 
 # Training loss
-mask = ...  # Set up your boolean mask
-loss, _ = model(wav, mask=mask)
+mask_indices = ...  # Set up the indices of the masked frames
+loss, _ = model(wav, mask_indices=mask_indices)
 
 # Continuous representations
 codebook_predictions = model.get_codebooks(wav)  # Log-probs from prediction heads
@@ -55,7 +57,7 @@ units_from_heads = codebook_predictions[layer - 1].argmax(-1)
 
 # From intermediate representations, using K-means
 kmeans = joblib.load("/path/to/kmeans.joblib")
-units_from_interm = kmeans.predict(hidden_states[layer - 1])
+units_from_interm = kmeans.predict(hidden_states[layer - 1].squeeze(0).detach().numpy())
 ```
 
 #### HuBERT checkpoints
@@ -81,7 +83,9 @@ units_from_interm = kmeans.predict(hidden_states[layer - 1])
     )
 
     # Training loss
-    loss, _ = model_from_pretraining(wav, mask=mask)
+    labels = ...  # Target cluster of each frame
+    mask = ...  # Set up your boolean mask
+    loss, _ = model_from_pretraining(wav, labels, mask=mask, attention_mask=None)
 
     # Intermediate Transformer representations (same convention as in fairseq)
     # Use this method if you want to get discrete units using K-means
@@ -213,8 +217,8 @@ extract_hubert_discrete_units(
     path_units="/path/to/scores/hubert-base-vp20",
     language=language,
     split=split,
-    model="coml/hubert-base-vp20",
-    kmeans={11: kmeans},
+    pretrained_model_name_or_path="coml/hubert-base-vp20",
+    kmeans_by_layer={11: kmeans},
     layers=11,
 )
 
@@ -224,7 +228,25 @@ extract_spidr_discrete_units(
     path_units="/path/to/scores/spidr-vp20",
     language=language,
     split=split,
-    model="/path/to/spidr-vp20/final.pt",
+    checkpoint="/path/to/spidr-vp20/final.pt",
     layers=None,  # Default value
 )
 ```
+
+The units of each layer are written to `{path_units}/{layer}/units-{code}-{split}.jsonl`, the layout expected by
+[the benchmark](evaluate.md#high-level). Continuous features are extracted with
+[`extract_spidr_continuous_features`][discophon.baselines.extract_spidr_continuous_features]
+and [`extract_hubert_continuous_features`][discophon.baselines.extract_hubert_continuous_features].
+The extraction can be resumed if interrupted: the files already extracted are skipped.
+
+Or use the CLI, which extracts all languages on the dev and test splits by default:
+
+```console
+❯ python -m discophon.baselines.extract hubert units /path/to/discophon_data /path/to/units coml/hubert-base-vp20 \
+    --kmeans 11=/path/to/hubert-base-vp20/km256-it2-l11.joblib
+❯ python -m discophon.baselines.extract spidr features /path/to/discophon_data /path/to/features \
+    /path/to/spidr-vp20/final.pt --layers 6 --batch-size 16
+```
+
+HuBERT is processed one utterance at a time: padding changes the statistics of its GroupNorm, so batches would
+give different features. SpidR gives the same results with batches, up to numerical precision.

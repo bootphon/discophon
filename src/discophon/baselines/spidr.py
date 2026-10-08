@@ -27,6 +27,7 @@ from discophon.baselines.utils import (
     SAVE_INTERVAL,
     SEED,
     DiscophonAudioDataset,
+    build_inference_dataloader,
     ft_optimizer_config,
     get_target_layers,
     link_best_checkpoint,
@@ -189,6 +190,8 @@ def validate_all_spidr_checkpoints(
     for path in tqdm(paths):
         step = int(path.stem.removeprefix("step_"))
         model = build_model(model_type="spidr", checkpoint=path).to(device)
+        # Same masks and crops for every checkpoint
+        loader.generator.manual_seed(seed)  # ty: ignore[unresolved-attribute]
         losses = validate_spidr(model, loader, device, dtype)
         results.append({"step": step, "group": group} | losses)
         with Path(output).open("ab") as f:
@@ -209,6 +212,7 @@ def extract_spidr_discrete_units(
     checkpoint: str | Path,
     *,
     layers: int | Iterable[int] | None = None,
+    batch_size: int = 1,
 ) -> None:
     """Extract SpidR discrete units for all utterances of a DiscoPhon split.
 
@@ -219,13 +223,14 @@ def extract_spidr_discrete_units(
 
     Args:
         path_dataset: Path to the DiscoPhon dataset.
-        path_units: Output path used as a template. Its parent directory and filename stem
-            determine where the per-layer JSONL files are written.
+        path_units: Output directory under which the per-layer JSONL files are written.
         language: Language identifier resolved by [`get_language`][discophon.languages.get_language],
             either name or ISO 639-3 code.
         split: Dataset split to process.
         checkpoint: Path to the SpidR checkpoint.
         layers: Layers to extract. If `None`, all layers with a codebook are used.
+        batch_size: Number of utterances per forward pass. Padded batches give the same units up to numerical
+            precision, and a batch size of 1 reproduces the published units exactly.
 
     """
     path_units = Path(path_units)
@@ -235,20 +240,30 @@ def extract_spidr_discrete_units(
     layers = get_target_layers(layers, available)
     outputs = {layer: path_units / f"{layer}" / units_filename(dataset.language, dataset.split) for layer in layers}
     completed = {layer: read_completed_fileids(path) for layer, path in outputs.items()}
-    for fileid, waveform in tqdm(dataset, desc=f"{dataset.language.iso_639_3}-{dataset.split}"):
-        if all(fileid in completed[layer] for layer in outputs):
-            continue
-        all_features = model.get_codebooks(waveform.unsqueeze(0).cuda())
+    pending = [any(fileid not in completed[layer] for layer in outputs) for fileid in dataset.manifest["fileid"]]
+    dataset.manifest = dataset.manifest.filter(pl.Series(pending, dtype=pl.Boolean))
+    if dataset.manifest.is_empty():
+        return
+    loader = build_inference_dataloader(dataset, batch_size)
+    for fileids, waveforms, attn_mask, feat_lengths in tqdm(
+        loader, desc=f"{dataset.language.iso_639_3}-{dataset.split}"
+    ):
+        # A single file needs no mask, which keeps the exact computation of the published units
+        mask = attn_mask.cuda() if len(fileids) > 1 else None
+        all_features = model.get_codebooks(waveforms.cuda(), attention_mask=mask)
         for layer, features in enumerate(all_features, start=1):
-            if features is None or layer not in outputs or fileid in completed[layer]:
+            if features is None or layer not in outputs:
                 continue
-            units = features.squeeze().argmax(dim=-1).cpu().numpy().tolist()
-            entry = {"file": fileid, "units": units}
-            jsonl = outputs[layer]
-            jsonl.parent.mkdir(exist_ok=True, parents=True)
-            with jsonl.open("ab") as f:
-                f.write(orjson.dumps(entry, option=orjson.OPT_APPEND_NEWLINE))
-            completed[layer].add(fileid)
+            for fileid, logits, length in zip(fileids, features, feat_lengths.tolist(), strict=True):
+                if fileid in completed[layer]:
+                    continue
+                units = logits[:length].argmax(dim=-1).cpu().numpy().tolist()
+                entry = {"file": fileid, "units": units}
+                jsonl = outputs[layer]
+                jsonl.parent.mkdir(exist_ok=True, parents=True)
+                with jsonl.open("ab") as f:
+                    f.write(orjson.dumps(entry, option=orjson.OPT_APPEND_NEWLINE))
+                completed[layer].add(fileid)
 
 
 @torch.inference_mode()
@@ -260,6 +275,7 @@ def extract_spidr_continuous_features(
     checkpoint: str | Path,
     *,
     layers: int | Iterable[int] | None = None,
+    batch_size: int = 1,
 ) -> None:
     """Extract SpidR continuous features for all utterances of a DiscoPhon split.
 
@@ -274,17 +290,37 @@ def extract_spidr_continuous_features(
         split: Dataset split to process.
         checkpoint: Path to the SpidR checkpoint.
         layers: Layers to extract. If `None`, all student layers are used.
+        batch_size: Number of utterances per forward pass. Padded batches give the same features up to numerical
+            precision, and a batch size of 1 reproduces the published features exactly.
+
+    Files whose features already exist for all requested layers are skipped, so the extraction can be resumed.
 
     """
     path_features = Path(path_features)
     dataset = DiscophonAudioDataset(path_dataset, language, split, normalize=True)
     model = build_model(model_type="spidr", checkpoint=checkpoint).eval().cuda()
     layers = get_target_layers(layers, [i + 1 for i in range(len(model.student.layers))])
-    for fileid, waveform in tqdm(dataset, desc=f"{dataset.language.iso_639_3}-{dataset.split}"):
-        all_features = model.get_intermediate_outputs(waveform.unsqueeze(0).cuda())
+    directories = {layer: path_features / f"{layer}" / dataset.language.iso_639_3 / dataset.split for layer in layers}
+    pending = [
+        any(not (directory / f"{fileid}.pt").is_file() for directory in directories.values())
+        for fileid in dataset.manifest["fileid"]
+    ]
+    dataset.manifest = dataset.manifest.filter(pl.Series(pending, dtype=pl.Boolean))
+    if dataset.manifest.is_empty():
+        return
+    loader = build_inference_dataloader(dataset, batch_size)
+    for fileids, waveforms, attn_mask, feat_lengths in tqdm(
+        loader, desc=f"{dataset.language.iso_639_3}-{dataset.split}"
+    ):
+        # A single file needs no mask, which keeps the exact computation of the published features
+        mask = attn_mask.cuda() if len(fileids) > 1 else None
+        all_features = model.get_intermediate_outputs(waveforms.cuda(), attention_mask=mask)
         for layer, features in enumerate(all_features):
             if layer + 1 not in layers:
                 continue
-            path = path_features / f"{layer + 1}" / dataset.language.iso_639_3 / dataset.split / f"{fileid}.pt"
-            path.parent.mkdir(exist_ok=True, parents=True)
-            torch.save(features.squeeze().cpu(), path)
+            for fileid, frames, length in zip(fileids, features, feat_lengths.tolist(), strict=True):
+                path = directories[layer + 1] / f"{fileid}.pt"
+                path.parent.mkdir(exist_ok=True, parents=True)
+                partial = path.with_suffix(".pt.part")  # Written atomically to resume safely if interrupted
+                torch.save(frames[:length].clone().cpu(), partial)  # Clone to not save the storage of the batch
+                partial.replace(path)

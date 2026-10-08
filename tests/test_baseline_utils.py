@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 
@@ -47,11 +47,13 @@ def test_best_checkpoint_link_preserves_regular_file(tmp_path: Path) -> None:
 def test_spidr_validation_reruns_ignore_aliases_and_old_scores(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    for name in ("set_seed", "setup_pytorch", "setup_environment", "patch_manifest_with_paths", "build_dataloader"):
+    for name in ("set_seed", "setup_pytorch", "setup_environment", "patch_manifest_with_paths"):
         monkeypatch.setattr(spidr, name, MagicMock())
     monkeypatch.setattr(spidr.torch.cuda, "get_device_capability", lambda: (8, 0))
     build = MagicMock()
     monkeypatch.setattr(spidr, "build_model", build)
+    loader = MagicMock()
+    monkeypatch.setattr(spidr, "build_dataloader", MagicMock(return_value=loader))
     monkeypatch.setattr(spidr, "validate_spidr", MagicMock(side_effect=[{"loss": 2.0}, {"loss": 1.0}] * 2))
     for filename in ("step_1000.pt", "step_2000.pt", "final.pt"):
         (tmp_path / filename).touch()
@@ -64,6 +66,7 @@ def test_spidr_validation_reruns_ignore_aliases_and_old_scores(
     for _ in range(2):
         spidr.validate_all_spidr_checkpoints(output, tmp_path, tmp_path / "manifest-deu-dev.csv")
         assert (tmp_path / "best.pt").readlink() == Path("step_2000.pt")
+    assert loader.generator.manual_seed.call_args_list == [call(0)] * 4  # same masks for every checkpoint
     assert [call.kwargs["checkpoint"].name for call in build.call_args_list] == [
         "step_1000.pt",
         "step_2000.pt",
@@ -82,13 +85,14 @@ def test_hubert_validation_reruns_ignore_aliases_and_old_scores(
         "patch_manifest_with_paths",
         "compute_and_save_hubert_features",
         "patch_manifest_with_units",
-        "build_dataloader_with_labels",
     ):
         monkeypatch.setattr(hubert, name, MagicMock())
     monkeypatch.setattr(hubert.joblib, "load", MagicMock())
     monkeypatch.setattr(hubert.torch.cuda, "get_device_capability", lambda: (8, 0))
     build = MagicMock()
     monkeypatch.setattr(hubert.HuBERTPretrain, "from_pretrained", build)
+    loader = MagicMock()
+    monkeypatch.setattr(hubert, "build_dataloader_with_labels", MagicMock(return_value=loader))
     monkeypatch.setattr(hubert, "validate_hubert", MagicMock(side_effect=[{"loss": 2.0}, {"loss": 1.0}] * 2))
     for filename in ("step_1000.pt", "step_2000.pt", "final.pt"):
         (tmp_path / filename).touch()
@@ -101,9 +105,49 @@ def test_hubert_validation_reruns_ignore_aliases_and_old_scores(
     for _ in range(2):
         hubert.validate_all_hubert_checkpoints(output, tmp_path, tmp_path / "manifest-deu-dev.csv", "it2.pt", 11)
         assert (tmp_path / "best.pt").readlink() == Path("step_2000.pt")
+    assert loader.generator.manual_seed.call_args_list == [call(0)] * 4  # same masks for every checkpoint
     assert [call.args[0].name for call in build.call_args_list] == [
         "step_1000.pt",
         "step_2000.pt",
         "step_1000.pt",
         "step_2000.pt",
     ]
+
+
+def test_hubert_finetuning_resumes_with_the_same_targets(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in (
+        "set_seed",
+        "setup_pytorch",
+        "setup_environment",
+        "wandb",
+        "joblib",
+        "patch_manifest_with_paths",
+        "HuBERTPretrain",
+        "AdamW",
+        "GradScaler",
+        "tristage_scheduler",
+        "AverageMeters",
+        "profiler_context",
+        "tqdm",
+    ):
+        monkeypatch.setattr(hubert, name, MagicMock())
+    fit_kmeans, build_loader, checkpointer = MagicMock(), MagicMock(), MagicMock()
+    monkeypatch.setattr(hubert, "fit_kmeans_from_checkpoint", fit_kmeans)
+    monkeypatch.setattr(hubert, "build_dataloader_with_labels", build_loader)
+    monkeypatch.setattr(hubert, "Checkpointer", checkpointer)
+    monkeypatch.setattr(hubert.torch, "load", MagicMock())
+    monkeypatch.setattr(hubert.torch.cuda, "get_device_capability", lambda: (8, 0))
+    checkpointer.return_value.step = hubert.ft_optimizer_config().max_steps  # skip the training loop
+    checkpointer.return_value.epoch = 0
+    patch = MagicMock(side_effect=lambda _src, dest, *_: Path(dest).write_text("{}", encoding="utf-8"))
+    monkeypatch.setattr(hubert, "patch_manifest_with_units", patch)
+    for _ in range(2):
+        hubert.finetune_hubert(
+            "run", "project", tmp_path, tmp_path / "it2.pt", "manifest.csv", n_clusters=8, target_layer=6
+        )
+    manifest = tmp_path / "project" / "run" / "manifest-with-units.jsonl"
+    assert fit_kmeans.call_count == 1
+    assert patch.call_count == 1
+    assert manifest.read_text(encoding="utf-8") == "{}"
+    assert build_loader.call_count == 2
+    assert all(c.args[0].manifest == str(manifest) for c in build_loader.call_args_list)
