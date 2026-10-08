@@ -1,3 +1,5 @@
+"""CLI entry-point for baseline finetuning."""
+
 import argparse
 from pathlib import Path
 
@@ -7,7 +9,10 @@ from discophon.baselines.spidr import finetune_spidr
 
 def cli(argv: list[str] | None = None) -> None:
     """Command-line entry point for baseline finetuning."""
-    parser = argparse.ArgumentParser(description="Baseline finetuning of HuBERT or SpidR")
+    parser = argparse.ArgumentParser(
+        prog="discophon.baselines",
+        description="Baseline finetuning of HuBERT or SpidR",
+    )
     parser.add_argument("architecture", type=str, choices=["hubert", "spidr"], help="Model architecture")
     parser.add_argument("name", type=str, help="Run name")
     parser.add_argument("project", type=str, help="Run project")

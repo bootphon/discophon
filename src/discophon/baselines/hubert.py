@@ -21,7 +21,7 @@ from spidr.checkpoint import Checkpointer
 from spidr.config import MaskingConfig
 from spidr.environment import set_seed, setup_environment, setup_pytorch
 from spidr.tools import AverageMeters, profiler_context
-from torch import GradScaler
+from torch import GradScaler, nn
 from torch.nn.utils import clip_grad_norm_
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
@@ -67,8 +67,8 @@ def fit_kmeans_from_checkpoint(
 def finetune_hubert(  # ruff: ignore[too-many-locals, too-many-statements]
     name: str,
     project: str,
-    workdir: Path,
-    checkpoint: Path,
+    workdir: str | Path,
+    checkpoint: str | Path,
     manifest: str,
     *,
     n_clusters: int,
@@ -80,7 +80,7 @@ def finetune_hubert(  # ruff: ignore[too-many-locals, too-many-statements]
         name: Name of the run
         project: Wandb project
         workdir: Path to workdir
-        checkpoint: Path to pretrained checkpoint
+        checkpoint: Path to pretrained checkpoint, or HuggingFace model identifier
         manifest: Path to the manifest
         n_clusters: Number of clusters
         target_layer: Target layer
@@ -92,7 +92,7 @@ def finetune_hubert(  # ruff: ignore[too-many-locals, too-many-statements]
         set_seed(SEED)
         setup_pytorch(use_deterministic=False)
         setup_environment()
-        rundir = workdir / project / name
+        rundir = Path(workdir) / project / name
         rundir.mkdir(parents=True, exist_ok=True)
         wandb.init(project=project, name=name, mode="offline", dir=workdir)
         stack.callback(wandb.finish)
@@ -118,11 +118,12 @@ def finetune_hubert(  # ruff: ignore[too-many-locals, too-many-statements]
             partial_manifest.replace(new_manifest)
         loader = build_dataloader_with_labels(hubert_ft_data_config(str(new_manifest)), MaskingConfig())
 
-        # HuBERT
-        model = HuBERTPretrain(n_clusters).to(device).train()
-        state_dict = torch.load(checkpoint)["model"]
-        del state_dict["logit_generator.label_embeddings"]
-        model.load_state_dict(state_dict, strict=False)
+        # HuBERT, with new label embeddings for the new targets (initialized like in minimal_hubert)
+        model = HuBERTPretrain.from_pretrained(checkpoint)
+        final_dim = model.logit_generator.label_embeddings.size(1)
+        model.logit_generator.label_embeddings = nn.Parameter(nn.init.uniform_(torch.empty(n_clusters, final_dim)))
+        model.num_classes = n_clusters
+        model = model.to(device).train()
 
         # Common setup
         optimizer = AdamW(
@@ -286,18 +287,20 @@ def extract_hubert_discrete_units(
         pretrained_model_name_or_path: HuBERT checkpoint or HuggingFace model identifier.
         kmeans_by_layer: Mapping from 1-based layer index to the K-means model used to
             quantize that layer.
-        layers: Layers to extract. If `None`, all encoder layers are used. Only layers present
-            in both `layers` and `kmeans_by_layer` are written.
+        layers: Layers to extract. If `None`, all the layers of `kmeans_by_layer` are used.
+
+    Raises:
+        ValueError: If a layer is not in the model, or has no K-means in `kmeans_by_layer`.
 
     """
     path_units = Path(path_units)
     dataset = DiscophonAudioDataset(path_dataset, language, split, normalize=True)
     model = HuBERT.from_pretrained(pretrained_model_name_or_path).eval().cuda()
-    layers = get_target_layers(layers, [i + 1 for i in range(len(model.encoder.layers))])
-    outputs = {
-        layer: path_units / f"{layer}" / units_filename(dataset.language, dataset.split)
-        for layer in layers & kmeans_by_layer.keys()
-    }
+    available = [i + 1 for i in range(len(model.encoder.layers))]
+    layers = get_target_layers(kmeans_by_layer.keys() if layers is None else layers, available)
+    if missing := layers - kmeans_by_layer.keys():
+        raise ValueError(f"No K-means for the layers {sorted(missing)}.")
+    outputs = {layer: path_units / f"{layer}" / units_filename(dataset.language, dataset.split) for layer in layers}
     completed = {layer: read_completed_fileids(path) for layer, path in outputs.items()}
     pending = [any(fileid not in completed[layer] for layer in outputs) for fileid in dataset.manifest["fileid"]]
     dataset.manifest = dataset.manifest.filter(pl.Series(pending, dtype=pl.Boolean))

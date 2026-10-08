@@ -39,7 +39,12 @@ def cli(argv: list[str] | None = None) -> None:
         metavar="SPLIT",
         help="Splits, among dev, test, train-10min, train-1h, and train-10h",
     )
-    parser.add_argument("--layers", type=int, nargs="+", help="Layers to extract (all available if not set)")
+    parser.add_argument(
+        "--layers",
+        type=int,
+        nargs="+",
+        help="Layers to extract (all available if not set, or all with a K-means for HuBERT units)",
+    )
     parser.add_argument(
         "--kmeans",
         type=layer_and_path,
@@ -55,6 +60,8 @@ def cli(argv: list[str] | None = None) -> None:
         parser.error("`--kmeans` only applies to HuBERT units.")
     if args.architecture == "hubert" and args.batch_size != 1:
         parser.error("HuBERT is not batch invariant: `--batch-size` must be 1.")
+    if args.kmeans and args.layers and (missing := set(args.layers) - {layer for layer, _ in args.kmeans}):
+        parser.error(f"No `--kmeans` for the layers {sorted(missing)}.")
 
     kmeans_by_layer = {layer: joblib.load(path) for layer, path in args.kmeans or []}
     for language in args.languages:

@@ -23,9 +23,19 @@ from discophon.evaluate import phoneme_discovery
 from discophon.languages import Language, all_languages, get_language
 from discophon.validate import validate_dataset_structure
 
-__all__ = ["benchmark_abx_continuous", "benchmark_abx_discrete", "benchmark_discovery"]
+__all__ = ["NoPredictionsError", "benchmark_abx_continuous", "benchmark_abx_discrete", "benchmark_discovery"]
 
-_EMPTY_RESULTS_SCHEMA = {"language": pl.String, "split": pl.String, "metric": pl.String, "score": pl.Float64}
+EVALUATED_SPLITS = {"dev", "test"}
+
+
+class NoPredictionsError(FileNotFoundError):
+    """Raised when there are no units or features to evaluate."""
+
+    def __init__(self, directory: str | Path, pattern: str) -> None:
+        super().__init__(
+            f"Nothing to evaluate in {directory}: expected {pattern}, with the ISO 639-3 code of a DiscoPhon language "
+            "and the dev or test split."
+        )
 
 
 def available_languages_and_splits_for_units(
@@ -67,12 +77,20 @@ def benchmark_discovery(
     Returns:
         DataFrame with the results
 
+    Raises:
+        NoPredictionsError: If there is nothing to evaluate.
+
     """
     validate_dataset_structure(path_dataset)
+    available = [
+        (lang, split)
+        for lang, split in available_languages_and_splits_for_units(path_units)
+        if split in EVALUATED_SPLITS
+    ]
+    if not available:
+        raise NoPredictionsError(path_units, "units-{code}-{split}.jsonl")
     df = []
-    for language, split in available_languages_and_splits_for_units(path_units):
-        if split not in {"dev", "test"}:
-            continue
+    for language, split in available:
         units = read_submitted_units(Path(path_units) / units_filename(language, split))
         phones = read_gold_annotations(Path(path_dataset) / "alignment" / alignment_filename(language, split))
         n_units = DEFAULT_N_UNITS if kind == "many-to-one" else language.n_phonemes + 1
@@ -85,8 +103,6 @@ def benchmark_discovery(
             kind=kind,
         )
         df.append({"language": language.iso_639_3, "split": split} | scores)
-    if not df:
-        return pl.DataFrame(schema=_EMPTY_RESULTS_SCHEMA)
     return pl.DataFrame(df).unpivot(index=["language", "split"], variable_name="metric", value_name="score")
 
 
@@ -111,14 +127,22 @@ def benchmark_abx_discrete(
     Returns:
         DataFrame with the results
 
+    Raises:
+        NoPredictionsError: If there is nothing to evaluate.
+
     """
     from discophon.abx import discrete_abx
 
     validate_dataset_structure(path_dataset)
+    available = [
+        (lang, split)
+        for lang, split in available_languages_and_splits_for_units(path_units)
+        if split in EVALUATED_SPLITS
+    ]
+    if not available:
+        raise NoPredictionsError(path_units, "units-{code}-{split}.jsonl")
     df = []
-    for language, split in available_languages_and_splits_for_units(path_units):
-        if split not in {"dev", "test"}:
-            continue
+    for language, split in available:
         abx = discrete_abx(
             Path(path_dataset) / "item" / item_filename(language, split, kind=kind),
             Path(path_units) / units_filename(language, split),
@@ -128,8 +152,6 @@ def benchmark_abx_discrete(
         for speaker, score in abx.items():
             metric = f"{kind}_abx_discrete_{speaker}"
             df.append({"language": language.iso_639_3, "split": split, "metric": metric, "score": score})
-    if not df:
-        return pl.DataFrame(schema=_EMPTY_RESULTS_SCHEMA)
     return pl.DataFrame(df)
 
 
@@ -154,14 +176,22 @@ def benchmark_abx_continuous(
     Returns:
         DataFrame with the results
 
+    Raises:
+        NoPredictionsError: If there is nothing to evaluate.
+
     """
     from discophon.abx import continuous_abx
 
     validate_dataset_structure(path_dataset)
+    available = [
+        (lang, split)
+        for lang, split in available_languages_and_splits_for_features(path_features)
+        if split in EVALUATED_SPLITS
+    ]
+    if not available:
+        raise NoPredictionsError(path_features, "{code}/{split}/")
     df = []
-    for language, split in available_languages_and_splits_for_features(path_features):
-        if split not in {"dev", "test"}:
-            continue
+    for language, split in available:
         abx = continuous_abx(
             Path(path_dataset) / "item" / item_filename(language, split, kind=kind),
             Path(path_features) / language.iso_639_3 / split,
@@ -171,8 +201,6 @@ def benchmark_abx_continuous(
         for speaker_context, score in abx.items():
             metric = f"{kind}_abx_continuous_{speaker_context}"
             df.append({"language": language.iso_639_3, "split": split, "metric": metric, "score": score})
-    if not df:
-        return pl.DataFrame(schema=_EMPTY_RESULTS_SCHEMA)
     return pl.DataFrame(df)
 
 

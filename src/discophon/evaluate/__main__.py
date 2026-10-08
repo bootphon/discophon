@@ -6,6 +6,7 @@ from pathlib import Path
 
 from discophon.data import DEFAULT_N_UNITS, STEP_UNITS, read_gold_annotations, read_submitted_units
 from discophon.evaluate.discovery import phoneme_discovery
+from discophon.languages import get_language
 from discophon.validate import infer_number_of_phonemes
 
 
@@ -18,8 +19,9 @@ def cli(argv: list[str] | None = None) -> None:
     )
     parser.add_argument("units", type=Path, help="Path to predicted units")
     parser.add_argument("phones", type=Path, help="Path to gold alignments")
-    parser.add_argument("--language", type=str, help="Evaluated language. Either use this or `--n-phonemes`")
-    parser.add_argument("--n-phonemes", type=int, help="Number of phonemes. Either use this or `--language`")
+    target = parser.add_mutually_exclusive_group(required=True)
+    target.add_argument("--language", type=get_language, help="Evaluated language. Either use this or `--n-phonemes`")
+    target.add_argument("--n-phonemes", type=int, help="Number of phonemes. Either use this or `--language`")
     parser.add_argument(
         "--n-units",
         type=int,

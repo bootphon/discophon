@@ -23,7 +23,7 @@ First install the [`spidr`](https://github.com/facebookresearch/spidr) and
 or directly:
 
 ```bash
-pip install discophon[baselines]
+pip install "discophon[baselines]"
 ```
 
 #### SpidR checkpoints
@@ -174,8 +174,8 @@ Use the CLI utility:
 
 ```console
 ❯ python -m discophon.baselines --help
-usage: python -m discophon.baselines [-h] [--n-clusters N_CLUSTERS] [--layer LAYER]
-                                     {hubert,spidr} name project workdir checkpoint manifest
+usage: discophon.baselines [-h] [--n-clusters N_CLUSTERS] [--layer LAYER]
+                           {hubert,spidr} name project workdir checkpoint manifest
 
 Baseline finetuning of HuBERT or SpidR
 

@@ -127,7 +127,12 @@ def test_per_rejects_too_few_arguments() -> None:
         phone_error_rate({"a": ["x"]})  # ty: ignore[missing-argument]
 
 
-def test_per_empty_gold_raises() -> None:
-    # Empty annotations cannot be normalized; deduplicate rejects them before any division by zero.
-    with pytest.raises(ValueError, match="Empty sequence"):
-        phone_error_rate({"f": []}, {"f": []}, n_jobs=1)
+@pytest.mark.parametrize(("predicted", "gold"), [([], ["a"]), (["a"], []), ([], [])])
+def test_per_empty_sequence_raises_with_the_file(predicted: list[str], gold: list[str]) -> None:
+    with pytest.raises(ValueError, match=r"Empty predicted or gold sequences for 1 files, such as \['f'\]"):
+        phone_error_rate({"f": predicted, "g": ["a"]}, {"f": gold, "g": ["a"]}, n_jobs=1)
+
+
+def test_per_no_files_raises() -> None:
+    with pytest.raises(ValueError, match="No files to evaluate"):
+        phone_error_rate({}, {}, n_jobs=1)

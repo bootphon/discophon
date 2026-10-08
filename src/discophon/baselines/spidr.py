@@ -42,8 +42,8 @@ from discophon.data import units_filename
 def finetune_spidr(  # ruff: ignore[too-many-locals, too-many-statements]
     name: str,
     project: str,
-    workdir: Path,
-    checkpoint: Path,
+    workdir: str | Path,
+    checkpoint: str | Path,
     manifest: str,
 ) -> None:
     """Finetune SpidR on DiscoPhon data with the default configuration.
@@ -62,7 +62,7 @@ def finetune_spidr(  # ruff: ignore[too-many-locals, too-many-statements]
         set_seed(SEED)
         setup_pytorch(use_deterministic=False)
         setup_environment()
-        rundir = workdir / project / name
+        rundir = Path(workdir) / project / name
         rundir.mkdir(parents=True, exist_ok=True)
         wandb.init(project=project, name=name, mode="offline", dir=workdir)
         stack.callback(wandb.finish)

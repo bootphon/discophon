@@ -136,7 +136,10 @@ class TextGridEntry(TypedDict):
 def textgrid_array_from_sequence(seq: Iterable[str | int], *, step_in_ms: int) -> list[TextGridEntry]:
     """Create a list of TextGrid entries from a sequence of tokens."""
     step_in_seconds = Decimal(step_in_ms) / 1000
-    labels, counts = zip(*[(key, len(list(group))) for key, group in itertools.groupby(seq)], strict=True)
+    groups = [(key, len(list(group))) for key, group in itertools.groupby(seq)]
+    if not groups:
+        raise ValueError("Cannot build TextGrid intervals from an empty sequence of tokens.")
+    labels, counts = zip(*groups, strict=True)
     ends = np.cumsum(counts, dtype=np.int64)
     starts = np.concatenate(([0], ends[:-1]))
     return [
@@ -149,6 +152,8 @@ def write_textgrids(seqs: Phones | Units, /, outdir: str | Path, *, tier_name: s
     """Write the given sequences of tokens as TextGrid files in the given output directory."""
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
+    if empty := sorted(file for file, sequence in seqs.items() if not sequence):
+        raise ValueError(f"Cannot write empty sequences to TextGrid: {len(empty)} files, such as {empty[:5]}.")
     for file, sequence in seqs.items():
         path = outdir / f"{file}.TextGrid"
         tg = textgrids.TextGrid(path if path.is_file() else None)
@@ -283,16 +288,14 @@ def read_submitted_units(source: str | Path) -> Units:
     Returns:
         Mapping between file ids and units
 
+    Raises:
+        ValueError: If a file appears more than once.
+
     """
-    return {
-        audio: row[UNITS]
-        for audio, row in (
-            pl.read_ndjson(source, schema_overrides={"file": pl.String, UNITS: pl.List(pl.Int32)})
-            .rename({"file": FILE})
-            .rows_by_key(FILE, named=True, unique=True)
-            .items()
-        )
-    }
+    df = pl.read_ndjson(source, schema_overrides={"file": pl.String, UNITS: pl.List(pl.Int32)}).rename({"file": FILE})
+    if duplicates := sorted(set(df.filter(pl.col(FILE).is_duplicated())[FILE])):
+        raise ValueError(f"Duplicate files in {source}: {len(duplicates)} files, such as {duplicates[:5]}.")
+    return {audio: row[UNITS] for audio, row in df.rows_by_key(FILE, named=True, unique=True).items()}
 
 
 def read_scores(root: str | Path) -> pl.DataFrame:

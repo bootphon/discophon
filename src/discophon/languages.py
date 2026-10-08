@@ -1,3 +1,5 @@
+"""Languages of the benchmark and their phoneme inventories."""
+
 import json
 from dataclasses import dataclass
 from functools import cache
@@ -37,10 +39,9 @@ def load_phonemes() -> dict[str, list[str]]:
 
 @dataclass(frozen=True)
 class Language:
-    """The underlying representation of a language.
+    """A language of the benchmark. Get one with [`get_language`][discophon.languages.get_language].
 
-    Parameters
-    ----------
+    Attributes:
         name: Name of the language.
         iso_639_3: Its ISO 639-3 code.
         split: Which split it belongs to in the benchmark.

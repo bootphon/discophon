@@ -31,6 +31,13 @@ dependencies = [
 ]
 dynamic = ["version"]
 
+[project.urls]
+Documentation = "https://benchmarks.cognitive-ml.fr/discophon/guide/"
+Homepage = "https://benchmarks.cognitive-ml.fr/discophon/"
+Issues = "https://github.com/bootphon/discophon/issues"
+Paper = "https://www.isca-archive.org/interspeech_2026/poli26_interspeech.html"
+Repository = "https://github.com/bootphon/discophon"
+
 [project.optional-dependencies]
 abx = [
   "fastabx>=0.8.0",

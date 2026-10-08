@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, call
 
 import pytest
+import torch
 
 from discophon.baselines import hubert, spidr
 from discophon.baselines.utils import link_best_checkpoint, read_completed_fileids
@@ -122,7 +123,6 @@ def test_hubert_finetuning_resumes_with_the_same_targets(tmp_path: Path, monkeyp
         "wandb",
         "joblib",
         "patch_manifest_with_paths",
-        "HuBERTPretrain",
         "AdamW",
         "GradScaler",
         "tristage_scheduler",
@@ -131,19 +131,21 @@ def test_hubert_finetuning_resumes_with_the_same_targets(tmp_path: Path, monkeyp
         "tqdm",
     ):
         monkeypatch.setattr(hubert, name, MagicMock())
-    fit_kmeans, build_loader, checkpointer = MagicMock(), MagicMock(), MagicMock()
+    fit_kmeans, build_loader, checkpointer, hubert_pretrain = MagicMock(), MagicMock(), MagicMock(), MagicMock()
+    monkeypatch.setattr(hubert, "HuBERTPretrain", hubert_pretrain)
     monkeypatch.setattr(hubert, "fit_kmeans_from_checkpoint", fit_kmeans)
     monkeypatch.setattr(hubert, "build_dataloader_with_labels", build_loader)
     monkeypatch.setattr(hubert, "Checkpointer", checkpointer)
-    monkeypatch.setattr(hubert.torch, "load", MagicMock())
     monkeypatch.setattr(hubert.torch.cuda, "get_device_capability", lambda: (8, 0))
+    pretrained = hubert_pretrain.from_pretrained.return_value
+    pretrained.logit_generator.label_embeddings = torch.zeros(4, 3)  # pretrained on 4 targets, with final_dim 3
     checkpointer.return_value.step = hubert.ft_optimizer_config().max_steps  # skip the training loop
     checkpointer.return_value.epoch = 0
     patch = MagicMock(side_effect=lambda _src, dest, *_: Path(dest).write_text("{}", encoding="utf-8"))
     monkeypatch.setattr(hubert, "patch_manifest_with_units", patch)
-    for _ in range(2):
+    for workdir in (tmp_path, str(tmp_path)):
         hubert.finetune_hubert(
-            "run", "project", tmp_path, tmp_path / "it2.pt", "manifest.csv", n_clusters=8, target_layer=6
+            "run", "project", workdir, tmp_path / "it2.pt", "manifest.csv", n_clusters=8, target_layer=6
         )
     manifest = tmp_path / "project" / "run" / "manifest-with-units.jsonl"
     assert fit_kmeans.call_count == 1
@@ -151,3 +153,11 @@ def test_hubert_finetuning_resumes_with_the_same_targets(tmp_path: Path, monkeyp
     assert manifest.read_text(encoding="utf-8") == "{}"
     assert build_loader.call_count == 2
     assert all(c.args[0].manifest == str(manifest) for c in build_loader.call_args_list)
+    hubert_pretrain.from_pretrained.assert_called_with(tmp_path / "it2.pt")
+    # New label embeddings for the new targets, initialized uniformly in [0, 1)
+    assert isinstance(pretrained.logit_generator.label_embeddings, torch.nn.Parameter)
+    assert pretrained.logit_generator.label_embeddings.shape == (8, 3)
+    assert (
+        0 <= pretrained.logit_generator.label_embeddings.min() <= pretrained.logit_generator.label_embeddings.max() < 1
+    )
+    assert pretrained.num_classes == 8

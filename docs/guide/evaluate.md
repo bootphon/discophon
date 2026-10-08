@@ -49,6 +49,9 @@ Each line of a JSONL file is a JSON object with exactly two fields: `file`, the 
 {"file": "0188-135249-0001", "units": [12, 12, 45, 3, 3, 3, 78]}
 ```
 
+Each file must appear only once, otherwise reading the units fails. The benchmark evaluates every file
+named like this for a dev or test split, and fails if there is none.
+
 ### Producing units from your own model
 
 You are responsible for turning your model's output into these JSONL files. For each language and
@@ -159,7 +162,7 @@ Or via the CLI:
 
 ```console
 ❯ python -m discophon.evaluate --help
-usage: discophon.evaluate [-h] [--language LANGUAGE] [--n-phonemes N_PHONEMES] [--n-units N_UNITS]
+usage: discophon.evaluate [-h] (--language LANGUAGE | --n-phonemes N_PHONEMES) [--n-units N_UNITS]
                           [--kind {many-to-one,one-to-one}] [--step-units STEP_UNITS]
                           units phones
 
@@ -174,11 +177,10 @@ options:
   --language LANGUAGE   Evaluated language. Either use this or `--n-phonemes` (default: None)
   --n-phonemes N_PHONEMES
                         Number of phonemes. Either use this or `--language` (default: None)
-  --n-units N_UNITS     Number of units. Defaults to 256 for many-to-one, and to the number of phonemes
-                        plus one for one-to-one (default: None)
+  --n-units N_UNITS     Number of units. Defaults to 256 for many-to-one, and to the number of phonemes plus one for
+                        one-to-one (default: None)
   --kind {many-to-one,one-to-one}
-                        Kind of assignment (either many-to-one, or one-to-one) (default: many-to-
-                        one)
+                        Kind of assignment (either many-to-one, or one-to-one) (default: many-to-one)
   --step-units STEP_UNITS
                         Step between units (in ms) (default: 20)
 ```
@@ -188,7 +190,7 @@ options:
 The ABX evaluation is done separately. First, install this package with the `abx` optional dependencies:
 
 ```bash
-pip install discophon[abx]
+pip install "discophon[abx]"
 ```
 
 Discrete ABX reads the same `units-{code}-{split}.jsonl` files as above. **Continuous** ABX instead

@@ -68,7 +68,14 @@ def phone_error_rate(predicted_phones_from_units: Phones, gold_phones: Phones, *
     Returns:
         Phone error rate. Multiply it by 100 to get a percentage.
 
+    Raises:
+        ValueError: If there are no files, or if some files have an empty predicted or gold sequence.
+
     """
+    if not gold_phones:
+        raise ValueError("No files to evaluate: the predicted and gold phones are empty.")
+    if empty := sorted(f for f in gold_phones if not gold_phones[f] or not predicted_phones_from_units[f]):
+        raise ValueError(f"Empty predicted or gold sequences for {len(empty)} files, such as {empty[:5]}.")
     results = Parallel(n_jobs=n_jobs)(
         delayed(_edit_distance_and_length)(predicted_phones_from_units[fileid], gold_phones[fileid])
         for fileid in predicted_phones_from_units

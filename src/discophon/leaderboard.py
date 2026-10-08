@@ -183,7 +183,11 @@ def build(root: Path, output: Path) -> None:
 
 
 def cli(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="DiscoPhon leaderboard")
+    parser = argparse.ArgumentParser(
+        prog="discophon.leaderboard",
+        description="DiscoPhon leaderboard",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
     parser_export = subparsers.add_parser("export", help="Export the leaderboard scores of a model")
     parser_export.add_argument("model", type=Path, help="Model directory in the artifacts dataset, named by its key")

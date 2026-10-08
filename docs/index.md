@@ -14,14 +14,17 @@ Given only 10 hours of speech in an unseen language, models must produce discret
 
 ## Getting started
 
-DiscoPhon requires **Python ≥ 3.12** and has no system dependencies.
+DiscoPhon requires **Python ≥ 3.12**.
 
 - Install this package:
   ```bash
-  pip install discophon            # core: data preparation and phoneme discovery
-  pip install discophon[abx]       # adds ABX discriminability (fastabx)
-  pip install discophon[baselines] # adds the baseline models
+  pip install discophon              # core: phoneme discovery evaluation
+  pip install "discophon[prepare]"   # adds the data download and preparation
+  pip install "discophon[abx]"       # adds ABX discriminability (fastabx)
+  pip install "discophon[baselines]" # adds the baseline models
   ```
+  Only the `baselines` extra has a system dependency:
+  [FFmpeg](https://ffmpeg.org/download.html), required by `torchcodec` to read audio.
 - [Follow the tutorials](https://benchmarks.cognitive-ml.fr/discophon/guide/) to download data, evaluate models, and prepare your submission.
 - [Current leaderboard](https://benchmarks.cognitive-ml.fr/discophon/leaderboard/).
 

@@ -239,7 +239,10 @@ def check_commonvoice(path_dataset: str | Path, language: str) -> DatasetDetails
 
 def cli(argv: list[str] | None = None) -> None:
     """Command-line entry point for dataset download and preparation."""
-    parser = argparse.ArgumentParser(description="Prepare the DiscoPhon benchmark data")
+    parser = argparse.ArgumentParser(
+        prog="discophon.prepare",
+        description="Prepare the DiscoPhon benchmark data",
+    )
     subparsers = parser.add_subparsers(dest="command", required=True, help="command to run")
     parser_download = subparsers.add_parser(
         "download",

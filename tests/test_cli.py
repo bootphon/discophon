@@ -8,10 +8,12 @@ import pytest
 
 from discophon.baselines import __main__ as baselines_main
 from discophon.baselines.__main__ import cli as baselines_cli
+from discophon.benchmark import NoPredictionsError
 from discophon.benchmark import cli as benchmark_cli
 from discophon.evaluate import __main__ as evaluate_main
 from discophon.evaluate.__main__ import cli as evaluate_cli
 
+from .test_benchmark import write_synthetic_split
 from .test_validate import build_valid_dataset
 
 
@@ -63,12 +65,46 @@ def test_baselines_cli_dispatches_finetuning(monkeypatch: pytest.MonkeyPatch) ->
     assert hubert.call_count == 1
 
 
-def test_benchmark_cli_writes_output_file(tmp_path: Path) -> None:
+def test_benchmark_cli_appends_scores_to_output_file(tmp_path: Path) -> None:
+    dataset, units = build_valid_dataset(tmp_path / "dataset"), tmp_path / "units"
+    write_synthetic_split(dataset, units)
+    output = tmp_path / "scores.jsonl"
+    for _ in range(2):
+        benchmark_cli([str(dataset), str(units), str(output), "--benchmark", "discovery"])
+    rows = [json.loads(line) for line in output.read_text(encoding="utf-8").splitlines()]
+    assert len(rows) == 2 * 4  # appended: 4 metrics for German dev, twice
+    assert {(row["language"], row["split"]) for row in rows} == {("deu", "dev")}
+
+
+def test_benchmark_cli_fails_without_units(tmp_path: Path) -> None:
     dataset = build_valid_dataset(tmp_path / "dataset")
     units = tmp_path / "units"
     units.mkdir()
     output = tmp_path / "scores.jsonl"
-    benchmark_cli([str(dataset), str(units), str(output), "--benchmark", "discovery"])
-    # no units available, so the run produces a valid (empty) output file rather than crashing
-    assert output.exists()
-    assert output.stat().st_size == 0
+    with pytest.raises(NoPredictionsError):
+        benchmark_cli([str(dataset), str(units), str(output), "--benchmark", "discovery"])
+    assert not output.exists()
+
+
+@pytest.mark.parametrize(
+    ("args", "match"),
+    [
+        ([], "one of the arguments --language --n-phonemes is required"),
+        (["--language", "deu", "--n-phonemes", "41"], "not allowed with argument --language"),
+        (["--language", "klingon"], "invalid get_language value: 'klingon'"),
+    ],
+)
+def test_evaluate_cli_rejects_invalid_targets(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], args: list[str], match: str
+) -> None:
+    units, alignment = _write_tiny_prediction(tmp_path)
+    with pytest.raises(SystemExit):
+        evaluate_cli([str(units), str(alignment), *args])
+    assert match in capsys.readouterr().err
+
+
+def test_abx_cli_rejects_unknown_inputs(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    abx_cli = pytest.importorskip("discophon.abx").cli
+    with pytest.raises(SystemExit):
+        abx_cli([str(tmp_path / "triphone.item"), str(tmp_path / "units.txt"), "--frequency", "50"])
+    assert "Expected a directory of features or a .jsonl units file" in capsys.readouterr().err

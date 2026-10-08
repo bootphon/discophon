@@ -121,14 +121,28 @@ def read_features(root: Path) -> dict[str, torch.Tensor]:
     return {str(p.relative_to(root)): torch.load(p) for p in sorted(root.rglob("*.pt"))}
 
 
-def test_hubert_discrete_units(tmp_path: Path, dataset: Path, model: FakeModel) -> None:
+@pytest.mark.parametrize("layers", [[2, 4], None])
+def test_hubert_discrete_units(tmp_path: Path, dataset: Path, model: FakeModel, layers: list[int] | None) -> None:
     kmeans = cast("dict[int, MiniBatchKMeans]", {layer: FakeKMeans() for layer in (2, 4)})
-    hubert.extract_hubert_discrete_units(dataset, tmp_path / "units", "deu", "dev", "it2.pt", kmeans, layers=[1, 2, 4])
+    hubert.extract_hubert_discrete_units(dataset, tmp_path / "units", "deu", "dev", "it2.pt", kmeans, layers=layers)
     assert sorted(p.parent.name for p in (tmp_path / "units").rglob("*.jsonl")) == ["2", "4"]  # layers with K-means
     for layer in (2, 4):
         units = read_units(tmp_path / "units" / str(layer) / units_filename(GERMAN, "dev"))
         assert units == {fileid: [t + layer for t in range(n_frames(fileid))] for fileid in NUM_SAMPLES}
     assert model.batch_sizes == [1] * len(NUM_SAMPLES)  # HuBERT is not batch invariant
+
+
+@pytest.mark.usefixtures("model")
+@pytest.mark.parametrize(("layers", "kmeans_layers", "match"), [([1, 2], [2], "No K-means"), (None, [2, 9], "9")])
+def test_hubert_discrete_units_rejects_layers_without_kmeans(
+    tmp_path: Path, dataset: Path, layers: list[int] | None, kmeans_layers: list[int], match: str
+) -> None:
+    kmeans = cast("dict[int, MiniBatchKMeans]", dict.fromkeys(kmeans_layers, FakeKMeans()))
+    with pytest.raises(ValueError, match=match):
+        hubert.extract_hubert_discrete_units(
+            dataset, tmp_path / "units", "deu", "dev", "it2.pt", kmeans, layers=layers
+        )
+    assert not (tmp_path / "units").exists()
 
 
 def test_hubert_continuous_features(tmp_path: Path, dataset: Path, model: FakeModel) -> None:
@@ -248,6 +262,7 @@ def test_cli_extracts_all_languages_and_splits_by_default(monkeypatch: pytest.Mo
         (["spidr", "units", "--kmeans", "6=kmeans.joblib"], "only applies to HuBERT units"),
         (["hubert", "features", "--batch-size", "2"], "must be 1"),
         (["hubert", "units", "--kmeans", "six=kmeans.joblib"], "invalid layer_and_path value"),
+        (["hubert", "units", "--kmeans", "6=kmeans.joblib", "--layers", "6", "7"], "No `--kmeans` for the layers [7]"),
     ],
 )
 def test_cli_rejects_invalid_arguments(capsys: pytest.CaptureFixture[str], args: list[str], match: str) -> None:

@@ -2,7 +2,7 @@
 
 We split this part of the evaluation in a separate module because it's optional
 and takes more time to compute. If you want to use it, install `fastabx` either
-with `pip install discophon[abx]` or `pip install fastabx`.
+with `pip install 'discophon[abx]'` or `pip install fastabx`.
 """
 
 import argparse
@@ -15,7 +15,7 @@ try:
 except ImportError as error:
     raise ImportError(
         "fastabx is required for ABX evaluation. "
-        "Please install it with `pip install discophon[abx]` or `pip install fastabx`."
+        "Please install it with `pip install 'discophon[abx]'` or `pip install fastabx`."
     ) from error
 
 __all__ = ["continuous_abx", "discrete_abx"]
@@ -205,7 +205,7 @@ def cli(argv: list[str] | None = None) -> None:
     elif args.root.suffix == ".jsonl":
         scores = discrete_abx(args.item, args.root, frequency=args.frequency, kind=args.kind)
     else:
-        raise ValueError(f"Expected a directory of features or a .jsonl units file, got {args.root}")
+        parser.error(f"Expected a directory of features or a .jsonl units file, got {args.root}")
     print("\n".join(f"{key}:\t{score:.2%}" for key, score in scores.items()))
 
 

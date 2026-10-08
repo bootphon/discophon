@@ -1,3 +1,5 @@
+"""Validation of the inputs and of the dataset structure."""
+
 from collections.abc import Callable, Sequence
 from functools import wraps
 from inspect import signature
