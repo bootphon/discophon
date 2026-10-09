@@ -61,7 +61,7 @@ def test_best_checkpoint_link_preserves_regular_file(tmp_path: Path) -> None:
     assert checkpoint.read_bytes() == contents
 
 
-def test_spidr_validation_reruns_ignore_aliases_and_old_scores(
+def test_spidr_validation_skips_checkpoints_already_in_the_output(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     for name in ("set_seed", "setup_pytorch", "setup_environment", "patch_manifest_with_paths"):
@@ -71,28 +71,27 @@ def test_spidr_validation_reruns_ignore_aliases_and_old_scores(
     monkeypatch.setattr(spidr, "build_model", build)
     loader = MagicMock()
     monkeypatch.setattr(spidr, "build_dataloader", MagicMock(return_value=loader))
-    monkeypatch.setattr(spidr, "validate_spidr", MagicMock(side_effect=[{"loss": 2.0}, {"loss": 1.0}] * 2))
+    monkeypatch.setattr(spidr, "validate_spidr", MagicMock(side_effect=[{"loss": 1.0}]))
     for filename in ("step_1000.pt", "step_2000.pt", "final.pt"):
         (tmp_path / filename).touch()
     link_best_checkpoint(tmp_path, "final.pt")
     output = tmp_path / "scores.jsonl"
     output.write_text(
-        '{"step": 9999, "group": "other", "loss": 0.0}\n{"step": 1000, "group": "deu-dev", "loss": 0.0}\n',
+        '{"step": 2000, "group": "other", "loss": -2.0}\n'  # another manifest
+        '{"step": 3000, "group": "deu-dev", "loss": -1.0}\n'  # checkpoint deleted since
+        '{"step": 1000, "group": "deu-dev", "loss": 0.0}\n',
         encoding="utf-8",
     )
     for _ in range(2):
         spidr.validate_all_spidr_checkpoints(output, tmp_path, tmp_path / "manifest-deu-dev.csv")
-        assert (tmp_path / "best.pt").readlink() == Path("step_2000.pt")
-    assert loader.generator.manual_seed.call_args_list == [call(0)] * 4  # same masks for every checkpoint
-    assert [call.kwargs["checkpoint"].name for call in build.call_args_list] == [
-        "step_1000.pt",
-        "step_2000.pt",
-        "step_1000.pt",
-        "step_2000.pt",
-    ]
+        assert (tmp_path / "best.pt").readlink() == Path("step_1000.pt")
+    assert loader.generator.manual_seed.call_args_list == [call(0)]
+    assert [call.kwargs["checkpoint"].name for call in build.call_args_list] == ["step_2000.pt"]
+    lines = output.read_text(encoding="utf-8").splitlines()
+    assert [json.loads(line) for line in lines[3:]] == [{"step": 2000, "group": "deu-dev", "loss": 1.0}]
 
 
-def test_hubert_validation_reruns_ignore_aliases_and_old_scores(
+def test_hubert_validation_skips_checkpoints_already_in_the_output(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     for name in (
@@ -100,35 +99,36 @@ def test_hubert_validation_reruns_ignore_aliases_and_old_scores(
         "setup_pytorch",
         "setup_environment",
         "patch_manifest_with_paths",
-        "compute_and_save_hubert_features",
         "patch_manifest_with_units",
     ):
         monkeypatch.setattr(hubert, name, MagicMock())
     monkeypatch.setattr(hubert.joblib, "load", MagicMock())
     monkeypatch.setattr(hubert.torch.cuda, "get_device_capability", lambda: (8, 0))
+    features = MagicMock()
+    monkeypatch.setattr(hubert, "compute_and_save_hubert_features", features)
     build = MagicMock()
     monkeypatch.setattr(hubert.HuBERTPretrain, "from_pretrained", build)
     loader = MagicMock()
     monkeypatch.setattr(hubert, "build_dataloader_with_labels", MagicMock(return_value=loader))
-    monkeypatch.setattr(hubert, "validate_hubert", MagicMock(side_effect=[{"loss": 2.0}, {"loss": 1.0}] * 2))
+    monkeypatch.setattr(hubert, "validate_hubert", MagicMock(side_effect=[{"loss": 1.0}]))
     for filename in ("step_1000.pt", "step_2000.pt", "final.pt"):
         (tmp_path / filename).touch()
     link_best_checkpoint(tmp_path, "final.pt")
     output = tmp_path / "scores.jsonl"
     output.write_text(
-        '{"step": 9999, "group": "other", "loss": 0.0}\n{"step": 1000, "group": "deu-dev", "loss": 0.0}\n',
+        '{"step": 2000, "group": "other", "loss": -2.0}\n'  # another manifest
+        '{"step": 3000, "group": "deu-dev", "loss": -1.0}\n'  # checkpoint deleted since
+        '{"step": 1000, "group": "deu-dev", "loss": 0.0}\n',
         encoding="utf-8",
     )
     for _ in range(2):
         hubert.validate_all_hubert_checkpoints(output, tmp_path, tmp_path / "manifest-deu-dev.csv", "it2.pt", 11)
-        assert (tmp_path / "best.pt").readlink() == Path("step_2000.pt")
-    assert loader.generator.manual_seed.call_args_list == [call(0)] * 4  # same masks for every checkpoint
-    assert [call.args[0].name for call in build.call_args_list] == [
-        "step_1000.pt",
-        "step_2000.pt",
-        "step_1000.pt",
-        "step_2000.pt",
-    ]
+        assert (tmp_path / "best.pt").readlink() == Path("step_1000.pt")
+    assert loader.generator.manual_seed.call_args_list == [call(0)]
+    assert [call.args[0].name for call in build.call_args_list] == ["step_2000.pt"]
+    assert features.call_count == 1  # no targets when nothing is pending
+    lines = output.read_text(encoding="utf-8").splitlines()
+    assert [json.loads(line) for line in lines[3:]] == [{"step": 2000, "group": "deu-dev", "loss": 1.0}]
 
 
 def test_hubert_finetuning_resumes_with_the_same_targets(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

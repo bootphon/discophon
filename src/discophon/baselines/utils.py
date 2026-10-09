@@ -51,6 +51,16 @@ def read_completed_fileids(path: str | Path) -> set[str]:
     return completed
 
 
+def read_validation_losses(path: str | Path, group: str) -> dict[int, dict]:
+    """Read the losses of the checkpoints already validated on `group`, from an append-only JSONL output."""
+    path = Path(path)
+    if not path.is_file():
+        return {}
+    with path.open(encoding="utf-8") as lines:
+        entries = [json.loads(line) for line in lines if line.strip()]
+    return {entry["step"]: entry for entry in entries if entry["group"] == group}
+
+
 def link_best_checkpoint(directory: Path, target: str) -> None:
     """Create or update best.pt without overwriting a regular checkpoint file."""
     link = directory / "best.pt"

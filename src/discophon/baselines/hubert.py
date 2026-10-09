@@ -41,6 +41,7 @@ from discophon.baselines.utils import (
     patch_manifest_with_paths,
     patch_manifest_with_units,
     read_completed_fileids,
+    read_validation_losses,
     tristage_scheduler,
 )
 from discophon.data import units_filename
@@ -231,7 +232,8 @@ def validate_all_hubert_checkpoints(
 
     The targets are the K-means units saved by [`finetune_hubert`][discophon.baselines.finetune_hubert] in
     `checkpoints/kmeans.joblib`, computed on the features of the `pretrained` model at `target_layer`.
-    Every checkpoint is evaluated with the same masks and crops.
+    Every checkpoint is evaluated with the same masks and crops. The checkpoints already validated on the same
+    manifest in `output` are skipped, and their losses are reused to choose the best one.
 
     Args:
         output: JSONL file to which the losses of each checkpoint are appended
@@ -250,31 +252,33 @@ def validate_all_hubert_checkpoints(
     setup_environment()
     device = torch.device("cuda")
     dtype = torch.bfloat16 if torch.cuda.get_device_capability() >= (8, 0) else torch.float16
-    kmeans = joblib.load(Path(checkpoints) / "kmeans.joblib")
-    with (
-        NamedTemporaryFile(suffix=".csv") as temp_manifest,
-        NamedTemporaryFile(suffix=".jsonl") as new_manifest,
-        TemporaryDirectory(prefix="features-", dir=checkpoints) as temp_features,
-    ):
-        patch_manifest_with_paths(manifest, temp_manifest.name)
-        compute_and_save_hubert_features(temp_manifest.name, temp_features, pretrained, target_layer)
-        patch_manifest_with_units(temp_manifest.name, new_manifest.name, temp_features, kmeans)
-        cfg = replace(hubert_ft_data_config(new_manifest.name), persistent_workers=False)
-        loader = build_dataloader_with_labels(cfg, MaskingConfig())
     paths = sorted(Path(checkpoints).glob("step_*.pt"))
     if not paths:
         raise ValueError(f"No step checkpoints found in {checkpoints}")
     group = Path(manifest).stem.removeprefix("manifest-")
-    results = []
-    for path in tqdm(paths):
-        step = int(path.stem.removeprefix("step_"))
-        model = HuBERTPretrain.from_pretrained(path).to(device)
-        # Same masks and crops for every checkpoint
-        loader.generator.manual_seed(seed)  # ty: ignore[unresolved-attribute]
-        losses = validate_hubert(model, loader, device, dtype)
-        results.append({"step": step, "group": group} | losses)
-        with Path(output).open("ab") as f:
-            f.write(orjson.dumps({"step": step, "group": group} | losses, option=orjson.OPT_APPEND_NEWLINE))
+    done = read_validation_losses(output, group)
+    steps = {path: int(path.stem.removeprefix("step_")) for path in paths}
+    results = [done[step] for step in steps.values() if step in done]
+    if pending := [path for path, step in steps.items() if step not in done]:
+        kmeans = joblib.load(Path(checkpoints) / "kmeans.joblib")
+        with (
+            NamedTemporaryFile(suffix=".csv") as temp_manifest,
+            NamedTemporaryFile(suffix=".jsonl") as new_manifest,
+            TemporaryDirectory(prefix="features-", dir=checkpoints) as temp_features,
+        ):
+            patch_manifest_with_paths(manifest, temp_manifest.name)
+            compute_and_save_hubert_features(temp_manifest.name, temp_features, pretrained, target_layer)
+            patch_manifest_with_units(temp_manifest.name, new_manifest.name, temp_features, kmeans)
+            cfg = replace(hubert_ft_data_config(new_manifest.name), persistent_workers=False)
+            loader = build_dataloader_with_labels(cfg, MaskingConfig())
+        for path in tqdm(pending):
+            model = HuBERTPretrain.from_pretrained(path).to(device)
+            # Same masks and crops for every checkpoint
+            loader.generator.manual_seed(seed)  # ty: ignore[unresolved-attribute]
+            losses = validate_hubert(model, loader, device, dtype)
+            results.append({"step": steps[path], "group": group} | losses)
+            with Path(output).open("ab") as f:
+                f.write(orjson.dumps({"step": steps[path], "group": group} | losses, option=orjson.OPT_APPEND_NEWLINE))
 
     best_step = (
         pl.DataFrame(results).sort("step").filter(pl.col("loss") == pl.col("loss").min()).tail(1).to_dicts()[0]["step"]

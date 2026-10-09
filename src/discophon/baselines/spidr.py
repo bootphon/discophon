@@ -34,6 +34,7 @@ from discophon.baselines.utils import (
     link_best_checkpoint,
     patch_manifest_with_paths,
     read_completed_fileids,
+    read_validation_losses,
     spidr_ft_data_config,
     tristage_scheduler,
 )
@@ -178,7 +179,8 @@ def validate_all_spidr_checkpoints(
 ) -> None:
     """Compute the validation loss of every checkpoint of a SpidR finetuning, and link the best one to `best.pt`.
 
-    Every checkpoint is evaluated with the same masks and crops.
+    Every checkpoint is evaluated with the same masks and crops. The checkpoints already validated on the same
+    manifest in `output` are skipped, and their losses are reused to choose the best one.
 
     Args:
         output: JSONL file to which the losses of each checkpoint are appended
@@ -195,24 +197,26 @@ def validate_all_spidr_checkpoints(
     setup_environment()
     device = torch.device("cuda")
     dtype = torch.bfloat16 if torch.cuda.get_device_capability() >= (8, 0) else torch.float16
-    with NamedTemporaryFile(suffix=".csv") as tempfile:
-        patch_manifest_with_paths(manifest, tempfile.name)
-        cfg = replace(spidr_ft_data_config(tempfile.name), persistent_workers=False)
-        loader = build_dataloader(cfg, MaskingConfig())
     paths = sorted(Path(checkpoints).glob("step_*.pt"))
     if not paths:
         raise ValueError(f"No step checkpoints found in {checkpoints}")
     group = Path(manifest).stem.removeprefix("manifest-")
-    results = []
-    for path in tqdm(paths):
-        step = int(path.stem.removeprefix("step_"))
-        model = build_model(model_type="spidr", checkpoint=path).to(device)
-        # Same masks and crops for every checkpoint
-        loader.generator.manual_seed(seed)  # ty: ignore[unresolved-attribute]
-        losses = validate_spidr(model, loader, device, dtype)
-        results.append({"step": step, "group": group} | losses)
-        with Path(output).open("ab") as f:
-            f.write(orjson.dumps({"step": step, "group": group} | losses, option=orjson.OPT_APPEND_NEWLINE))
+    done = read_validation_losses(output, group)
+    steps = {path: int(path.stem.removeprefix("step_")) for path in paths}
+    results = [done[step] for step in steps.values() if step in done]
+    if pending := [path for path, step in steps.items() if step not in done]:
+        with NamedTemporaryFile(suffix=".csv") as tempfile:
+            patch_manifest_with_paths(manifest, tempfile.name)
+            cfg = replace(spidr_ft_data_config(tempfile.name), persistent_workers=False)
+            loader = build_dataloader(cfg, MaskingConfig())
+        for path in tqdm(pending):
+            model = build_model(model_type="spidr", checkpoint=path).to(device)
+            # Same masks and crops for every checkpoint
+            loader.generator.manual_seed(seed)  # ty: ignore[unresolved-attribute]
+            losses = validate_spidr(model, loader, device, dtype)
+            results.append({"step": steps[path], "group": group} | losses)
+            with Path(output).open("ab") as f:
+                f.write(orjson.dumps({"step": steps[path], "group": group} | losses, option=orjson.OPT_APPEND_NEWLINE))
 
     best_step = (
         pl.DataFrame(results).sort("step").filter(pl.col("loss") == pl.col("loss").min()).tail(1).to_dicts()[0]["step"]
