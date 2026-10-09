@@ -19,7 +19,6 @@ classifiers = [
 ]
 dependencies = [
   "filelock>=3.20.2",
-  "joblib>=1.5.3",
   "numba>=0.63.1",
   "numpy>=2.3.5",
   "polars>=1.36.1",
@@ -43,6 +42,7 @@ abx = [
   "fastabx>=0.8.0",
 ]
 baselines = [
+  "joblib>=1.5.3",
   "minimal-hubert>=0.0.8",
   "orjson>=3.11.5",
   "scikit-learn>=1.8.0",

@@ -5,7 +5,6 @@ from itertools import chain, groupby
 
 import numba
 import numpy as np
-from joblib import Parallel, delayed
 
 from discophon.data import Phones
 from discophon.validate import validate_first_two_arguments_same_keys
@@ -54,7 +53,7 @@ def _edit_distance_and_length(predicted: Sequence[str], gold: Sequence[str]) -> 
 
 
 @validate_first_two_arguments_same_keys
-def phone_error_rate(predicted_phones_from_units: Phones, gold_phones: Phones, *, n_jobs: int = -1) -> float:
+def phone_error_rate(predicted_phones_from_units: Phones, gold_phones: Phones) -> float:
     """Phone error rate.
 
     Total edit distances divided by the total length of the target annotations.
@@ -63,7 +62,6 @@ def phone_error_rate(predicted_phones_from_units: Phones, gold_phones: Phones, *
         predicted_phones_from_units: Predicted phones obtained with
             [`phone_assignments`][discophon.evaluate.phone_assignments]
         gold_phones: Gold phone annotations
-        n_jobs: The maximum number of concurrently runnings jobs to be passed to [`joblib.Parallel`][]
 
     Returns:
         Phone error rate. Multiply it by 100 to get a percentage.
@@ -76,9 +74,9 @@ def phone_error_rate(predicted_phones_from_units: Phones, gold_phones: Phones, *
         raise ValueError("No files to evaluate: the predicted and gold phones are empty.")
     if empty := sorted(f for f in gold_phones if not gold_phones[f] or not predicted_phones_from_units[f]):
         raise ValueError(f"Empty predicted or gold sequences for {len(empty)} files, such as {empty[:5]}.")
-    results = Parallel(n_jobs=n_jobs)(
-        delayed(_edit_distance_and_length)(predicted_phones_from_units[fileid], gold_phones[fileid])
-        for fileid in predicted_phones_from_units
-    )
-    edit_distances, lengths = zip(*results, strict=True)
-    return sum(edit_distances) / sum(lengths)
+    total_distance, total_length = 0, 0
+    for fileid, gold in gold_phones.items():
+        distance, length = _edit_distance_and_length(predicted_phones_from_units[fileid], gold)
+        total_distance += distance
+        total_length += length
+    return total_distance / total_length

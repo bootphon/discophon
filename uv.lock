@@ -690,7 +690,6 @@ name = "discophon"
 source = { editable = "." }
 dependencies = [
     { name = "filelock" },
-    { name = "joblib" },
     { name = "numba" },
     { name = "numpy" },
     { name = "polars" },
@@ -706,6 +705,7 @@ abx = [
     { name = "fastabx" },
 ]
 baselines = [
+    { name = "joblib" },
     { name = "minimal-hubert" },
     { name = "orjson" },
     { name = "scikit-learn" },
@@ -741,7 +741,7 @@ requires-dist = [
     { name = "datacollective", marker = "extra == 'prepare'", specifier = ">=0.6.4" },
     { name = "fastabx", marker = "extra == 'abx'", specifier = ">=0.8.0" },
     { name = "filelock", specifier = ">=3.20.2" },
-    { name = "joblib", specifier = ">=1.5.3" },
+    { name = "joblib", marker = "extra == 'baselines'", specifier = ">=1.5.3" },
     { name = "minimal-hubert", marker = "extra == 'baselines'", specifier = ">=0.0.8" },
     { name = "numba", specifier = ">=0.63.1" },
     { name = "numpy", specifier = ">=2.3.5" },
