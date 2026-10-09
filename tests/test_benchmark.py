@@ -66,17 +66,18 @@ def test_available_languages_and_splits_for_units(tmp_path: Path) -> None:
     assert (get_language("eng"), "train-10h") in found
 
 
-def test_available_languages_and_splits_for_units_skips_unknown_languages(tmp_path: Path) -> None:
+@pytest.mark.parametrize("name", ["units-old-dev.jsonl", "units-german-dev.jsonl", "units-deu_dev.jsonl"])
+def test_available_languages_and_splits_for_units_rejects_unknown_languages(tmp_path: Path, name: str) -> None:
     (tmp_path / units_filename(get_language("deu"), "dev")).touch()
-    (tmp_path / "units-old-dev.jsonl").touch()
-    assert available_languages_and_splits_for_units(tmp_path) == [(get_language("deu"), "dev")]
+    (tmp_path / name).touch()
+    with pytest.raises(ValueError, match=rf"Unknown language codes in .*: \['{name}'\]"):
+        available_languages_and_splits_for_units(tmp_path)
 
 
 def test_benchmark_discovery_raises_when_no_units(tmp_path: Path) -> None:
     dataset = build_valid_dataset(tmp_path / "dataset")
     units = tmp_path / "units"
     units.mkdir()
-    (units / "units-english-test.jsonl").touch()  # unknown language code
     (units / units_filename(get_language("deu"), "train-10h")).touch()  # not evaluated
     with pytest.raises(NoPredictionsError, match=r"units-\{code\}-\{split\}\.jsonl"):
         benchmark_discovery(dataset, units, kind="many-to-one")

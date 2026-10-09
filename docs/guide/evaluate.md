@@ -50,7 +50,7 @@ Each line of a JSONL file is a JSON object with exactly two fields: `file`, the 
 ```
 
 Each file must appear only once, otherwise reading the units fails. The benchmark evaluates every file
-named like this for a dev or test split, and fails if there is none.
+named like this for a dev or test split. It fails if there is none, or if a file has an unknown language code.
 
 ### Producing units from your own model
 

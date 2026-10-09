@@ -45,8 +45,13 @@ def available_languages_and_splits_for_units(
 ) -> list[tuple[Language, str]]:
     """List of languages and splits for which units are available."""
     found = [n.split("-") for n in sorted(p.stem for p in Path(path_units).glob(f"{prefix}*.jsonl"))]
-    codes = {language.iso_639_3 for language in all_languages()}  # Skip files of unknown languages
-    return [(get_language(p), "-".join(q)) for _, p, *q in found if p in codes]
+    codes = {language.iso_639_3 for language in all_languages()}
+    if unknown := ["-".join(parts) + ".jsonl" for parts in found if parts[1] not in codes]:
+        raise ValueError(
+            f"Unknown language codes in {path_units}: {unknown[:5]}. Name the files {prefix}{{code}}-{{split}}.jsonl, "
+            "with the ISO 639-3 code of a DiscoPhon language."
+        )
+    return [(get_language(p), "-".join(q)) for _, p, *q in found]
 
 
 def available_languages_and_splits_for_features(path_features: str | Path) -> list[tuple[Language, str]]:
