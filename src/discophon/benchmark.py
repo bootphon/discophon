@@ -27,6 +27,7 @@ from discophon.validate import validate_dataset_structure
 __all__ = ["NoPredictionsError", "benchmark_abx_continuous", "benchmark_abx_discrete", "benchmark_discovery"]
 
 EVALUATED_SPLITS = {"dev", "test"}
+KNOWN_SPLITS = EVALUATED_SPLITS | {"train-10min", "train-1h", "train-10h"}
 
 
 class NoPredictionsError(FileNotFoundError):
@@ -52,6 +53,11 @@ def available_languages_and_splits_for_units(
             f"Unknown language codes in {path_units}: {unknown[:5]}. Name the files {prefix}{{code}}-{{split}}.jsonl, "
             "with the ISO 639-3 code of a DiscoPhon language."
         )
+    if unknown := ["-".join(parts) + ".jsonl" for parts in found if "-".join(parts[2:]) not in KNOWN_SPLITS]:
+        raise ValueError(
+            f"Unknown splits in {path_units}: {unknown[:5]}. Name the files {prefix}{{code}}-{{split}}.jsonl, "
+            f"with a split among {sorted(KNOWN_SPLITS)}."
+        )
     return [(get_language(p), "-".join(q)) for _, p, *q in found]
 
 
@@ -63,6 +69,11 @@ def available_languages_and_splits_for_features(path_features: str | Path) -> li
         raise ValueError(
             f"Unknown language codes in {path_features}: {unknown[:5]}. Name the directories {{code}}/{{split}}/, "
             "with the ISO 639-3 code of a DiscoPhon language."
+        )
+    if unknown := sorted({f"{p.parent.name}/{p.name}" for p in found if p.name not in KNOWN_SPLITS}):
+        raise ValueError(
+            f"Unknown splits in {path_features}: {unknown[:5]}. Name the directories {{code}}/{{split}}/, "
+            f"with a split among {sorted(KNOWN_SPLITS)}."
         )
     return [(get_language(p.parent.name), p.name) for p in found]
 

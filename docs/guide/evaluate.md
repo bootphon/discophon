@@ -42,15 +42,16 @@ units/
 The filenames should be in the format `units-{language}-{split}.jsonl`, where `language` is the language code[^1],
 and `split` is the dataset split (`test` or `dev`).
 
-Each line of a JSONL file is a JSON object with exactly two fields: `file`, the audio file id (a `str`), and
-`units`, the sequence of discrete units for that file (a `list[int]`):
+Each line of a JSONL file is a JSON object with two required fields: `file`, the audio file id (a `str`), and
+`units`, the sequence of discrete units for that file (a `list[int]`). Other fields are ignored:
 
 ```json
 {"file": "0188-135249-0001", "units": [12, 12, 45, 3, 3, 3, 78]}
 ```
 
 Each file must appear only once, otherwise reading the units fails. The benchmark evaluates every file
-named like this for a dev or test split. It fails if there is none, or if a file has an unknown language code.
+named like this for a dev or test split. It fails if there is none, or if a file has an unknown language code
+or split (`dev`, `test`, `train-10min`, `train-1h`, or `train-10h`).
 
 ### Producing units from your own model
 
@@ -227,7 +228,7 @@ Or via the CLI:
 
 ```console
 ❯ python -m discophon.abx --help
-usage: discophon.abx [-h] --frequency FREQUENCY [--kind {triphone,phoneme}] item root
+usage: discophon.abx [-h] [--step-units STEP_UNITS] [--kind {triphone,phoneme}] item root
 
 Continuous or discrete ABX
 
@@ -237,8 +238,9 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
-  --frequency FREQUENCY
-                        Required. Units frequency in Hz (default: None)
+  --step-units STEP_UNITS
+                        Step in ms between units or features. 'frequency' is then set to 1000 / step_units. (default:
+                        20)
   --kind {triphone,phoneme}
                         Triphone- or phoneme-based ABX (default: triphone)
 ```

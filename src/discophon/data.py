@@ -232,6 +232,8 @@ def decimal_series_is_integer(series: pl.Series) -> bool:
 
 def read_gold_annotations_as_dataframe(source: str | Path) -> pl.DataFrame:
     df = pl.read_csv(source, separator=" ", columns=[FILE, ONSET, OFFSET, PHONE], schema_overrides=[pl.String] * 4)
+    if df.null_count().sum_horizontal().item():
+        raise ValueError("Invalid annotations: file IDs, onsets, offsets, and phones must not be null.")
     return df.with_columns(
         df[ONSET].str.to_decimal(inference_length=len(df)),
         df[OFFSET].str.to_decimal(inference_length=len(df)),
@@ -282,7 +284,9 @@ def read_gold_annotations(source: str | Path, *, step_in_ms: int = STEP_PHONES) 
 
 
 def read_submitted_units(source: str | Path) -> Units:
-    """Read the units from a JSONL file. Must only have fields named `file` ([`str`][]) and `units` (`list[int]`).
+    """Read the units from a JSONL file. Requires fields named `file` ([`str`][]) and `units` (`list[int]`).
+
+    Other fields are ignored.
 
     Arguments:
         source: Path to the units file

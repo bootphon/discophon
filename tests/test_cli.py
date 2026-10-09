@@ -1,6 +1,7 @@
 """Smoke tests for the command-line entry points (argument wiring, end-to-end I/O)."""
 
 import json
+from decimal import Decimal
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -106,8 +107,19 @@ def test_evaluate_cli_rejects_invalid_targets(
 def test_abx_cli_rejects_unknown_inputs(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     abx_cli = pytest.importorskip("discophon.abx").cli
     with pytest.raises(SystemExit):
-        abx_cli([str(tmp_path / "triphone.item"), str(tmp_path / "units.txt"), "--frequency", "50"])
+        abx_cli([str(tmp_path / "triphone.item"), str(tmp_path / "units.txt")])
     assert "Expected a directory of features or a .jsonl units file" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(("step_units", "frequency"), [("20", Decimal(50)), ("30", Decimal(1_000) / 30)])
+def test_abx_cli_uses_the_exact_frequency(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, step_units: str, frequency: Decimal
+) -> None:
+    abx = pytest.importorskip("discophon.abx")
+    discrete = MagicMock(return_value={"within_speaker": 0.0, "across_speaker": 0.0})
+    monkeypatch.setattr(abx, "discrete_abx", discrete)
+    abx.cli([str(tmp_path / "triphone.item"), str(tmp_path / "units.jsonl"), "--step-units", step_units])
+    assert discrete.call_args.kwargs["frequency"] == frequency
 
 
 def parse_abx_output(output: str) -> dict[str, float]:
@@ -122,8 +134,8 @@ def test_abx_cli_uses_units_files_and_feature_directories(tmp_path: Path, capsys
         [
             str(dataset / "item" / "phoneme-deu-dev.item"),
             str(predictions / "units-deu-dev.jsonl"),
-            "--frequency",
-            "50",
+            "--step-units",
+            "20",
             "--kind",
             "phoneme",
         ]
@@ -134,7 +146,7 @@ def test_abx_cli_uses_units_files_and_feature_directories(tmp_path: Path, capsys
         "within_speaker_any_context": 0.0,
         "across_speaker_any_context": 100.0,
     }
-    abx_cli([str(dataset / "item" / "triphone-deu-dev.item"), str(predictions / "deu" / "dev"), "--frequency", "50"])
+    abx_cli([str(dataset / "item" / "triphone-deu-dev.item"), str(predictions / "deu" / "dev")])
     assert parse_abx_output(capsys.readouterr().out) == {"within_speaker": 0.0, "across_speaker": 100.0}
 
 

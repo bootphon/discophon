@@ -10,6 +10,8 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Literal, TypedDict, overload
 
+from discophon.data import STEP_UNITS
+
 try:
     from fastabx import Dataset, Score, Subsampler, Task
     from fastabx.distance import DistanceName
@@ -65,7 +67,7 @@ def discrete_abx(
     path_units: str | Path,
     *,
     frequency: int | Decimal,
-    kind: Literal["triphone"],
+    kind: Literal["triphone"] = ...,
 ) -> TriphoneABX: ...
 
 
@@ -125,7 +127,7 @@ def continuous_abx(
     path_features: str | Path,
     *,
     frequency: int | Decimal,
-    kind: Literal["triphone"],
+    kind: Literal["triphone"] = ...,
 ) -> TriphoneABX: ...
 
 
@@ -192,7 +194,12 @@ def cli(argv: list[str] | None = None) -> None:
         type=Path,
         help="Path to the JSONL with units or directory with continuous features",
     )
-    parser.add_argument("--frequency", required=True, type=int, help="Required. Units frequency in Hz")
+    parser.add_argument(
+        "--step-units",
+        type=int,
+        default=STEP_UNITS,
+        help="Step in ms between units or features. 'frequency' is then set to 1000 / step_units.",
+    )
     parser.add_argument(
         "--kind",
         type=str,
@@ -201,10 +208,11 @@ def cli(argv: list[str] | None = None) -> None:
         help="Triphone- or phoneme-based ABX",
     )
     args = parser.parse_args(argv)
+    frequency = Decimal(1_000) / args.step_units
     if args.root.is_dir():
-        scores = continuous_abx(args.item, args.root, frequency=args.frequency, kind=args.kind)
+        scores = continuous_abx(args.item, args.root, frequency=frequency, kind=args.kind)
     elif args.root.suffix == ".jsonl":
-        scores = discrete_abx(args.item, args.root, frequency=args.frequency, kind=args.kind)
+        scores = discrete_abx(args.item, args.root, frequency=frequency, kind=args.kind)
     else:
         parser.error(f"Expected a directory of features or a .jsonl units file, got {args.root}")
     print("\n".join(f"{key}:\t{score:.2%}" for key, score in scores.items()))

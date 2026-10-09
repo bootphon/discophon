@@ -35,6 +35,16 @@ from discophon.languages import get_language
 GERMAN = get_language("german")
 
 
+@pytest.mark.parametrize("column", range(4))
+def test_read_gold_annotations_rejects_null_fields(tmp_path: Path, column: int) -> None:
+    fields = ["f", "0.02", "0.04", "b"]
+    fields[column] = ""
+    path = tmp_path / "alignment.txt"
+    path.write_text("#file onset offset #phone\nf 0 0.02 a\n" + " ".join(fields) + "\n")
+    with pytest.raises(ValueError, match="must not be null"):
+        read_gold_annotations(path)
+
+
 def test_filename_helpers() -> None:
     assert units_filename(GERMAN, "dev") == "units-deu-dev.jsonl"
     assert alignment_filename(GERMAN, "test") == "alignment-deu-test.txt"

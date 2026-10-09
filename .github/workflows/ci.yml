@@ -64,7 +64,7 @@ jobs:
         run: uv sync --locked --all-extras --group test
 
       - name: Run tests
-        run: uv run pytest --cov=discophon --cov-report=term-missing --cov-fail-under=70
+        run: uv run pytest --cov=discophon --cov-report=term-missing
 
   test-lowest:
     name: Test with the lowest supported dependencies

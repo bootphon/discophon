@@ -377,6 +377,12 @@ def served_benchmark(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterato
         info = tarfile.TarInfo("discophon_data/manifest/speakers.jsonl")
         info.size = 2
         tar.addfile(info, io.BytesIO(b"{}"))
+        info = tarfile.TarInfo("discophon_data/audio/deu/all/a.wav")
+        info.size = 3
+        tar.addfile(info, io.BytesIO(b"wav"))
+        link = tarfile.TarInfo("discophon_data/audio/deu/dev/a.wav")  # The splits link to the files of `all`
+        link.type, link.linkname = tarfile.SYMTYPE, "../all/a.wav"
+        tar.addfile(link)
     server = ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(RangeHandler, directory=archive.parent))
     threading.Thread(target=server.serve_forever, daemon=True).start()
     monkeypatch.setattr(RangeHandler, "requested_ranges", [])
@@ -393,6 +399,15 @@ def test_download_benchmark_extracts_archive(tmp_path: Path) -> None:
     prepare.cli(["download", str(tmp_path / "data")])
     assert (tmp_path / "data" / "manifest" / "speakers.jsonl").read_text() == "{}"
     assert not (tmp_path / "data" / "discophon_data.tar.gz").exists()
+
+
+@pytest.mark.usefixtures("served_benchmark")
+def test_download_benchmark_keeps_split_symlinks(tmp_path: Path) -> None:
+    prepare.download_benchmark(tmp_path / "data")
+    link = tmp_path / "data" / "audio" / "deu" / "dev" / "a.wav"
+    assert link.is_symlink()
+    assert link.readlink() == Path("../all/a.wav")
+    assert link.resolve() == (tmp_path / "data" / "audio" / "deu" / "all" / "a.wav").resolve()
 
 
 @pytest.mark.usefixtures("served_benchmark")

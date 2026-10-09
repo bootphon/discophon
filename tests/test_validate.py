@@ -145,6 +145,13 @@ def test_validate_dataset_structure_rejects_missing_audio_split(tmp_path: Path) 
         validate_dataset_structure(root)
 
 
+def test_validate_dataset_structure_rejects_wrong_audio_language(tmp_path: Path) -> None:
+    root = build_valid_dataset(tmp_path)
+    (root / "audio" / "deu").rename(root / "audio" / "unknown")
+    with pytest.raises(DatasetError, match=r"missing \['deu'\], unexpected \['unknown'\]"):
+        validate_dataset_structure(root)
+
+
 def test_validate_dataset_structure_rejects_audio_split_file(tmp_path: Path) -> None:
     root = build_valid_dataset(tmp_path)
     split = next((root / "audio").glob("*/all"))

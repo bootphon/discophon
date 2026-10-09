@@ -93,13 +93,15 @@ def validate_dataset_structure(path: str | Path) -> None:
         raise DatasetError(root / "manifest", found, expected)
     audio_languages = list((root / "audio").glob(visible))
     found, expected = {p.name for p in audio_languages}, {lang.iso_639_3 for lang in languages}
-    if found != expected or (not_dirs := [p.name for p in audio_languages if not p.is_dir()]):
+    not_dirs = [p.name for p in audio_languages if not p.is_dir()]
+    if found != expected or not_dirs:
         raise DatasetError(root / "audio", found, expected, not_dirs)
     expected = {"all", "dev", "test", "train-10h", "train-10min", "train-1h"}
     for lang in languages:
         audio_splits = list((root / "audio" / lang.iso_639_3).glob(visible))
         found = {p.name for p in audio_splits}
-        if found != expected or (not_dirs := [p.name for p in audio_splits if not p.is_dir()]):
+        not_dirs = [p.name for p in audio_splits if not p.is_dir()]
+        if found != expected or not_dirs:
             raise DatasetError(root / "audio" / lang.iso_639_3, found, expected, not_dirs)
 
 

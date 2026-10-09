@@ -77,6 +77,14 @@ def test_available_languages_and_splits_for_units_rejects_unknown_languages(tmp_
         available_languages_and_splits_for_units(tmp_path)
 
 
+@pytest.mark.parametrize("name", ["units-deu-valid.jsonl", "units-deu-dev2.jsonl", "units-deu.jsonl"])
+def test_available_languages_and_splits_for_units_rejects_unknown_splits(tmp_path: Path, name: str) -> None:
+    (tmp_path / units_filename(get_language("deu"), "dev")).touch()
+    (tmp_path / name).touch()
+    with pytest.raises(ValueError, match=rf"Unknown splits in .*: \['{name}'\]"):
+        available_languages_and_splits_for_units(tmp_path)
+
+
 def test_available_languages_and_splits_for_features(tmp_path: Path) -> None:
     (tmp_path / "deu" / "dev").mkdir(parents=True)
     (tmp_path / "eng" / "train-10h").mkdir(parents=True)
@@ -91,6 +99,14 @@ def test_available_languages_and_splits_for_features_rejects_unknown_languages(t
     (tmp_path / "deu" / "dev").mkdir(parents=True)
     (tmp_path / name / "dev").mkdir(parents=True)
     with pytest.raises(ValueError, match=rf"Unknown language codes in .*: \['{name}'\]"):
+        available_languages_and_splits_for_features(tmp_path)
+
+
+@pytest.mark.parametrize("name", ["valid", "dev2", "all"])
+def test_available_languages_and_splits_for_features_rejects_unknown_splits(tmp_path: Path, name: str) -> None:
+    (tmp_path / "deu" / "dev").mkdir(parents=True)
+    (tmp_path / "deu" / name).mkdir(parents=True)
+    with pytest.raises(ValueError, match=rf"Unknown splits in .*: \['deu/{name}'\]"):
         available_languages_and_splits_for_features(tmp_path)
 
 

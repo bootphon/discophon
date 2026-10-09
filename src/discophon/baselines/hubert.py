@@ -144,6 +144,7 @@ def finetune_hubert(  # ruff: ignore[too-many-locals, too-many-statements]
         )
         ckpt = Checkpointer(rundir, SAVE_INTERVAL)
         ckpt.init_state(model=model, optimizer=optimizer, scheduler=scheduler, scaler=scaler)
+        ckpt.load_existing_run()
         step, epoch = int(ckpt.step), int(ckpt.epoch)
         stack.callback(lambda: ckpt.save(step, epoch))
         meters = AverageMeters(["loss", "grad_norm", "batch_size", "feature_loss"], device=device)

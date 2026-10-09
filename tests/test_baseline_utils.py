@@ -155,7 +155,12 @@ def test_hubert_finetuning_resumes_with_the_same_targets(tmp_path: Path, monkeyp
     monkeypatch.setattr(hubert.torch.cuda, "get_device_capability", lambda: (8, 0))
     pretrained = hubert_pretrain.from_pretrained.return_value
     pretrained.logit_generator.label_embeddings = torch.zeros(4, 3)  # pretrained on 4 targets, with final_dim 3
-    checkpointer.return_value.step = hubert.ft_optimizer_config().max_steps  # skip the training loop
+
+    def restore_run() -> None:
+        checkpointer.return_value.step = hubert.ft_optimizer_config().max_steps  # skip the training loop
+
+    checkpointer.return_value.init_state.side_effect = lambda **_: setattr(checkpointer.return_value, "step", None)
+    checkpointer.return_value.load_existing_run.side_effect = restore_run
     checkpointer.return_value.epoch = 0
     patch = MagicMock(side_effect=lambda _src, dest, *_: Path(dest).write_text("{}", encoding="utf-8"))
     monkeypatch.setattr(hubert, "patch_manifest_with_units", patch)
@@ -168,6 +173,7 @@ def test_hubert_finetuning_resumes_with_the_same_targets(tmp_path: Path, monkeyp
     assert patch.call_count == 1
     assert manifest.read_text(encoding="utf-8") == "{}"
     assert build_loader.call_count == 2
+    assert checkpointer.return_value.load_existing_run.call_count == 2
     assert all(c.args[0].manifest == str(manifest) for c in build_loader.call_args_list)
     hubert_pretrain.from_pretrained.assert_called_with(tmp_path / "it2.pt")
     # New label embeddings for the new targets, initialized uniformly in [0, 1)

@@ -76,8 +76,13 @@ units_from_interm = kmeans.predict(hidden_states[layer - 1].squeeze(0).detach().
 
     ```python
     from minimal_hubert import HuBERT, HuBERTPretrain
+    from torch.nn import functional as F
+    from torchcodec.decoders import WavDecoder
 
-    model = HuBERT.from_pretrained("coml/hubert-base-vp20")
+    wav = WavDecoder("/path/to/file.wav").get_all_samples().data  # (1, num_samples), 16 kHz mono
+    wav = F.layer_norm(wav, wav.shape)  # Normalized like in the extraction functions of discophon
+
+    model = HuBERT.from_pretrained("coml/hubert-base-vp20").eval()
     model_from_pretraining = HuBERTPretrain.from_pretrained(
         "https://huggingface.co/coml/hubert-base-vp20/resolve/main/it2.pt"
     )
