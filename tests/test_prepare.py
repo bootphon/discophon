@@ -89,6 +89,12 @@ class FakeMDC:
         return target
 
 
+@pytest.fixture(autouse=True)
+def fake_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Never use the API key of the environment."""
+    monkeypatch.setenv("MDC_API_KEY", "key")
+
+
 @pytest.fixture
 def mdc(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> FakeMDC:
     fake = FakeMDC(make_release(tmp_path / "release.tar.gz", ["a", "b", "c"]))
@@ -296,15 +302,55 @@ def test_cli_commonvoice_fails_fast_on_missing_terms(
     dataset: Path, mdc: FakeMDC, monkeypatch: pytest.MonkeyPatch, *, check_only: bool
 ) -> None:
     def deny(languages: list[str]) -> list[DatasetDetails]:
-        assert languages == ["swa", "tam"]
+        assert languages == ["swa"]
         return [DatasetDetails(id="new", name=RELEASE, datasetUrl="https://mdc/datasets/new")]
 
     monkeypatch.setattr(prepare, "inaccessible_releases", deny)
     monkeypatch.setattr(prepare, "check_commonvoice", lambda *_: pytest.fail("checked before terms"))
     with pytest.raises(SystemExit) as error:
-        prepare.cli(["commonvoice", str(dataset), "swa", "tam", *(["--check-only"] if check_only else [])])
+        prepare.cli(["commonvoice", str(dataset), "swa", *(["--check-only"] if check_only else [])])
     assert f"{RELEASE}: https://mdc/datasets/new" in str(error.value.code)
     assert mdc.downloads == 0
+
+
+def prepare_all_clips(dataset: Path) -> None:
+    for fileid in ["a", "b", "c"]:
+        (dataset / "audio" / "swa" / "all" / f"{fileid}.wav").write_bytes(EXISTING)
+
+
+def test_cli_commonvoice_skips_prepared_languages_without_api_key(
+    dataset: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # A new release with unaccepted terms, or no API key, must not block a language that is already prepared
+    prepare_all_clips(dataset)
+    monkeypatch.delenv("MDC_API_KEY")
+    monkeypatch.setattr(prepare, "latest_release", lambda _: pytest.fail("no request for a prepared language"))
+    prepare.cli(["commonvoice", str(dataset), "swa"])
+    assert "swa: all clips prepared" in capsys.readouterr().out
+
+
+def test_cli_commonvoice_check_only_rechecks_prepared_languages(
+    dataset: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    prepare_all_clips(dataset)
+    terms, checked = [], []
+    monkeypatch.setattr(prepare, "inaccessible_releases", lambda languages: terms.extend(languages) or [])
+    monkeypatch.setattr(
+        prepare, "check_commonvoice", lambda _, code: checked.append(code) or SimpleNamespace(name=RELEASE)
+    )
+    prepare.cli(["commonvoice", str(dataset), "swa", "--check-only"])
+    assert terms == checked == ["swa"]
+    assert f"swa: all clips found in {RELEASE}" in capsys.readouterr().out
+
+
+def test_cli_commonvoice_requires_api_key_to_prepare(
+    dataset: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.delenv("MDC_API_KEY")
+    monkeypatch.setattr(prepare, "inaccessible_releases", lambda _: pytest.fail("no request without an API key"))
+    with pytest.raises(SystemExit):
+        prepare.cli(["commonvoice", str(dataset), "swa"])
+    assert "Set `MDC_API_KEY`" in capsys.readouterr().err
 
 
 @pytest.mark.usefixtures("served_release")

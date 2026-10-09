@@ -98,6 +98,12 @@ def needed_clips(path_dataset: Path, language: Language) -> set[str]:
     return set(pl.concat([pl.read_csv(path) for path in manifests])["fileid"].to_list())
 
 
+def remaining_clips(path_dataset: Path, language: Language) -> set[str]:
+    """Return the identifiers of the files of `language` listed in the manifests, but not converted to WAV yet."""
+    dest = path_dataset / "audio" / language.iso_639_3 / "all"
+    return {fileid for fileid in needed_clips(path_dataset, language) if not (dest / f"{fileid}.wav").is_file()}
+
+
 def latest_release(language: Language) -> DatasetDetails:
     """Find the latest Common Voice Scripted Speech release of `language` on Mozilla Data Collective."""
     cv_code = ISO6393_TO_CV[language.iso_639_3]
@@ -276,7 +282,10 @@ def cli(argv: list[str] | None = None) -> None:
             download_benchmark(args.data)
         case "commonvoice":
             languages = args.languages or codes
-            if denied := inaccessible_releases(languages):
+            pending = [code for code in languages if args.check_only or remaining_clips(args.data, get_language(code))]
+            if pending and not os.environ.get("MDC_API_KEY"):
+                parser.error("Missing API key. Set `MDC_API_KEY` to your Mozilla Data Collective key.")
+            if denied := inaccessible_releases(pending):
                 sys.exit(
                     "Accept the terms of these releases on Mozilla Data Collective, then rerun:\n"
                     + "\n".join(f"  {release.name}: {release.datasetUrl}" for release in denied)
