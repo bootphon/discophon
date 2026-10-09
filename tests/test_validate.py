@@ -122,8 +122,13 @@ def test_validate_dataset_structure_rejects_missing_top_level_dir(tmp_path: Path
 def test_validate_dataset_structure_rejects_unexpected_extra_file(tmp_path: Path) -> None:
     root = build_valid_dataset(tmp_path)
     (root / "manifest" / "unexpected.csv").touch()
-    with pytest.raises(DatasetError, match=str(root.resolve() / "manifest")):
+    (root / "manifest" / "manifest-deu-dev.csv").unlink()
+    with pytest.raises(DatasetError) as error:
         validate_dataset_structure(root)
+    assert str(error.value) == (
+        f"Invalid discophon dataset structure in {root.resolve() / 'manifest'}: "
+        "missing ['manifest-deu-dev.csv'], unexpected ['unexpected.csv']."
+    )
 
 
 def test_validate_dataset_structure_ignores_hidden_files(tmp_path: Path) -> None:
@@ -145,5 +150,5 @@ def test_validate_dataset_structure_rejects_audio_split_file(tmp_path: Path) -> 
     split = next((root / "audio").glob("*/all"))
     split.rmdir()
     split.touch()
-    with pytest.raises(DatasetError):
+    with pytest.raises(DatasetError, match=r"not directories \['all'\]"):
         validate_dataset_structure(root)

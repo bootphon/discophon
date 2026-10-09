@@ -54,40 +54,53 @@ def validate_first_two_arguments_same_keys[R, **P](func: Callable[P, R]) -> Call
 class DatasetError(ValueError):
     """Raised when the structure is wrong."""
 
-    def __init__(self, directory: Path) -> None:
-        super().__init__(f"Invalid discophon dataset structure in {directory}. Verify your file structure!")
+    def __init__(self, directory: Path, found: set[str], expected: set[str], not_dirs: Sequence[str] = ()) -> None:
+        details = [
+            f"{label} {sorted(names)}"
+            for label, names in [
+                ("missing", expected - found),
+                ("unexpected", found - expected),
+                ("not directories", set(not_dirs)),
+            ]
+            if names
+        ]
+        super().__init__(f"Invalid discophon dataset structure in {directory}: {', '.join(details)}.")
 
 
 def validate_dataset_structure(path: str | Path) -> None:
     root = Path(path).resolve()
     visible = "[!.]*"  # Ignore hidden files such as .DS_Store
     languages = all_languages()
-    if {p.name for p in root.glob(visible)} != {"alignment", "audio", "item", "manifest"}:
-        raise DatasetError(root)
-    if {p.name for p in (root / "alignment").glob(visible)} != set(
-        starmap(alignment_filename, product(languages, ["dev", "test"]))
-    ):
-        raise DatasetError(root / "alignment")
-    if {p.name for p in (root / "item").glob(visible)} != {
+    found, expected = {p.name for p in root.glob(visible)}, {"alignment", "audio", "item", "manifest"}
+    if found != expected:
+        raise DatasetError(root, found, expected)
+    found = {p.name for p in (root / "alignment").glob(visible)}
+    expected = set(starmap(alignment_filename, product(languages, ["dev", "test"])))
+    if found != expected:
+        raise DatasetError(root / "alignment", found, expected)
+    found = {p.name for p in (root / "item").glob(visible)}
+    expected = {
         item_filename(lang, split, kind=kind)
         for kind, lang, split in product(["triphone", "phoneme"], languages, ["dev", "test"])
-    }:
-        raise DatasetError(root / "item")
-    if {p.name for p in (root / "manifest").glob(visible)} != (
-        set(starmap(manifest_filename, product(languages, ["dev", "test", "train-10h", "train-10min", "train-1h"])))
-        | {"speakers.jsonl"}
-    ):
-        raise DatasetError(root / "manifest")
+    }
+    if found != expected:
+        raise DatasetError(root / "item", found, expected)
+    found = {p.name for p in (root / "manifest").glob(visible)}
+    expected = set(
+        starmap(manifest_filename, product(languages, ["dev", "test", "train-10h", "train-10min", "train-1h"]))
+    ) | {"speakers.jsonl"}
+    if found != expected:
+        raise DatasetError(root / "manifest", found, expected)
     audio_languages = list((root / "audio").glob(visible))
-    if {p.name for p in audio_languages} != {lang.iso_639_3 for lang in languages} or not all(
-        p.is_dir() for p in audio_languages
-    ):
-        raise DatasetError(root / "audio")
-    splits = {"all", "dev", "test", "train-10h", "train-10min", "train-1h"}
+    found, expected = {p.name for p in audio_languages}, {lang.iso_639_3 for lang in languages}
+    if found != expected or (not_dirs := [p.name for p in audio_languages if not p.is_dir()]):
+        raise DatasetError(root / "audio", found, expected, not_dirs)
+    expected = {"all", "dev", "test", "train-10h", "train-10min", "train-1h"}
     for lang in languages:
         audio_splits = list((root / "audio" / lang.iso_639_3).glob(visible))
-        if {p.name for p in audio_splits} != splits or not all(p.is_dir() for p in audio_splits):
-            raise DatasetError(root / "audio" / lang.iso_639_3)
+        found = {p.name for p in audio_splits}
+        if found != expected or (not_dirs := [p.name for p in audio_splits if not p.is_dir()]):
+            raise DatasetError(root / "audio" / lang.iso_639_3, found, expected, not_dirs)
 
 
 class NumberPhonemesError(ValueError):
