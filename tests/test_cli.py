@@ -108,3 +108,60 @@ def test_abx_cli_rejects_unknown_inputs(tmp_path: Path, capsys: pytest.CaptureFi
     with pytest.raises(SystemExit):
         abx_cli([str(tmp_path / "triphone.item"), str(tmp_path / "units.txt"), "--frequency", "50"])
     assert "Expected a directory of features or a .jsonl units file" in capsys.readouterr().err
+
+
+def parse_abx_output(output: str) -> dict[str, float]:
+    return {key: float(score.removesuffix("%")) for key, score in (line.split(":\t") for line in output.splitlines())}
+
+
+def test_abx_cli_uses_units_files_and_feature_directories(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    abx_cli = pytest.importorskip("discophon.abx").cli
+    dataset, predictions = build_valid_dataset(tmp_path / "dataset"), tmp_path / "predictions"
+    write_synthetic_split(dataset, predictions, swapped_speaker="s2")  # perfect within speakers, swapped across
+    abx_cli(
+        [
+            str(dataset / "item" / "phoneme-deu-dev.item"),
+            str(predictions / "units-deu-dev.jsonl"),
+            "--frequency",
+            "50",
+            "--kind",
+            "phoneme",
+        ]
+    )
+    assert parse_abx_output(capsys.readouterr().out) == {
+        "within_speaker_within_context": 0.0,
+        "across_speaker_within_context": 100.0,
+        "within_speaker_any_context": 0.0,
+        "across_speaker_any_context": 100.0,
+    }
+    abx_cli([str(dataset / "item" / "triphone-deu-dev.item"), str(predictions / "deu" / "dev"), "--frequency", "50"])
+    assert parse_abx_output(capsys.readouterr().out) == {"within_speaker": 0.0, "across_speaker": 100.0}
+
+
+@pytest.mark.parametrize(
+    ("args", "expected"),
+    [
+        (
+            ["--benchmark", "abx-discrete", "--abx-kind", "phoneme"],
+            {
+                "phoneme_abx_discrete_within_speaker_within_context": 0.0,
+                "phoneme_abx_discrete_across_speaker_within_context": 1.0,
+                "phoneme_abx_discrete_within_speaker_any_context": 0.0,
+                "phoneme_abx_discrete_across_speaker_any_context": 1.0,
+            },
+        ),
+        (
+            ["--benchmark", "abx-continuous"],
+            {"triphone_abx_continuous_within_speaker": 0.0, "triphone_abx_continuous_across_speaker": 1.0},
+        ),
+    ],
+)
+def test_benchmark_cli_abx(tmp_path: Path, args: list[str], expected: dict[str, float]) -> None:
+    pytest.importorskip("fastabx")
+    dataset, predictions = build_valid_dataset(tmp_path / "dataset"), tmp_path / "predictions"
+    write_synthetic_split(dataset, predictions, swapped_speaker="s2")
+    output = tmp_path / "scores.jsonl"
+    benchmark_cli([str(dataset), str(predictions), str(output), *args])
+    rows = [json.loads(line) for line in output.read_text(encoding="utf-8").splitlines()]
+    assert {(row["language"], row["split"]) for row in rows} == {("deu", "dev")}
+    assert {row["metric"]: row["score"] for row in rows} == expected

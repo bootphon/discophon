@@ -6,7 +6,14 @@ from functools import cache
 from importlib import resources
 from typing import Literal
 
-__all__ = ["Language", "get_language"]
+__all__ = [
+    "Language",
+    "Sonority",
+    "get_language",
+    "load_phonemes",
+    "load_sonority",
+    "load_tipa",
+]
 
 type Sonority = Literal[
     "fricative",
@@ -18,6 +25,7 @@ type Sonority = Literal[
     "monophthong",
     "diphthong",
 ]
+"""Sonority class of a phoneme: manner of articulation for consonants, and type of vowel."""
 
 
 @cache
@@ -26,14 +34,32 @@ def _load_asset(name: str) -> dict:
 
 
 def load_sonority() -> dict[str, Sonority]:
+    """Sonority class of each phoneme of the benchmark, for all languages.
+
+    Returns:
+        Mapping from each phoneme (in IPA) to its [`Sonority`][discophon.languages.Sonority] class.
+
+    """
     return _load_asset("sonority")
 
 
 def load_tipa() -> dict[str, str]:
+    r"""LaTeX code of each phoneme of the benchmark with the `tipa` package, for all languages.
+
+    Returns:
+        Mapping from each phoneme (in IPA) to its LaTeX code, such as `\textipa{S}` for `ʃ`.
+
+    """
     return _load_asset("tipa")
 
 
 def load_phonemes() -> dict[str, list[str]]:
+    """Phoneme inventory of each language of the benchmark.
+
+    Returns:
+        Mapping from the ISO 639-3 code of each language to its sorted list of phonemes (in IPA).
+
+    """
     return _load_asset("phonemes")
 
 

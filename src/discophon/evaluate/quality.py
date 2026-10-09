@@ -5,7 +5,20 @@ from xarray import DataArray
 
 
 def probability_phone_given_unit(cooccurrence: DataArray) -> DataArray:
-    """P(phone|unit) from a DataArray."""
+    """Probability of each phone given each unit, ordered to plot the correspondence between phones and units.
+
+    The units that never occur are dropped. The units are grouped by their most probable phone, in the order of
+    the phones in `cooccurrence`, and sorted by decreasing probability of that phone within each group, so that
+    the plot is close to diagonal.
+
+    Arguments:
+        cooccurrence: Cooccurrence matrix between units and phones, computed with
+            [`cooccurrence_matrix`][discophon.evaluate.cooccurrence_matrix]
+
+    Returns:
+        P(phone|unit), with dimensions `phone` and `unit`. Each column sums to one.
+
+    """
     cooccurrence = cooccurrence[:, cooccurrence.any(dim="phone")]
     proba = cooccurrence / cooccurrence.sum(dim="phone")
     most_probable_phones = proba.idxmax(dim="phone")

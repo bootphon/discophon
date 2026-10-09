@@ -1,12 +1,24 @@
 import json
+from itertools import pairwise
 from pathlib import Path
 from unittest.mock import MagicMock, call
 
+import numpy as np
+import polars as pl
 import pytest
+import soundfile as sf
 import torch
 
 from discophon.baselines import hubert, spidr
-from discophon.baselines.utils import link_best_checkpoint, read_completed_fileids
+from discophon.baselines.utils import (
+    DiscophonAudioDataset,
+    link_best_checkpoint,
+    patch_manifest_with_paths,
+    read_completed_fileids,
+    tristage_scheduler,
+)
+from discophon.data import SAMPLE_RATE, manifest_filename
+from discophon.languages import get_language
 
 
 def test_read_completed_fileids_supports_resuming_and_deduplicates(tmp_path: Path) -> None:
@@ -161,3 +173,65 @@ def test_hubert_finetuning_resumes_with_the_same_targets(tmp_path: Path, monkeyp
         0 <= pretrained.logit_generator.label_embeddings.min() <= pretrained.logit_generator.label_embeddings.max() < 1
     )
     assert pretrained.num_classes == 8
+
+
+def test_tristage_scheduler_warms_up_holds_and_decays() -> None:
+    optimizer = torch.optim.SGD([torch.zeros(1, requires_grad=True)], lr=1.0)
+    scheduler = tristage_scheduler(optimizer, warmup_steps=10, hold_steps=20, decay_steps=30)
+    lrs = []
+    for _ in range(60):
+        lrs.append(scheduler.get_last_lr()[0])
+        optimizer.step()
+        scheduler.step()
+    lrs.append(scheduler.get_last_lr()[0])
+    assert lrs[0] == pytest.approx(0.01)  # init_lr_scale
+    assert lrs[5] == pytest.approx(0.01 + 0.99 / 2)  # linear warmup
+    assert lrs[10:31] == pytest.approx([1.0] * 21)  # hold, until the decay starts
+    assert lrs[45] == pytest.approx(0.1)  # exponential decay, halfway between 1 and final_lr_scale
+    assert lrs[60] == pytest.approx(0.01)  # final_lr_scale
+    assert all(a > b for a, b in pairwise(lrs[30:]))
+
+
+def write_manifest(dataset: Path, split: str, fileids: list[str]) -> Path:
+    path = dataset / "manifest" / manifest_filename(get_language("deu"), split)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    pl.DataFrame({"fileid": fileids, "num_samples": [SAMPLE_RATE] * len(fileids)}).write_csv(path)
+    return path
+
+
+def test_patch_manifest_with_paths_finds_the_audio_of_the_split(tmp_path: Path) -> None:
+    dataset = tmp_path / "data"
+    src = write_manifest(dataset, "train-10h", ["a", "b"])
+    with pytest.raises(ValueError, match="Audio directory does not exist"):
+        patch_manifest_with_paths(src, tmp_path / "patched.csv")
+    audio = dataset / "audio" / "deu" / "train-10h"  # the split has a hyphen
+    audio.mkdir(parents=True)
+    patch_manifest_with_paths(src, tmp_path / "patched.csv")
+    patched = pl.read_csv(tmp_path / "patched.csv")
+    assert patched["path"].to_list() == [str(audio.resolve() / "a.wav"), str(audio.resolve() / "b.wav")]
+    patch_manifest_with_paths(tmp_path / "patched.csv", tmp_path / "again.csv")  # existing paths are kept
+    assert pl.read_csv(tmp_path / "again.csv").equals(patched)
+
+
+@pytest.mark.parametrize(("sample_rate", "channels"), [(8_000, 1), (SAMPLE_RATE, 2)])
+def test_audio_dataset_rejects_audio_not_mono_at_16khz(tmp_path: Path, sample_rate: int, channels: int) -> None:
+    write_manifest(tmp_path, "dev", ["a"])
+    (tmp_path / "audio" / "deu" / "dev").mkdir(parents=True)
+    samples = np.random.default_rng(0).uniform(-0.5, 0.5, (sample_rate, channels))
+    sf.write(tmp_path / "audio" / "deu" / "dev" / "a.wav", samples, sample_rate)
+    with pytest.raises(ValueError, match="Expected mono audio at 16000 Hz"):
+        DiscophonAudioDataset(tmp_path, "deu", "dev", normalize=False)[0]
+
+
+def test_audio_dataset_normalizes_waveforms(tmp_path: Path) -> None:
+    write_manifest(tmp_path, "dev", ["a"])
+    (tmp_path / "audio" / "deu" / "dev").mkdir(parents=True)
+    samples = np.random.default_rng(0).uniform(-0.8, 1.0, SAMPLE_RATE)  # loud enough for the eps of layer_norm
+    sf.write(tmp_path / "audio" / "deu" / "dev" / "a.wav", samples, SAMPLE_RATE, subtype="FLOAT")
+    fileid, raw = DiscophonAudioDataset(tmp_path, "German", "dev", normalize=False)[0]
+    _, normalized = DiscophonAudioDataset(tmp_path, "German", "dev", normalize=True)[0]
+    assert fileid == "a"
+    assert raw.shape == normalized.shape == (SAMPLE_RATE,)
+    assert raw.mean().item() == pytest.approx(0.1, abs=1e-2)
+    assert normalized.mean().item() == pytest.approx(0, abs=1e-5)
+    assert normalized.std().item() == pytest.approx(1, abs=1e-3)

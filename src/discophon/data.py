@@ -17,6 +17,7 @@ __all__ = [
     "STEP_PHONES",
     "STEP_UNITS",
     "Phones",
+    "Splits",
     "Units",
     "alignment_filename",
     "df_to_textgrids",
@@ -32,7 +33,8 @@ __all__ = [
     "write_textgrids",
 ]
 
-Splits = Literal["all", "train-10min", "train-1h", "train-10h", "dev", "test"]
+type Splits = Literal["all", "train-10min", "train-1h", "train-10h", "dev", "test"]
+"""Type of the dataset splits. `all` holds every audio file of a language, the other splits link to some of them."""
 
 type Units = dict[str, list[int]]
 """Type of the discrete units: dictionary mapping file identifiers to lists of integers."""

@@ -1,8 +1,8 @@
 """DiscoPhon evaluation module."""
 
-from discophon.evaluate.assignment import cooccurrence_matrix, phone_assignments
+from discophon.evaluate.assignment import cooccurrence_matrix, phone_assignments, relabel_assignment
 from discophon.evaluate.discovery import phoneme_discovery
-from discophon.evaluate.quality import pnmi
+from discophon.evaluate.quality import pnmi, probability_phone_given_unit
 from discophon.evaluate.recognition import phone_error_rate
 from discophon.evaluate.segmentation import phone_segmentation
 
@@ -13,4 +13,6 @@ __all__ = [
     "phone_segmentation",
     "phoneme_discovery",
     "pnmi",
+    "probability_phone_given_unit",
+    "relabel_assignment",
 ]

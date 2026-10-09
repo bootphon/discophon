@@ -174,6 +174,20 @@ def validate_all_spidr_checkpoints(
     *,
     seed: int = 0,
 ) -> None:
+    """Compute the validation loss of every checkpoint of a SpidR finetuning, and link the best one to `best.pt`.
+
+    Every checkpoint is evaluated with the same masks and crops.
+
+    Args:
+        output: JSONL file to which the losses of each checkpoint are appended
+        checkpoints: Directory with the `step_*.pt` checkpoints, where `best.pt` is created
+        manifest: Manifest of the validation files
+        seed: Random seed of the masks and crops
+
+    Raises:
+        ValueError: If there is no checkpoint in `checkpoints`.
+
+    """
     set_seed(seed)
     setup_pytorch(use_deterministic=False)
     setup_environment()

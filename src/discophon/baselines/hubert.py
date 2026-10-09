@@ -225,6 +225,24 @@ def validate_all_hubert_checkpoints(
     *,
     seed: int = 0,
 ) -> None:
+    """Compute the validation loss of every checkpoint of a HuBERT finetuning, and link the best one to `best.pt`.
+
+    The targets are the K-means units saved by [`finetune_hubert`][discophon.baselines.finetune_hubert] in
+    `checkpoints/kmeans.joblib`, computed on the features of the `pretrained` model at `target_layer`.
+    Every checkpoint is evaluated with the same masks and crops.
+
+    Args:
+        output: JSONL file to which the losses of each checkpoint are appended
+        checkpoints: Directory with the `step_*.pt` checkpoints and `kmeans.joblib`, where `best.pt` is created
+        manifest: Manifest of the validation files
+        pretrained: Path to the pretrained checkpoint the finetuning started from
+        target_layer: Layer of the pretrained model used to fit the K-means
+        seed: Random seed of the masks and crops
+
+    Raises:
+        ValueError: If there is no checkpoint in `checkpoints`.
+
+    """
     set_seed(seed)
     setup_pytorch(use_deterministic=False)
     setup_environment()

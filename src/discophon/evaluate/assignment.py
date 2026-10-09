@@ -112,7 +112,22 @@ def cooccurrence_matrix(
 
 
 def relabel_assignment(assignment: Iterable[int], proba: DataArray) -> DataArray:
-    """Relabel the assignment of units to phones according to the most probable phones."""
+    """Relabel clusters of units so that their labels follow the order of the phones they most likely represent.
+
+    Useful to plot units grouped in clusters (for instance, by a clustering of their embeddings) next to the
+    phones: each cluster is matched to the phone with the highest mean probability over its units, and the
+    clusters are then numbered in the order of the phones in `proba`, so that the plot is close to diagonal.
+    The partition itself is unchanged: units that share a cluster still share one after relabeling.
+
+    Arguments:
+        assignment: Cluster of each unit, in the order of the `unit` coordinate of `proba`
+        proba: Probability of each phone given each unit, with dimensions `phone` and `unit`, computed with
+            [`probability_phone_given_unit`][discophon.evaluate.probability_phone_given_unit]
+
+    Returns:
+        New cluster of each unit, with dimension `unit`.
+
+    """
     c_proba, c_phone, c_unit = str(proba.name), "phone", "unit"
     df_assignment = pl.DataFrame({c_unit: proba[c_unit].to_numpy(), "assignment": np.array(assignment)})
     phones, units = proba[c_phone].to_numpy(), proba[c_unit].to_numpy()
