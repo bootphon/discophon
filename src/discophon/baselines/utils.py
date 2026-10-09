@@ -86,17 +86,17 @@ class DiscophonAudioDataset(Dataset):
         return fileid, waveform.squeeze()
 
 
-def collate_fn(waveforms: list[Tensor]) -> tuple[Tensor, Tensor, Tensor]:
+def collate_fn(waveforms: list[Tensor]) -> tuple[Tensor, Tensor | None, Tensor]:
     wav_lengths = torch.tensor([w.size(0) for w in waveforms])
     wavs = pad_sequence(waveforms, batch_first=True)
     feat_lengths = conv_length(DEFAULT_CONV_LAYER_CONFIG, wav_lengths)
     batch_size, max_len = wavs.size(0), int(feat_lengths.max())
     padding_mask = torch.arange(max_len).expand(batch_size, max_len) >= feat_lengths[:, None]
-    attn_mask = ~padding_mask[:, None, None, :].expand(batch_size, 1, max_len, max_len)
+    attn_mask = ~padding_mask[:, None, None, :] if bool(padding_mask.any()) else None
     return wavs, attn_mask, feat_lengths
 
 
-def _collate_with_fileids(batch: list[tuple[str, Tensor]]) -> tuple[list[str], Tensor, Tensor, Tensor]:
+def _collate_with_fileids(batch: list[tuple[str, Tensor]]) -> tuple[list[str], Tensor, Tensor | None, Tensor]:
     fileids, waveforms = zip(*batch, strict=True)
     wavs, attn_mask, feat_lengths = collate_fn(list(waveforms))
     return list(fileids), wavs, attn_mask, feat_lengths

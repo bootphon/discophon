@@ -3,6 +3,7 @@
 import logging
 from collections.abc import Iterable
 from contextlib import ExitStack
+from dataclasses import replace
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import Literal
@@ -57,7 +58,7 @@ def fit_kmeans_from_checkpoint(
 ) -> MiniBatchKMeans:
     compute_and_save_hubert_features(manifest, root_features, checkpoint, layer)
     kmeans = build_kmeans(n_clusters, seed=seed)
-    features = torch.concat([torch.load(p) for p in Path(root_features).rglob("*.pt")])
+    features = torch.concat([torch.load(p, mmap=True) for p in sorted(Path(root_features).rglob("*.pt"))])
     kmeans.fit(features)
     inertia = -kmeans.score(features) / len(features)
     logger.info("K-means inertia: %s", inertia)
@@ -257,7 +258,8 @@ def validate_all_hubert_checkpoints(
         patch_manifest_with_paths(manifest, temp_manifest.name)
         compute_and_save_hubert_features(temp_manifest.name, temp_features, pretrained, target_layer)
         patch_manifest_with_units(temp_manifest.name, new_manifest.name, temp_features, kmeans)
-        loader = build_dataloader_with_labels(hubert_ft_data_config(new_manifest.name), MaskingConfig())
+        cfg = replace(hubert_ft_data_config(new_manifest.name), persistent_workers=False)
+        loader = build_dataloader_with_labels(cfg, MaskingConfig())
     paths = sorted(Path(checkpoints).glob("step_*.pt"))
     if not paths:
         raise ValueError(f"No step checkpoints found in {checkpoints}")

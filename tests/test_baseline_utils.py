@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 from itertools import pairwise
 from pathlib import Path
 from unittest.mock import MagicMock, call
@@ -8,13 +9,16 @@ import polars as pl
 import pytest
 import soundfile as sf
 import torch
+from torch.utils.data import DataLoader
 
 from discophon.baselines import hubert, spidr
 from discophon.baselines.utils import (
     DiscophonAudioDataset,
+    collate_fn,
     link_best_checkpoint,
     patch_manifest_with_paths,
     read_completed_fileids,
+    spidr_ft_data_config,
     tristage_scheduler,
 )
 from discophon.data import SAMPLE_RATE, manifest_filename
@@ -235,3 +239,58 @@ def test_audio_dataset_normalizes_waveforms(tmp_path: Path) -> None:
     assert raw.mean().item() == pytest.approx(0.1, abs=1e-2)
     assert normalized.mean().item() == pytest.approx(0, abs=1e-5)
     assert normalized.std().item() == pytest.approx(1, abs=1e-3)
+
+
+def test_spidr_validation_uses_the_same_crops_and_masks_for_every_checkpoint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    dataset = tmp_path / "data"
+    manifest = write_manifest(dataset, "dev", ["a", "b", "c"])
+    (dataset / "audio" / "deu" / "dev").mkdir(parents=True)
+    rng = np.random.default_rng(0)
+    for fileid, num_samples in [("a", 32_000), ("b", 40_000), ("c", 48_000)]:  # different lengths: random crops
+        sf.write(dataset / "audio" / "deu" / "dev" / f"{fileid}.wav", rng.uniform(-0.5, 0.5, num_samples), SAMPLE_RATE)
+    for name in ("set_seed", "setup_pytorch", "setup_environment", "build_model"):
+        monkeypatch.setattr(spidr, name, MagicMock())
+    monkeypatch.setattr(spidr.torch.cuda, "get_device_capability", lambda: (8, 0))
+    monkeypatch.setattr(spidr, "spidr_ft_data_config", lambda m: replace(spidr_ft_data_config(m), num_workers=2))
+    batches = []
+
+    def validate(_model: object, loader: DataLoader, *_: object) -> dict[str, float]:
+        batches.append([(waveforms, mask_indices) for waveforms, _, mask_indices in loader])
+        return {"loss": 0.0}
+
+    monkeypatch.setattr(spidr, "validate_spidr", validate)
+    for step in (1000, 2000):
+        (tmp_path / f"step_{step}.pt").touch()
+    spidr.validate_all_spidr_checkpoints(tmp_path / "scores.jsonl", tmp_path, manifest)
+    first, second = batches
+    assert len(first) == len(second) > 0
+    for (waveforms, masks), (other_waveforms, other_masks) in zip(first, second, strict=True):
+        assert torch.equal(waveforms, other_waveforms)
+        assert torch.equal(masks, other_masks)
+
+
+def test_hubert_kmeans_is_fitted_on_the_sorted_features(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    generator = torch.Generator().manual_seed(0)
+    features = {name: torch.randn(20, 4, generator=generator) for name in ["b/2", "a/1", "b/1"]}
+
+    def save_features(_manifest: str, root: Path, _checkpoint: Path, _layer: int) -> None:
+        for name, tensor in features.items():
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            torch.save(tensor, root / f"{name}.pt")
+
+    monkeypatch.setattr(hubert, "compute_and_save_hubert_features", save_features)
+    rglob = Path.rglob  # The order of the filesystem can be anything, here the reverse one
+    monkeypatch.setattr(Path, "rglob", lambda self, *args, **kwargs: reversed(list(rglob(self, *args, **kwargs))))
+    kmeans = hubert.fit_kmeans_from_checkpoint("manifest.csv", "it2.pt", tmp_path, layer=6, n_clusters=3, seed=0)
+    expected = hubert.build_kmeans(3, seed=0).fit(torch.concat([features[name] for name in sorted(features)]))
+    np.testing.assert_array_equal(kmeans.cluster_centers_, expected.cluster_centers_)
+
+
+def test_collate_fn_builds_a_broadcastable_attention_mask() -> None:
+    _, attn_mask, feat_lengths = collate_fn([torch.zeros(16_000), torch.zeros(8_000)])
+    assert attn_mask is not None
+    assert attn_mask.shape == (2, 1, 1, int(feat_lengths.max()))
+    assert attn_mask.sum(dim=-1).flatten().tolist() == feat_lengths.tolist()
+    assert collate_fn([torch.zeros(8_000), torch.zeros(8_000)])[1] is None  # no padding, no mask

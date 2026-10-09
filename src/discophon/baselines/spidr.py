@@ -2,6 +2,7 @@
 
 from collections.abc import Iterable
 from contextlib import ExitStack
+from dataclasses import replace
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Literal
@@ -195,7 +196,8 @@ def validate_all_spidr_checkpoints(
     dtype = torch.bfloat16 if torch.cuda.get_device_capability() >= (8, 0) else torch.float16
     with NamedTemporaryFile(suffix=".csv") as tempfile:
         patch_manifest_with_paths(manifest, tempfile.name)
-        loader = build_dataloader(spidr_ft_data_config(tempfile.name), MaskingConfig())
+        cfg = replace(spidr_ft_data_config(tempfile.name), persistent_workers=False)
+        loader = build_dataloader(cfg, MaskingConfig())
     paths = sorted(Path(checkpoints).glob("step_*.pt"))
     if not paths:
         raise ValueError(f"No step checkpoints found in {checkpoints}")
@@ -262,8 +264,7 @@ def extract_spidr_discrete_units(
     for fileids, waveforms, attn_mask, feat_lengths in tqdm(
         loader, desc=f"{dataset.language.iso_639_3}-{dataset.split}"
     ):
-        # A single file needs no mask, which keeps the exact computation of the published units
-        mask = attn_mask.cuda() if len(fileids) > 1 else None
+        mask = attn_mask.cuda() if attn_mask is not None else None
         all_features = model.get_codebooks(waveforms.cuda(), attention_mask=mask)
         for layer, features in enumerate(all_features, start=1):
             if features is None or layer not in outputs:
@@ -326,8 +327,7 @@ def extract_spidr_continuous_features(
     for fileids, waveforms, attn_mask, feat_lengths in tqdm(
         loader, desc=f"{dataset.language.iso_639_3}-{dataset.split}"
     ):
-        # A single file needs no mask, which keeps the exact computation of the published features
-        mask = attn_mask.cuda() if len(fileids) > 1 else None
+        mask = attn_mask.cuda() if attn_mask is not None else None
         all_features = model.get_intermediate_outputs(waveforms.cuda(), attention_mask=mask)
         for layer, features in enumerate(all_features):
             if layer + 1 not in layers:

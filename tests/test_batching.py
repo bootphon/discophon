@@ -38,7 +38,9 @@ def assert_batched_matches_individual(model: nn.Module, lengths: list[int], devi
     with torch.inference_mode():
         individual = [model.get_intermediate_outputs(w.unsqueeze(0)) for w in waveforms]
         wavs, attn_mask, feat_lengths = collate_fn(waveforms)
-        batched = model.get_intermediate_outputs(wavs.to(device), attention_mask=attn_mask.to(device))
+        batched = model.get_intermediate_outputs(
+            wavs.to(device), attention_mask=attn_mask.to(device) if attn_mask is not None else None
+        )
     for i, single in enumerate(individual):
         valid = int(feat_lengths[i])
         assert single[0].size(1) == valid
