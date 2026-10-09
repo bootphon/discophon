@@ -56,7 +56,7 @@ def available_languages_and_splits_for_units(
 
 def available_languages_and_splits_for_features(path_features: str | Path) -> list[tuple[Language, str]]:
     """List of languages and splits for which features are available."""
-    found = sorted(Path(path_features).glob("*/*/"))
+    found = sorted(Path(path_features).glob("[!.]*/[!.]*/"))  # Ignore hidden directories
     codes = {language.iso_639_3 for language in all_languages()}
     if unknown := sorted({p.parent.name for p in found if p.parent.name not in codes}):
         raise ValueError(

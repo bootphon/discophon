@@ -21,6 +21,7 @@ units (in ms) is only recorded for the users of the artifacts.
 
 import argparse
 import json
+import math
 import re
 import tomllib
 from pathlib import Path
@@ -40,6 +41,13 @@ METRICS = {
     "f1": {"label": "F1", "lower_is_better": False},
     "pnmi": {"label": "PNMI", "lower_is_better": False},
     "triphone_abx_continuous": {"label": "ABX", "lower_is_better": True},
+}
+SCORE_RANGES = {  # In %. PER can exceed 100, and the R-value can be negative
+    "per": (0, math.inf),
+    "r_val": (-math.inf, 100),
+    "f1": (0, 100),
+    "pnmi": (0, 100),
+    "triphone_abx_continuous": (0, 100),
 }
 DURATIONS = {"0": "Zero-shot", "10h": "Finetuned on 10h"}
 CATEGORIES = {"submission": "Submissions", "baseline": "Baselines", "topline": "Toplines"}
@@ -146,6 +154,11 @@ def validate(scores: pl.DataFrame, models: dict[str, dict]) -> None:
             raise ValueError(f"{where}: scores must all come from the same layer.")
         if group.null_count().sum_horizontal().item():
             raise ValueError(f"{where}: null values.")
+        if not group["score"].is_finite().all():
+            raise ValueError(f"{where}: non-finite scores.")
+        for metric, (low, high) in SCORE_RANGES.items():
+            if not group.filter(pl.col("metric") == metric)["score"].is_between(low, high).all():
+                raise ValueError(f"{where}: {metric} scores must be in [{low}, {high}].")
         if not models[model].get("partial") and len(group) != len(languages) * len(TRACKS[track]):
             raise ValueError(f"{where}: scores must cover every language and metric (or set partial = true).")
 
@@ -179,7 +192,9 @@ def build(root: Path, output: Path) -> None:
     models = read_models(root)
     scores = read_leaderboard_scores(root, models)
     validate(scores, models)
-    output.write_text(f"window.DISCOPHON_LEADERBOARD = {json.dumps(payload(scores, models))};\n", encoding="utf-8")
+    output.write_text(
+        f"window.DISCOPHON_LEADERBOARD = {json.dumps(payload(scores, models), allow_nan=False)};\n", encoding="utf-8"
+    )
 
 
 def cli(argv: list[str] | None = None) -> None:

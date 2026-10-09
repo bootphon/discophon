@@ -82,9 +82,11 @@ def download_benchmark(path_dataset: str | Path) -> None:
         raise ValueError(f"Checksum mismatch for {archive}: expected {BENCHMARK_SHA256}, got {checksum}.")
     with tarfile.open(archive, "r:gz") as tar:
         for member in tqdm(tar, desc="Extracting", unit=" files"):
-            root, parts = member.name.split("/", 1)
+            root, _, parts = member.name.partition("/")
             if root != "discophon_data":
                 raise ValueError(f"Unexpected tarfile: root is {root} but should be 'discophon_data'")
+            if not parts:  # The root directory itself
+                continue
             member.name = parts
             tar.extract(member, path=path_dataset, filter="data")
     archive.unlink()

@@ -78,6 +78,8 @@ def test_available_languages_and_splits_for_units_rejects_unknown_languages(tmp_
 def test_available_languages_and_splits_for_features(tmp_path: Path) -> None:
     (tmp_path / "deu" / "dev").mkdir(parents=True)
     (tmp_path / "eng" / "train-10h").mkdir(parents=True)
+    (tmp_path / ".cache" / "dev").mkdir(parents=True)
+    (tmp_path / "deu" / ".ipynb_checkpoints").mkdir(parents=True)
     found = available_languages_and_splits_for_features(tmp_path)
     assert found == [(get_language("deu"), "dev"), (get_language("eng"), "train-10h")]
 

@@ -173,3 +173,17 @@ def test_invalid_scores(tmp_path: Path) -> None:
         validate(df.with_columns(language=pl.lit("xxx")), models)
     with pytest.raises(ValueError, match="null values"):
         validate(df.with_columns(score=None), models)
+    for score in [float("nan"), float("inf"), float("-inf")]:
+        with pytest.raises(ValueError, match="non-finite scores"):
+            validate(df.with_columns(score=pl.lit(score)), models)
+    for metric, score in [
+        ("per", -1.0),
+        ("r_val", 101.0),
+        ("f1", -1.0),
+        ("pnmi", 100.5),
+        ("triphone_abx_continuous", -0.1),
+    ]:
+        with pytest.raises(ValueError, match=rf"{metric} scores must be in"):
+            validate(df.with_columns(score=pl.when(pl.col("metric") == metric).then(score).otherwise("score")), models)
+    validate(df.with_columns(score=pl.when(pl.col("metric") == "per").then(150.0).otherwise("score")), models)
+    validate(df.with_columns(score=pl.when(pl.col("metric") == "r_val").then(-50.0).otherwise("score")), models)

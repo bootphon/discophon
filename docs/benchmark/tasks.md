@@ -55,7 +55,7 @@ The PNMI between $\bm{p}$ and $\bm{u}$ is:
 
 $$
 \text{PNMI}(\bm{p}, \bm{u}) = \frac{I(\bm{p};\bm{u})}{H(\bm{p})} =
-\frac{\sum_{i,j}\prob(i, j)\log \frac{\prob(i, j)}{\prob_{\bm{p}}(i) \prob_{\bm{u}}(j)}}{\sum_i \prob_{\bm{p}}(i) \log \prob_{\bm{p}}(i)},
+\frac{\sum_{i,j}\prob(i, j)\log \frac{\prob(i, j)}{\prob_{\bm{p}}(i) \prob_{\bm{u}}(j)}}{-\sum_i \prob_{\bm{p}}(i) \log \prob_{\bm{p}}(i)},
 $$
 
 where $\prob_{\bm{p}}(i) = \sum_{j \in \mathcal{U}} \prob(i, j)$ and $\prob_{\bm{u}}(j) = \sum_{i \in \mathcal{P}} \prob(i, j)$

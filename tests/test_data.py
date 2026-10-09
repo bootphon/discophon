@@ -192,6 +192,16 @@ def test_read_submitted_units_rejects_duplicate_files(tmp_path: Path) -> None:
         read_submitted_units(path)
 
 
+@pytest.mark.parametrize(
+    "line", ['{"file": "b"}', '{"file": "b", "units": null}', '{"file": "b", "units": [1, null]}']
+)
+def test_read_submitted_units_rejects_missing_units(tmp_path: Path, line: str) -> None:
+    path = tmp_path / "units.jsonl"
+    path.write_text(f'{{"file": "a", "units": [1]}}\n{line}\n')
+    with pytest.raises(ValueError, match=r"Missing or null units in .*: 1 files, such as \['b'\]"):
+        read_submitted_units(path)
+
+
 def test_textgrid_array_rejects_empty_sequence() -> None:
     with pytest.raises(ValueError, match="empty sequence"):
         textgrid_array_from_sequence([], step_in_ms=10)

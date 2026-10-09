@@ -371,6 +371,9 @@ def served_benchmark(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterato
     archive = tmp_path / "served" / "discophon_data.tar.gz"
     archive.parent.mkdir()
     with tarfile.open(archive, "w:gz") as tar:
+        root = tarfile.TarInfo("discophon_data")
+        root.type = tarfile.DIRTYPE
+        tar.addfile(root)
         info = tarfile.TarInfo("discophon_data/manifest/speakers.jsonl")
         info.size = 2
         tar.addfile(info, io.BytesIO(b"{}"))

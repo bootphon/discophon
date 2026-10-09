@@ -249,7 +249,7 @@ class AnnotationsError(ValueError):
 def read_gold_annotations(source: str | Path, *, step_in_ms: int = STEP_PHONES) -> Phones:
     """Read the gold annotations and return a mapping between file names to the list of phonemes.
 
-    There will be one phone every 10 ms.
+    There will be one phone every `step_in_ms` ms.
 
     Arguments:
         source: Path to the annotations file
@@ -291,12 +291,15 @@ def read_submitted_units(source: str | Path) -> Units:
         Mapping between file ids and units
 
     Raises:
-        ValueError: If a file appears more than once.
+        ValueError: If a file appears more than once, or if some units are missing.
 
     """
     df = pl.read_ndjson(source, schema_overrides={"file": pl.String, UNITS: pl.List(pl.Int32)}).rename({"file": FILE})
     if duplicates := sorted(set(df.filter(pl.col(FILE).is_duplicated())[FILE])):
         raise ValueError(f"Duplicate files in {source}: {len(duplicates)} files, such as {duplicates[:5]}.")
+    is_null = pl.col(UNITS).is_null() | pl.col(UNITS).list.eval(pl.element().is_null()).list.any()
+    if missing := sorted(df.filter(is_null)[FILE]):
+        raise ValueError(f"Missing or null units in {source}: {len(missing)} files, such as {missing[:5]}.")
     return {audio: row[UNITS] for audio, row in df.rows_by_key(FILE, named=True, unique=True).items()}
 
 
