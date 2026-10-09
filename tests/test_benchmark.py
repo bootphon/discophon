@@ -8,6 +8,7 @@ import pytest
 
 from discophon.benchmark import (
     NoPredictionsError,
+    available_languages_and_splits_for_features,
     available_languages_and_splits_for_units,
     benchmark_abx_continuous,
     benchmark_abx_discrete,
@@ -72,6 +73,21 @@ def test_available_languages_and_splits_for_units_rejects_unknown_languages(tmp_
     (tmp_path / name).touch()
     with pytest.raises(ValueError, match=rf"Unknown language codes in .*: \['{name}'\]"):
         available_languages_and_splits_for_units(tmp_path)
+
+
+def test_available_languages_and_splits_for_features(tmp_path: Path) -> None:
+    (tmp_path / "deu" / "dev").mkdir(parents=True)
+    (tmp_path / "eng" / "train-10h").mkdir(parents=True)
+    found = available_languages_and_splits_for_features(tmp_path)
+    assert found == [(get_language("deu"), "dev"), (get_language("eng"), "train-10h")]
+
+
+@pytest.mark.parametrize("name", ["old", "german", "zh-CN"])
+def test_available_languages_and_splits_for_features_rejects_unknown_languages(tmp_path: Path, name: str) -> None:
+    (tmp_path / "deu" / "dev").mkdir(parents=True)
+    (tmp_path / name / "dev").mkdir(parents=True)
+    with pytest.raises(ValueError, match=rf"Unknown language codes in .*: \['{name}'\]"):
+        available_languages_and_splits_for_features(tmp_path)
 
 
 def test_benchmark_discovery_raises_when_no_units(tmp_path: Path) -> None:

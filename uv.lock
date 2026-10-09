@@ -695,7 +695,6 @@ dependencies = [
     { name = "polars" },
     { name = "praat-textgrids" },
     { name = "scipy" },
-    { name = "soundfile" },
     { name = "tqdm" },
     { name = "xarray" },
 ]
@@ -717,6 +716,7 @@ baselines = [
 prepare = [
     { name = "datacollective" },
     { name = "requests" },
+    { name = "soundfile" },
     { name = "soxr" },
 ]
 
@@ -751,7 +751,7 @@ requires-dist = [
     { name = "requests", marker = "extra == 'prepare'", specifier = ">=2.32.5" },
     { name = "scikit-learn", marker = "extra == 'baselines'", specifier = ">=1.8.0" },
     { name = "scipy", specifier = ">=1.17.0" },
-    { name = "soundfile", specifier = ">=0.13.1" },
+    { name = "soundfile", marker = "extra == 'prepare'", specifier = ">=0.13.1" },
     { name = "soxr", marker = "extra == 'prepare'", specifier = ">=1.0.0" },
     { name = "spidr", extras = ["train"], marker = "extra == 'baselines'", specifier = ">=0.2.0" },
     { name = "torch", marker = "extra == 'baselines'", specifier = ">=2.13.0" },

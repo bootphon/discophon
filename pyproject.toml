@@ -24,7 +24,6 @@ dependencies = [
   "polars>=1.44.1",
   "praat-textgrids>=1.4.0",
   "scipy>=1.17.0",
-  "soundfile>=0.13.1",
   "tqdm>=4.67.1",
   "xarray>=2025.12.0",
 ]
@@ -54,6 +53,7 @@ baselines = [
 prepare = [
   "datacollective>=0.6.4",
   "requests>=2.32.5",
+  "soundfile>=0.13.1",
   "soxr>=1.0.0",
 ]
 

@@ -18,7 +18,7 @@ def deduplicate[T](seq: Iterable[T]) -> list[T]:
     return deduplicated
 
 
-@numba.jit(nopython=True, nogil=True)
+@numba.njit(nogil=True, cache=True)
 def edit_distance(
     hypothesis: np.ndarray[tuple[int], np.dtype[np.int64]],
     target: np.ndarray[tuple[int], np.dtype[np.int64]],

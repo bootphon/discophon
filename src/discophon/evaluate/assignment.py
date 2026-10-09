@@ -81,6 +81,9 @@ def cooccurrence_matrix(
     """
     n_phonemes = infer_number_of_phonemes(n_phonemes, language)
     n_phonemes_with_sil = n_phonemes + 1
+    for unit in itertools.chain.from_iterable(units.values()):  # All units, including those trimmed by the alignment
+        if not 0 <= unit < n_units:
+            raise IndexError(f"Found unit {unit}, but n_units is {n_units}; units must be in [0, {n_units}).")
     index, phone_to_index = 0, {}
     phone_indices, unit_indices = [], []
     data = align_units_and_phones(units, phones, step_units=step_units, step_phones=step_phones)
@@ -94,8 +97,6 @@ def cooccurrence_matrix(
                     f"Found more than {n_phonemes_with_sil} distinct phones (phonemes plus silence); "
                     f"increase n_phonemes (currently {n_phonemes})."
                 )
-            if not 0 <= unit < n_units:
-                raise IndexError(f"Found unit {unit}, but n_units is {n_units}; units must be in [0, {n_units}).")
             phone_indices.append(phone_to_index[phone])
             unit_indices.append(unit)
     for missing in range(len(phone_to_index), n_phonemes_with_sil):

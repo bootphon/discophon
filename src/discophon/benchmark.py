@@ -56,7 +56,14 @@ def available_languages_and_splits_for_units(
 
 def available_languages_and_splits_for_features(path_features: str | Path) -> list[tuple[Language, str]]:
     """List of languages and splits for which features are available."""
-    return [(get_language(p.parent.stem), p.stem) for p in sorted(Path(path_features).glob("*/*/"))]
+    found = sorted(Path(path_features).glob("*/*/"))
+    codes = {language.iso_639_3 for language in all_languages()}
+    if unknown := sorted({p.parent.name for p in found if p.parent.name not in codes}):
+        raise ValueError(
+            f"Unknown language codes in {path_features}: {unknown[:5]}. Name the directories {{code}}/{{split}}/, "
+            "with the ISO 639-3 code of a DiscoPhon language."
+        )
+    return [(get_language(p.parent.name), p.name) for p in found]
 
 
 def benchmark_discovery(

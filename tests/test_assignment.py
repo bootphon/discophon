@@ -81,6 +81,12 @@ def test_cooccurrence_raises_when_unit_out_of_range(unit: int) -> None:
         cooccurrence_matrix({"f": [0, unit]}, {"f": ["a", "a", "b", "b"]}, n_units=2, n_phonemes=2)
 
 
+def test_cooccurrence_raises_when_trimmed_unit_out_of_range() -> None:
+    # 3 units at 20 ms cover 6 frames for 4 phones: the last unit is trimmed by the alignment, but still checked
+    with pytest.raises(IndexError, match="Found unit 999"):
+        cooccurrence_matrix({"f": [0, 1, 999]}, {"f": ["a", "a", "b", "b"]}, n_units=2, n_phonemes=2)
+
+
 def test_cooccurrence_raises_when_too_many_phonemes() -> None:
     with pytest.raises(IndexError):
         cooccurrence_matrix({"f": [0, 0, 0]}, {"f": ["a", "a", "b", "b", "c", "c"]}, n_units=1, n_phonemes=1)
