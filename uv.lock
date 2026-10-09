@@ -746,7 +746,7 @@ requires-dist = [
     { name = "numba", specifier = ">=0.63.1" },
     { name = "numpy", specifier = ">=2.3.5" },
     { name = "orjson", marker = "extra == 'baselines'", specifier = ">=3.11.5" },
-    { name = "polars", specifier = ">=1.36.1" },
+    { name = "polars", specifier = ">=1.44.1" },
     { name = "praat-textgrids", specifier = ">=1.4.0" },
     { name = "requests", marker = "extra == 'prepare'", specifier = ">=2.32.5" },
     { name = "scikit-learn", marker = "extra == 'baselines'", specifier = ">=1.8.0" },
