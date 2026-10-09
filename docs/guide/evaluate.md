@@ -10,7 +10,7 @@ There are two interfaces to evaluate your predicted units:
 
 All evaluation runs at a fixed frame rate. By default, units are assumed to be at **50 Hz, i.e. one
 unit every 20 ms**. This is controlled by `step_units` (the `--step-units` flag on the CLI), with
-`frequency = 1000 // step_units`. The gold phone annotations have one phone every 10 ms, and each unit is
+`frequency = 1000 / step_units`. The gold phone annotations have one phone every 10 ms, and each unit is
 repeated automatically to match them, so for phoneme discovery `step_units` must be a multiple of 10.
 
 If your model emits frames at a different rate, you **must** set `step_units` accordingly. Otherwise
@@ -127,7 +127,7 @@ options:
                         Representation kind for the ABX benchmarks (ignored for '--benchmark discovery'). (default:
                         triphone)
   --step-units STEP_UNITS
-                        Step in ms between units or features. 'frequency' is then set to 1000 // step_units. (default: 20)
+                        Step in ms between units or features. 'frequency' is then set to 1000 / step_units. (default: 20)
 ```
 
 ## Low level

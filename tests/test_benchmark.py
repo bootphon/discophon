@@ -1,8 +1,10 @@
 """Tests for the benchmark orchestration (no dataset download required)."""
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 from typing import Literal
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -117,6 +119,22 @@ def test_benchmark_abx_continuous_raises_when_no_features(tmp_path: Path) -> Non
     (features / "deu" / "train-1h").mkdir(parents=True)  # not evaluated
     with pytest.raises(NoPredictionsError, match=r"\{code\}/\{split\}/"):
         benchmark_abx_continuous(dataset, features)
+
+
+@pytest.mark.parametrize(
+    ("benchmark", "name"), [(benchmark_abx_discrete, "discrete_abx"), (benchmark_abx_continuous, "continuous_abx")]
+)
+def test_benchmark_abx_uses_the_exact_frequency(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, benchmark: Callable, name: str
+) -> None:
+    abx = pytest.importorskip("discophon.abx")
+    dataset, predictions = build_valid_dataset(tmp_path / "dataset"), tmp_path / "predictions"
+    write_synthetic_split(dataset, predictions)
+    called = MagicMock(return_value={"within_speaker": 0.0})
+    monkeypatch.setattr(abx, name, called)
+    benchmark(dataset, predictions, step_units=30)
+    frequency = called.call_args.kwargs["frequency"]
+    assert int(10 * frequency) == 333  # With 33 Hz instead of 33.33 Hz, the frames would drift by 100 ms after 10 s
 
 
 @pytest.mark.parametrize(("kind", "n_units"), [("many-to-one", 256), ("one-to-one", 42)])

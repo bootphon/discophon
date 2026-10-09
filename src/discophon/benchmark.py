@@ -4,6 +4,7 @@ Compute the scores for all languages and splits for which units or features have
 """
 
 import argparse
+from decimal import Decimal
 from pathlib import Path
 from typing import Literal
 
@@ -158,7 +159,7 @@ def benchmark_abx_discrete(
         abx = discrete_abx(
             Path(path_dataset) / "item" / item_filename(language, split, kind=kind),
             Path(path_units) / units_filename(language, split),
-            frequency=1_000 // step_units,
+            frequency=Decimal(1_000) / step_units,
             kind=kind,
         )
         for speaker, score in abx.items():
@@ -183,7 +184,7 @@ def benchmark_abx_continuous(
         path_features: Path to the directory with the extracted features
         kind: Kind of representations to use for ABX computation.
         step_units: Step between consecutive features (in ms).
-            The feature frequency will be set to `1_000 // step_units`
+            The feature frequency will be set to `1_000 / step_units`
 
     Returns:
         DataFrame with the results
@@ -207,7 +208,7 @@ def benchmark_abx_continuous(
         abx = continuous_abx(
             Path(path_dataset) / "item" / item_filename(language, split, kind=kind),
             Path(path_features) / language.iso_639_3 / split,
-            frequency=1_000 // step_units,
+            frequency=Decimal(1_000) / step_units,
             kind=kind,
         )
         for speaker_context, score in abx.items():
@@ -251,7 +252,7 @@ def cli(argv: list[str] | None = None) -> None:
         "--step-units",
         type=int,
         default=STEP_UNITS,
-        help="Step in ms between units or features. 'frequency' is then set to 1000 // step_units.",
+        help="Step in ms between units or features. 'frequency' is then set to 1000 / step_units.",
     )
     args = parser.parse_args(argv)
 

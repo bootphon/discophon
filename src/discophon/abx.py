@@ -6,6 +6,7 @@ with `pip install 'discophon[abx]'` or `pip install fastabx`.
 """
 
 import argparse
+from decimal import Decimal
 from pathlib import Path
 from typing import Literal, TypedDict, overload
 
@@ -63,7 +64,7 @@ def discrete_abx(
     path_item: str | Path,
     path_units: str | Path,
     *,
-    frequency: int,
+    frequency: int | Decimal,
     kind: Literal["triphone"],
 ) -> TriphoneABX: ...
 
@@ -73,7 +74,7 @@ def discrete_abx(
     path_item: str | Path,
     path_units: str | Path,
     *,
-    frequency: int,
+    frequency: int | Decimal,
     kind: Literal["phoneme"],
 ) -> PhonemeABX: ...
 
@@ -82,7 +83,7 @@ def discrete_abx(
     path_item: str | Path,
     path_units: str | Path,
     *,
-    frequency: int,
+    frequency: int | Decimal,
     kind: Literal["triphone", "phoneme"] = "triphone",
 ) -> TriphoneABX | PhonemeABX:
     """ABX on discrete units.
@@ -123,7 +124,7 @@ def continuous_abx(
     path_item: str | Path,
     path_features: str | Path,
     *,
-    frequency: int,
+    frequency: int | Decimal,
     kind: Literal["triphone"],
 ) -> TriphoneABX: ...
 
@@ -133,7 +134,7 @@ def continuous_abx(
     path_item: str | Path,
     path_features: str | Path,
     *,
-    frequency: int,
+    frequency: int | Decimal,
     kind: Literal["phoneme"],
 ) -> PhonemeABX: ...
 
@@ -142,7 +143,7 @@ def continuous_abx(
     path_item: str | Path,
     path_features: str | Path,
     *,
-    frequency: int,
+    frequency: int | Decimal,
     kind: Literal["triphone", "phoneme"] = "triphone",
 ) -> TriphoneABX | PhonemeABX:
     """ABX on continuous representations.
