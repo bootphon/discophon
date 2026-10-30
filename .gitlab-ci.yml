@@ -3,6 +3,7 @@ image: ubuntu:22.04
 variables:
   GIT_STRATEGY: clone
   GIT_SUBMODULE_STRATEGY: normal
+  UV_PYTHON: "3.14"
 
 before_script:
   - apt-get update || true
