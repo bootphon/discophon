@@ -26,8 +26,9 @@
 }
 .dlb-table th,
 .dlb-table td {
-  padding: 0.35rem 0.6rem;
+  padding: 0.35rem 0.4rem;
   text-align: right;
+  white-space: nowrap;
   border-bottom: 1px solid rgba(127, 127, 127, 0.2);
 }
 .dlb-table tbody tr:not(.dlb-group):not(.dlb-subgroup):hover {
@@ -36,7 +37,6 @@
 .dlb-table thead th {
   border-bottom: 1px solid currentColor;
   text-align: right;
-  white-space: nowrap;
 }
 .dlb-table th:first-child,
 .dlb-table td:first-child {

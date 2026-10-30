@@ -17,3 +17,9 @@
     font-family: "Charis";
     line-height: 1.2;
 }
+
+@media screen and (min-width: 60em) {
+    .md-sidebar--secondary {
+        width: 8rem;
+    }
+}

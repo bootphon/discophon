@@ -81,14 +81,14 @@
           })
           .filter((entry) => entry.layer !== null);
         if (!table.length) continue;
-        const best = metrics.map((m, i) => {
-          const values = table.map((e) => e.scores[i]).filter(Boolean).map((s) => s.value);
-          return m.lower_is_better ? Math.min(...values) : Math.max(...values);
-        });
         tbody.append(group("dlb-group", duration.label));
         for (const category of data.categories) {
           const entries = table.filter((e) => e.model.category === category.key);
           if (!entries.length) continue;
+          const best = metrics.map((m, i) => {
+            const values = entries.map((e) => e.scores[i]).filter(Boolean).map((s) => s.value);
+            return m.lower_is_better ? Math.min(...values) : Math.max(...values);
+          });
           tbody.append(group("dlb-subgroup", category.label));
           for (const { model, layer, scores } of entries) {
             const name = el("td", {}, [

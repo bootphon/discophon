@@ -26,3 +26,36 @@ url = "https://huggingface.co/coml/spidr-mmsulab"
 label = "SpidR VP-20"
 category = "baseline"
 url = "https://huggingface.co/coml/spidr-vp20"
+
+[spidr-adapt-ssl-vp19]
+label = "SpidR-Adapt - SSL"
+category = "submission"
+url = "https://github.com/facebookresearch/spidr-adapt"
+
+[spidr-adapt-reptile-ssl-vp19]
+label = "SpidR-Adapt - SSL + Reptile"
+category = "submission"
+url = "https://github.com/facebookresearch/spidr-adapt"
+
+[spidr-adapt-foblo-ssl-vp19]
+label = "SpidR-Adapt - SSL + FOBLO"
+category = "submission"
+url = "https://github.com/facebookresearch/spidr-adapt"
+
+[spidr-adapt-sl-vp19]
+label = "SpidR-Adapt - SSL/SL"
+category = "topline"
+url = "https://github.com/facebookresearch/spidr-adapt"
+description = "Topline because uses labels during pretraining"
+
+[spidr-adapt-reptile-sl-vp19]
+label = "SpidR-Adapt - SSL/SL + Reptile"
+category = "topline"
+url = "https://github.com/facebookresearch/spidr-adapt"
+description = "Topline because uses labels during pretraining"
+
+[spidr-adapt-foblo-sl-vp19]
+label = "SpidR-Adapt - SSL/SL + FOBLO"
+category = "topline"
+url = "https://github.com/facebookresearch/spidr-adapt"
+description = "Topline because uses labels during pretraining"
