@@ -735,7 +735,6 @@ dependencies = [
     { name = "numba" },
     { name = "numpy" },
     { name = "polars" },
-    { name = "praat-textgrids" },
     { name = "scipy" },
     { name = "tqdm" },
     { name = "xarray" },
@@ -789,7 +788,6 @@ requires-dist = [
     { name = "numpy", specifier = ">=2.3.5" },
     { name = "orjson", marker = "extra == 'baselines'", specifier = ">=3.11.5" },
     { name = "polars", specifier = ">=1.44.1" },
-    { name = "praat-textgrids", specifier = ">=1.4.0" },
     { name = "requests", marker = "extra == 'prepare'", specifier = ">=2.32.5" },
     { name = "scikit-learn", marker = "extra == 'baselines'", specifier = ">=1.8.0" },
     { name = "scipy", specifier = ">=1.17.0" },
@@ -2602,15 +2600,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/7f/05/304deee59a95865e1b5e9ec7b066069b49093b81b768f473d9d3b165c686/polars_runtime_32-2.0.0-cp310-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:55c26eef325b6840584d91aac232e9cf3ac19e1b904594b9b54131be1edeab4d", size = 54413293, upload-time = "2026-10-06T11:50:31.828Z" },
     { url = "https://files.pythonhosted.org/packages/61/59/8c9fd7199f7c4eb1b64e640306a946a2e4a46337b3bbb33b840972c7d84b/polars_runtime_32-2.0.0-cp310-abi3-win_amd64.whl", hash = "sha256:7da1caf3c7b4f397fb213c984013a0c755557619a2d511899a1ff74392484078", size = 54229989, upload-time = "2026-10-06T11:50:35.206Z" },
     { url = "https://files.pythonhosted.org/packages/e2/93/43608026f38aa6ed4d22da8597706a61682ee403caef0021ce8e6dc73227/polars_runtime_32-2.0.0-cp310-abi3-win_arm64.whl", hash = "sha256:c30ba698c8904048df4a9bc3d6c5033cc2d0a7cbb0e13f4fd2de5a1947b61994", size = 48730655, upload-time = "2026-10-06T11:50:38.756Z" },
-]
-
-[[package]]
-name = "praat-textgrids"
-version = "1.4.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/a0/15/8bb4cc6198a46ea9727fb6049ae343e5d306286004bae55f86351c9b1a94/praat-textgrids-1.4.0.tar.gz", hash = "sha256:57d86adcbb01722e732a898e37c85833a6326731e2c97802b18793ef1a64602c", size = 25473, upload-time = "2022-10-12T19:59:53.586Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/19/8b/de9acaf09cf119f3526dc9fdee6aa36f6ea12c70997e1b219bf5992549c9/praat_textgrids-1.4.0-py3-none-any.whl", hash = "sha256:288ebf4061f2994adc0a6110df28eebd3b7fb0c68e3196e1f222d6b4f33fa823", size = 25669, upload-time = "2022-10-12T19:59:51.199Z" },
 ]
 
 [[package]]

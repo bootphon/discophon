@@ -1,14 +1,9 @@
 """Data loading and writing utilities."""
 
-import itertools
-from collections.abc import Iterable
-from decimal import Decimal
 from pathlib import Path
-from typing import Literal, TypedDict
+from typing import Literal
 
-import numpy as np
 import polars as pl
-import textgrids
 
 from discophon.languages import Language, all_languages
 
@@ -20,17 +15,13 @@ __all__ = [
     "Splits",
     "Units",
     "alignment_filename",
-    "df_to_textgrids",
     "item_filename",
     "manifest_filename",
     "read_gold_annotations",
     "read_rttm",
     "read_scores",
     "read_submitted_units",
-    "read_textgrid",
-    "rttm_to_textgrids",
     "units_filename",
-    "write_textgrids",
 ]
 
 type Splits = Literal["all", "train-10min", "train-1h", "train-10h", "dev", "test"]
@@ -102,104 +93,6 @@ def read_rttm(source: str | Path) -> pl.DataFrame:
             "Speaker Name": pl.String,
         },
         null_values="<NA>",
-    )
-
-
-def _read_single_textgrid(path: str | Path) -> dict[str, pl.DataFrame]:
-    grid = textgrids.TextGrid(path)
-    tiers = {}
-    for name, tier in grid.items():
-        if tier.is_point_tier:
-            tiers[name] = pl.DataFrame([{"text": p.text or "SIL", "pos": p.xpos} for p in tier])
-        else:
-            tiers[name] = pl.DataFrame([{"text": p.text or "SIL", "start": p.xmin, "end": p.xmax} for p in tier])
-        tiers[name] = tiers[name].with_columns(fileid=pl.lit(Path(path).stem))
-    return tiers
-
-
-def read_textgrid(path: str | Path) -> dict[str, pl.DataFrame]:
-    """Read a TextGrid file or directory of TextGrid files."""
-    if Path(path).is_file():
-        return _read_single_textgrid(path)
-    if Path(path).is_dir():
-        grids = [_read_single_textgrid(p) for p in Path(path).glob("*.TextGrid")]
-        if not grids:
-            raise ValueError(f"No TextGrid files found in directory {path}")
-        return {name: pl.concat(grid[name] for grid in grids).sort("fileid") for name in grids[0]}
-    raise ValueError(f"Path is neither a TextGrid file nor a directory: {path}")
-
-
-class TextGridEntry(TypedDict):
-    begin: float
-    end: float
-    label: str
-
-
-def textgrid_array_from_sequence(seq: Iterable[str | int], *, step_in_ms: int) -> list[TextGridEntry]:
-    """Create a list of TextGrid entries from a sequence of tokens."""
-    step_in_seconds = Decimal(step_in_ms) / 1000
-    groups = [(key, len(list(group))) for key, group in itertools.groupby(seq)]
-    if not groups:
-        raise ValueError("Cannot build TextGrid intervals from an empty sequence of tokens.")
-    labels, counts = zip(*groups, strict=True)
-    ends = np.cumsum(counts, dtype=np.int64)
-    starts = np.concatenate(([0], ends[:-1]))
-    return [
-        TextGridEntry(begin=float(starts[i] * step_in_seconds), end=float(ends[i] * step_in_seconds), label=str(label))
-        for i, label in enumerate(labels)
-    ]
-
-
-def write_textgrids(seqs: Phones | Units, /, outdir: str | Path, *, tier_name: str, step_in_ms: int) -> None:
-    """Write the given sequences of tokens as TextGrid files in the given output directory."""
-    outdir = Path(outdir)
-    outdir.mkdir(parents=True, exist_ok=True)
-    if empty := sorted(file for file, sequence in seqs.items() if not sequence):
-        raise ValueError(f"Cannot write empty sequences to TextGrid: {len(empty)} files, such as {empty[:5]}.")
-    for file, sequence in seqs.items():
-        path = outdir / f"{file}.TextGrid"
-        tg = textgrids.TextGrid(path if path.is_file() else None)
-        tg.interval_tier_from_array(tier_name, textgrid_array_from_sequence(sequence, step_in_ms=step_in_ms))
-        tg.write(path)
-
-
-def df_to_textgrids(
-    df: pl.DataFrame,
-    outdir: str | Path,
-    *,
-    file_col: str,
-    begin_col: str,
-    end_col: str,
-    label_col: str,
-    tier_name: str,
-) -> None:
-    """Write the intervals of a DataFrame as TextGrid files in `outdir`, one per file and in the tier `tier_name`.
-
-    If a TextGrid file already exists, the tier is added to it.
-    """
-    outdir = Path(outdir)
-    outdir.mkdir(parents=True, exist_ok=True)
-    for (file,), subdf in df.group_by(file_col, maintain_order=True):
-        path = outdir / f"{file}.TextGrid"
-        tg = textgrids.TextGrid(path if path.is_file() else None)
-        array = [
-            TextGridEntry(begin=row[begin_col], end=row[end_col], label=row[label_col])
-            for row in subdf.sort(begin_col).iter_rows(named=True)
-        ]
-        tg.interval_tier_from_array(tier_name, array)
-        tg.write(path)
-
-
-def rttm_to_textgrids(source: str | Path, outdir: str | Path, *, tier_name: str) -> None:
-    """Write the speaker turns of an RTTM file as TextGrid files in `outdir`, in the tier `tier_name`."""
-    df_to_textgrids(
-        read_rttm(source).with_columns((pl.col("Turn Onset") + pl.col("Turn Duration")).alias("Turn Offset")),
-        outdir,
-        file_col="File ID",
-        begin_col="Turn Onset",
-        end_col="Turn Offset",
-        label_col="Speaker Name",
-        tier_name=tier_name,
     )
 
 

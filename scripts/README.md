@@ -7,7 +7,6 @@ picks up the `discophon-scripts` project, with the dependency group given by `--
 |------------------------------|----------------------------------------------------------------------|
 | `interactive_plots.py`       | Interactive figures of the documentation (`docs/assets/`)            |
 | `print_tables.py`            | LaTeX tables of the paper                                            |
-| `predictions_to_textgrids.py`| Export gold phones, units, and predicted phones to TextGrid          |
 | `vad_dataset.py`             | Voice activity detection on MMS-ulab (SLURM array)                   |
 | `post_process_dataset.py`    | Clean the VAD segments                                               |
 | `segment_dataset.py`         | Cut MMS-ulab into segments (SLURM array)                             |
@@ -21,15 +20,6 @@ The figures and tables are computed from the scores in the
 ```bash
 uv run --group figures python interactive_plots.py /path/to/discophon_data /path/to/discophon-artifacts ../docs/assets
 uv run python print_tables.py /path/to/discophon-artifacts
-```
-
-## TextGrids
-
-Export the gold phones, the units, and the phones predicted by the many-to-one mapping, for each language and split
-with units in `/path/to/units`:
-
-```bash
-uv run python predictions_to_textgrids.py /path/to/discophon_data /path/to/units /path/to/textgrids
 ```
 
 ## Pretraining datasets

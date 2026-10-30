@@ -12,6 +12,7 @@ The modules, roughly in the order you will use them:
 - [`discophon.evaluate`][discophon.evaluate] - individual metrics (PNMI, PER, segmentation).
 - [`discophon.abx`][discophon.abx] - optional ABX discriminability.
 - [`discophon.data`][discophon.data] - read/write units and gold annotations, and shared types.
+- [`discophon.textgrid`][discophon.textgrid] - read/write Praat TextGrids, and export your units to TextGrids.
 - [`discophon.languages`][discophon.languages] - language metadata and phoneme inventories.
 - [`discophon.baselines`][discophon.baselines] - finetune and extract units from the baseline models.
 
@@ -20,5 +21,6 @@ The modules, roughly in the order you will use them:
 ::: discophon.abx
 ::: discophon.prepare
 ::: discophon.data
+::: discophon.textgrid
 ::: discophon.languages
 ::: discophon.baselines
