@@ -40,7 +40,7 @@ METRICS = {
     "r_val": {"label": "R-value", "lower_is_better": False},
     "f1": {"label": "F1", "lower_is_better": False},
     "pnmi": {"label": "PNMI", "lower_is_better": False},
-    "triphone_abx_continuous": {"label": "ABX", "lower_is_better": True},
+    "triphone_abx_continuous": {"label": "ABX c.", "lower_is_better": True},
 }
 SCORE_RANGES = {  # In %. PER can exceed 100, and the R-value can be negative
     "per": (0, math.inf),
