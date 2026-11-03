@@ -78,6 +78,10 @@ def finetune_hubert(  # ruff: ignore[too-many-locals, too-many-statements]
 ) -> None:
     """Finetune HuBERT on DiscoPhon data with the default configuration.
 
+    The targets are the units of a K-means with `n_clusters` clusters, fitted on the features of the pretrained
+    model at `target_layer` on the finetuning data. It is saved to
+    `{workdir}/{project}/{name}/km{n_clusters}-targets-l{target_layer}.joblib`.
+
     Args:
         name: Name of the run
         project: Wandb project
@@ -114,7 +118,7 @@ def finetune_hubert(  # ruff: ignore[too-many-locals, too-many-statements]
                 n_clusters,
                 SEED,
             )
-            joblib.dump(kmeans, rundir / "kmeans.joblib")
+            joblib.dump(kmeans, rundir / f"km{n_clusters}-targets-l{target_layer}.joblib")
             partial_manifest = new_manifest.with_suffix(".part")
             patch_manifest_with_units(temp_manifest.name, partial_manifest, temp_features, kmeans)
             partial_manifest.replace(new_manifest)
@@ -231,20 +235,21 @@ def validate_all_hubert_checkpoints(
     """Compute the validation loss of every checkpoint of a HuBERT finetuning, and link the best one to `best.pt`.
 
     The targets are the K-means units saved by [`finetune_hubert`][discophon.baselines.finetune_hubert] in
-    `checkpoints/kmeans.joblib`, computed on the features of the `pretrained` model at `target_layer`.
+    `checkpoints/km{K}-targets-l{target_layer}.joblib`, computed on the features of the `pretrained` model at
+    `target_layer`.
     Every checkpoint is evaluated with the same masks and crops. The checkpoints already validated on the same
     manifest in `output` are skipped, and their losses are reused to choose the best one.
 
     Args:
         output: JSONL file to which the losses of each checkpoint are appended
-        checkpoints: Directory with the `step_*.pt` checkpoints and `kmeans.joblib`, where `best.pt` is created
+        checkpoints: Directory with the `step_*.pt` checkpoints and the K-means, where `best.pt` is created
         manifest: Manifest of the validation files
         pretrained: Path to the pretrained checkpoint the finetuning started from
         target_layer: Layer of the pretrained model used to fit the K-means
         seed: Random seed of the masks and crops
 
     Raises:
-        ValueError: If there is no checkpoint in `checkpoints`.
+        ValueError: If there is no checkpoint in `checkpoints`, or not exactly one K-means of the targets.
 
     """
     set_seed(seed)
@@ -260,7 +265,13 @@ def validate_all_hubert_checkpoints(
     steps = {path: int(path.stem.removeprefix("step_")) for path in paths}
     results = [done[step] for step in steps.values() if step in done]
     if pending := [path for path, step in steps.items() if step not in done]:
-        kmeans = joblib.load(Path(checkpoints) / "kmeans.joblib")
+        kmeans_paths = list(Path(checkpoints).glob(f"km*-targets-l{target_layer}.joblib"))
+        if len(kmeans_paths) != 1:
+            raise ValueError(
+                f"Expected one K-means `km*-targets-l{target_layer}.joblib` in {checkpoints}, "
+                f"found {len(kmeans_paths)}."
+            )
+        kmeans = joblib.load(kmeans_paths[0])
         with (
             NamedTemporaryFile(suffix=".csv") as temp_manifest,
             NamedTemporaryFile(suffix=".jsonl") as new_manifest,

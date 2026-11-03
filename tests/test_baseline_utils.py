@@ -102,7 +102,8 @@ def test_hubert_validation_skips_checkpoints_already_in_the_output(
         "patch_manifest_with_units",
     ):
         monkeypatch.setattr(hubert, name, MagicMock())
-    monkeypatch.setattr(hubert.joblib, "load", MagicMock())
+    load_kmeans = MagicMock()
+    monkeypatch.setattr(hubert.joblib, "load", load_kmeans)
     monkeypatch.setattr(hubert.torch.cuda, "get_device_capability", lambda: (8, 0))
     features = MagicMock()
     monkeypatch.setattr(hubert, "compute_and_save_hubert_features", features)
@@ -111,7 +112,7 @@ def test_hubert_validation_skips_checkpoints_already_in_the_output(
     loader = MagicMock()
     monkeypatch.setattr(hubert, "build_dataloader_with_labels", MagicMock(return_value=loader))
     monkeypatch.setattr(hubert, "validate_hubert", MagicMock(side_effect=[{"loss": 1.0}]))
-    for filename in ("step_1000.pt", "step_2000.pt", "final.pt"):
+    for filename in ("step_1000.pt", "step_2000.pt", "final.pt", "km8-targets-l11.joblib", "km8-targets-l6.joblib"):
         (tmp_path / filename).touch()
     link_best_checkpoint(tmp_path, "final.pt")
     output = tmp_path / "scores.jsonl"
@@ -127,6 +128,7 @@ def test_hubert_validation_skips_checkpoints_already_in_the_output(
     assert loader.generator.manual_seed.call_args_list == [call(0)]
     assert [call.args[0].name for call in build.call_args_list] == ["step_2000.pt"]
     assert features.call_count == 1  # no targets when nothing is pending
+    assert load_kmeans.call_args.args[0] == tmp_path / "km8-targets-l11.joblib"  # K-means of the target layer
     lines = output.read_text(encoding="utf-8").splitlines()
     assert [json.loads(line) for line in lines[3:]] == [{"step": 2000, "group": "deu-dev", "loss": 1.0}]
 
@@ -137,7 +139,6 @@ def test_hubert_finetuning_resumes_with_the_same_targets(tmp_path: Path, monkeyp
         "setup_pytorch",
         "setup_environment",
         "wandb",
-        "joblib",
         "patch_manifest_with_paths",
         "AdamW",
         "GradScaler",
@@ -148,6 +149,8 @@ def test_hubert_finetuning_resumes_with_the_same_targets(tmp_path: Path, monkeyp
     ):
         monkeypatch.setattr(hubert, name, MagicMock())
     fit_kmeans, build_loader, checkpointer, hubert_pretrain = MagicMock(), MagicMock(), MagicMock(), MagicMock()
+    dump_kmeans = MagicMock()
+    monkeypatch.setattr(hubert.joblib, "dump", dump_kmeans)
     monkeypatch.setattr(hubert, "HuBERTPretrain", hubert_pretrain)
     monkeypatch.setattr(hubert, "fit_kmeans_from_checkpoint", fit_kmeans)
     monkeypatch.setattr(hubert, "build_dataloader_with_labels", build_loader)
@@ -183,6 +186,19 @@ def test_hubert_finetuning_resumes_with_the_same_targets(tmp_path: Path, monkeyp
         0 <= pretrained.logit_generator.label_embeddings.min() <= pretrained.logit_generator.label_embeddings.max() < 1
     )
     assert pretrained.num_classes == 8
+    assert dump_kmeans.call_args.args[1] == tmp_path / "project" / "run" / "km8-targets-l6.joblib"
+
+
+def test_hubert_validation_requires_the_kmeans_of_the_targets(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in ("set_seed", "setup_pytorch", "setup_environment"):
+        monkeypatch.setattr(hubert, name, MagicMock())
+    monkeypatch.setattr(hubert.torch.cuda, "get_device_capability", lambda: (8, 0))
+    (tmp_path / "step_1000.pt").touch()
+    (tmp_path / "kmeans.joblib").touch()  # old name
+    with pytest.raises(ValueError, match=r"Expected one K-means `km\*-targets-l11.joblib`"):
+        hubert.validate_all_hubert_checkpoints(
+            tmp_path / "scores.jsonl", tmp_path, tmp_path / "manifest-deu-dev.csv", "it2.pt", 11
+        )
 
 
 def test_tristage_scheduler_warms_up_holds_and_decays() -> None:
