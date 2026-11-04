@@ -14,7 +14,7 @@ Baselines:
 Datasets:
 
 - MMS-ulab segmented dataset: https://huggingface.co/datasets/coml/mmsulab
-- VP-20 dataset: https://huggingface.co/datasets/coml/vp20
+- VP-20 dataset: https://huggingface.co/datasets/coml/vp20 (to be added soon)
 
 ### Models
 
@@ -112,7 +112,7 @@ installed:
 from datasets import load_dataset
 
 mmsulab = load_dataset("coml/mmsulab")
-vp20 = load_dataset("coml/vp20")
+vp20 = load_dataset("coml/vp20")  # To be added soon
 ```
 
 Check out their README for more details on their structure and how they were built.
@@ -202,6 +202,30 @@ options:
 or use the [`finetune_spidr`][discophon.baselines.finetune_spidr]
 and [`finetune_hubert`][discophon.baselines.finetune_hubert] functions.
 
+The finetuned checkpoints of the four baselines, on each language with 10 minutes, 1 hour and 10 hours of data, are
+in [coml/discophon-finetuned-baselines](https://huggingface.co/coml/discophon-finetuned-baselines). They were
+obtained with the following recipe.
+
+1. **Finetuning.** The manifest is one of the training manifests of the dataset, such as
+   `/path/to/discophon_data/manifest/manifest-deu-train-1h.csv`. Both models are finetuned with the same optimizer
+   and schedule, and the checkpoints `step_*.pt` are saved in `{workdir}/{project}/{name}/`.
+   SpidR keeps its pretraining objective. HuBERT needs new targets: before finetuning, a K-means with
+   `--n-clusters` clusters is fitted on the features of the pretrained model at `--layer`, on the finetuning data,
+   and saved next to the checkpoints as `km{n_clusters}-targets-l{layer}.joblib`. The baselines use 256 clusters,
+   at layer 11 for `hubert-base-vp20` and layer 12 for `hubert-base-mmsulab`.
+2. **Checkpoint selection.**
+   [`validate_all_spidr_checkpoints`][discophon.baselines.validate_all_spidr_checkpoints] and
+   [`validate_all_hubert_checkpoints`][discophon.baselines.validate_all_hubert_checkpoints] compute the validation
+   loss of every checkpoint on the dev split of the finetuning language (such as
+   `/path/to/discophon_data/manifest/manifest-deu-dev.csv`), with the same masks and crops, and link the best one to
+   `best.pt`. For HuBERT, the
+   validation targets come from the same targets K-means, on the features of the pretrained model.
+3. **Discrete units.** SpidR units come directly from the prediction heads of `best.pt`. HuBERT units come from a new
+   K-means with 256 clusters for each layer, fitted on the features of `best.pt` on the finetuning data. These
+   K-means are in the [artifacts dataset](https://huggingface.co/datasets/coml/discophon-artifacts), next to the
+   units, as `{key}/ft-{language}-{duration}/many_to_one/{layer}/km256-ft-{language}-{duration}-l{layer}.joblib`.
+   Then extract the units as [below](#discrete-units).
+
 ### Discrete units
 
 We provide utilities to easily extract discrete units with the functions
@@ -210,13 +234,19 @@ and [`extract_hubert_discrete_units`][discophon.baselines.extract_hubert_discret
 
 ```python
 import joblib
+from huggingface_hub import hf_hub_download
 from discophon.baselines import extract_hubert_discrete_units, extract_spidr_discrete_units
 
 language = "German"  # Either name or ISO 639-3 code
 split = "test"  # Or "dev", "train-10min", "train-1h", "train-10h"
 
-# HuBERT units, only layer 11
-kmeans = joblib.load("/path/to/hubert-base-vp20/km256-it2-l11.joblib")
+# HuBERT units, only layer 11, with the K-means of the artifacts dataset
+path_kmeans = hf_hub_download(
+    "coml/discophon-artifacts",
+    "hubert-vp20-it2/zero-shot/many_to_one/11/km256-vp20-l11.joblib",
+    repo_type="dataset",
+)
+kmeans = joblib.load(path_kmeans)
 extract_hubert_discrete_units(
     "/path/to/discophon_data",
     path_units="/path/to/scores/hubert-base-vp20",
@@ -248,7 +278,7 @@ Or use the CLI, which extracts all languages on the dev and test splits by defau
 
 ```console
 ❯ python -m discophon.baselines.extract hubert units /path/to/discophon_data /path/to/units coml/hubert-base-vp20 \
-    --kmeans 11=/path/to/hubert-base-vp20/km256-it2-l11.joblib
+    --kmeans 11=/path/to/discophon-artifacts/hubert-vp20-it2/zero-shot/many_to_one/11/km256-vp20-l11.joblib
 ❯ python -m discophon.baselines.extract spidr features /path/to/discophon_data /path/to/features \
     /path/to/spidr-vp20/final.pt --layers 6 --batch-size 16
 ```

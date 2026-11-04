@@ -17,6 +17,7 @@ from discophon.baselines.utils import (
     collate_fn,
     link_best_checkpoint,
     patch_manifest_with_paths,
+    patch_manifest_with_units,
     read_completed_fileids,
     spidr_ft_data_config,
     tristage_scheduler,
@@ -291,6 +292,19 @@ def test_spidr_validation_uses_the_same_crops_and_masks_for_every_checkpoint(
     for (waveforms, masks), (other_waveforms, other_masks) in zip(first, second, strict=True):
         assert torch.equal(waveforms, other_waveforms)
         assert torch.equal(masks, other_masks)
+
+
+def test_patch_manifest_with_units_accepts_kmeans_fitted_on_float64(tmp_path: Path) -> None:
+    generator = torch.Generator().manual_seed(0)
+    features = {name: torch.randn(20, 4, generator=generator) for name in ["a", "b"]}
+    for name, tensor in features.items():
+        torch.save(tensor, tmp_path / f"{name}.pt")
+    kmeans = hubert.build_kmeans(3, seed=0).fit(torch.concat(list(features.values())))  # torch input: float64
+    assert kmeans.cluster_centers_.dtype == np.float64
+    src = write_manifest(tmp_path / "data", "train-10h", ["a", "b"])
+    patch_manifest_with_units(src, tmp_path / "units.jsonl", tmp_path, kmeans)
+    units = pl.read_ndjson(tmp_path / "units.jsonl")["units"].to_list()
+    assert units == [kmeans.predict(features[name].double().numpy()).tolist() for name in ["a", "b"]]
 
 
 def test_hubert_kmeans_is_fitted_on_the_sorted_features(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

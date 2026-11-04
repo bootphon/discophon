@@ -75,6 +75,8 @@ class FakeModel:
 class FakeKMeans:
     """K-means whose clusters are the second feature."""
 
+    cluster_centers_ = np.zeros((1, 1), dtype=np.float32)
+
     @staticmethod
     def predict(features: np.ndarray) -> np.ndarray:
         """Cluster of each frame."""

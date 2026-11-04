@@ -212,7 +212,7 @@ def patch_manifest_with_units(
     new_manifest = []
     for row in tqdm(manifest.iter_rows(named=True), total=manifest.height):
         features = torch.load(root / f"{row['fileid']}.pt")
-        units = kmeans.predict(features.numpy()).tolist()
+        units = kmeans.predict(features.numpy().astype(kmeans.cluster_centers_.dtype)).tolist()
         new_manifest.append(row | {"units": units})
     pl.DataFrame(new_manifest).write_ndjson(dest)
 

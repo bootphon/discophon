@@ -349,7 +349,8 @@ def extract_hubert_discrete_units(
         for layer, features in enumerate(all_features, start=1):
             if layer not in outputs or fileid in completed[layer]:
                 continue
-            units = kmeans_by_layer[layer].predict(features.squeeze(0).cpu().numpy()).tolist()
+            kmeans = kmeans_by_layer[layer]
+            units = kmeans.predict(features.squeeze(0).cpu().numpy().astype(kmeans.cluster_centers_.dtype)).tolist()
             entry = {"file": fileid, "units": units}
             jsonl = outputs[layer]
             jsonl.parent.mkdir(exist_ok=True, parents=True)
