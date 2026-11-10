@@ -781,7 +781,7 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "datacollective", marker = "extra == 'prepare'", specifier = ">=0.6.4" },
-    { name = "fastabx", marker = "extra == 'abx'", specifier = ">=0.8.0" },
+    { name = "fastabx", marker = "extra == 'abx'", specifier = ">=0.10.0" },
     { name = "filelock", specifier = ">=3.20.2" },
     { name = "joblib", marker = "extra == 'baselines'", specifier = ">=1.5.3" },
     { name = "minimal-hubert", marker = "extra == 'baselines'", specifier = ">=0.0.8" },
@@ -860,7 +860,7 @@ wheels = [
 
 [[package]]
 name = "fastabx"
-version = "0.8.0"
+version = "0.10.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
@@ -869,9 +869,9 @@ dependencies = [
     { name = "torchdtw" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/42/65/8c3432bb4cc4e3cc6907685592a6f03f06f57a26dfe1b44b8d22fe237655/fastabx-0.8.0.tar.gz", hash = "sha256:ab771f197ff9f238cf702645d6bcae8445ba8fb4743d91573ef42974d5c2a31f", size = 459835, upload-time = "2026-06-17T14:26:30.879Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e7/f1/be8cb984a5e1c91c4080d8a266019562c8b40e9751f984b9b9e7af2fa0a3/fastabx-0.10.0.tar.gz", hash = "sha256:495fb2751f41162e707264d1c459f8bc21c758dd6d9972c86582a3715609c4fe", size = 485706, upload-time = "2026-11-06T17:39:43.533Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/93/08/748ddb853b71a99065396861066d11745ecf9ef083d16f24fb528a8108d9/fastabx-0.8.0-py3-none-any.whl", hash = "sha256:8aeaa6c844528170aea2d3e9be20ea8048b950776d8411ea9447cd42e864106a", size = 33699, upload-time = "2026-06-17T14:26:29.87Z" },
+    { url = "https://files.pythonhosted.org/packages/a5/a2/08609b5baccbbfff20bea8e1dd959e7050c8633ce0a1ca09ba50b96ef95b/fastabx-0.10.0-py3-none-any.whl", hash = "sha256:116ba6ad898387d127f7bb08b878bd99334469a783f09b9c4f20bab53b5b4b58", size = 46100, upload-time = "2026-11-06T17:39:42.362Z" },
 ]
 
 [[package]]

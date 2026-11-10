@@ -111,7 +111,7 @@ def finetune_spidr(  # ruff: ignore[too-many-locals, too-many-statements]
         # Training loop
         while step < cfg.max_steps:
             epoch += 1
-            loader.batch_sampler.set_epoch(epoch)  # ty: ignore[unresolved-attribute]
+            loader.batch_sampler.set_epoch(epoch)  # ty: ignore[missing-attribute]
             for waveforms, attn_mask, mask_indices in loader:
                 if step >= cfg.max_steps:
                     break
@@ -212,7 +212,7 @@ def validate_all_spidr_checkpoints(
         for path in tqdm(pending):
             model = build_model(model_type="spidr", checkpoint=path).to(device)
             # Same masks and crops for every checkpoint
-            loader.generator.manual_seed(seed)  # ty: ignore[unresolved-attribute]
+            loader.generator.manual_seed(seed)  # ty: ignore[missing-union-attribute]
             losses = validate_spidr(model, loader, device, dtype)
             results.append({"step": steps[path], "group": group} | losses)
             with Path(output).open("ab") as f:

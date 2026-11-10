@@ -164,7 +164,7 @@ def finetune_hubert(  # ruff: ignore[too-many-locals, too-many-statements]
         # Training loop
         while step < cfg.max_steps:
             epoch += 1
-            loader.batch_sampler.set_epoch(epoch)  # ty: ignore[unresolved-attribute]
+            loader.batch_sampler.set_epoch(epoch)  # ty: ignore[missing-attribute]
             for waveforms, labels, attn_mask, mask in loader:
                 if step >= cfg.max_steps:
                     break
@@ -285,7 +285,7 @@ def validate_all_hubert_checkpoints(
         for path in tqdm(pending):
             model = HuBERTPretrain.from_pretrained(path).to(device)
             # Same masks and crops for every checkpoint
-            loader.generator.manual_seed(seed)  # ty: ignore[unresolved-attribute]
+            loader.generator.manual_seed(seed)  # ty: ignore[missing-union-attribute]
             losses = validate_hubert(model, loader, device, dtype)
             results.append({"step": steps[path], "group": group} | losses)
             with Path(output).open("ab") as f:

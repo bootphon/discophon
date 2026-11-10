@@ -38,7 +38,7 @@ Repository = "https://github.com/bootphon/discophon"
 
 [project.optional-dependencies]
 abx = [
-  "fastabx>=0.8.0",
+  "fastabx>=0.10.0",
 ]
 baselines = [
   "joblib>=1.5.3",
