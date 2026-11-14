@@ -12,7 +12,7 @@
 {"duration":"0","layer":9,"language":"eng","metric":"per","score":60.1175}
 {"duration":"0","layer":9,"language":"eng","metric":"pnmi","score":69.4044}
 {"duration":"0","layer":9,"language":"eng","metric":"r_val","score":57.7801}
-{"duration":"0","layer":9,"language":"eng","metric":"triphone_abx_continuous","score":4.6569}
+{"duration":"0","layer":9,"language":"eng","metric":"triphone_abx_continuous","score":3.9831}
 {"duration":"0","layer":9,"language":"eus","metric":"f1","score":81.572}
 {"duration":"0","layer":9,"language":"eus","metric":"per","score":30.8634}
 {"duration":"0","layer":9,"language":"eus","metric":"pnmi","score":79.0907}

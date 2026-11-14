@@ -12,7 +12,7 @@
 {"duration":"0","layer":6,"language":"eng","metric":"per","score":145.9093}
 {"duration":"0","layer":6,"language":"eng","metric":"pnmi","score":40.3444}
 {"duration":"0","layer":6,"language":"eng","metric":"r_val","score":3.9503}
-{"duration":"0","layer":6,"language":"eng","metric":"triphone_abx_continuous","score":4.1688}
+{"duration":"0","layer":6,"language":"eng","metric":"triphone_abx_continuous","score":3.4664}
 {"duration":"0","layer":6,"language":"eus","metric":"f1","score":53.3369}
 {"duration":"0","layer":6,"language":"eus","metric":"per","score":138.4167}
 {"duration":"0","layer":6,"language":"eus","metric":"pnmi","score":44.4608}
@@ -72,7 +72,7 @@
 {"duration":"10h","layer":6,"language":"eng","metric":"per","score":57.8729}
 {"duration":"10h","layer":6,"language":"eng","metric":"pnmi","score":62.8568}
 {"duration":"10h","layer":6,"language":"eng","metric":"r_val","score":61.9918}
-{"duration":"10h","layer":6,"language":"eng","metric":"triphone_abx_continuous","score":3.8573}
+{"duration":"10h","layer":6,"language":"eng","metric":"triphone_abx_continuous","score":3.1108}
 {"duration":"10h","layer":6,"language":"eus","metric":"f1","score":69.2166}
 {"duration":"10h","layer":6,"language":"eus","metric":"per","score":39.3706}
 {"duration":"10h","layer":6,"language":"eus","metric":"pnmi","score":70.1945}
