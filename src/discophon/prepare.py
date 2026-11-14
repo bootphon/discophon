@@ -25,8 +25,8 @@ from discophon.languages import ISO6393_TO_CV, Language, commonvoice_languages, 
 __all__ = ["MissingClipsError", "check_commonvoice", "download_benchmark", "prepare_commonvoice"]
 
 BENCHMARK_URL = "https://cognitive-ml.fr/downloads/phoneme-discovery/discophon_data.tar.gz"
-BENCHMARK_SHA256 = "358dbc61e9e74e9b922e2ae38ec989d3ad4e101c9fd57b60e2ea3c0332b2502c"
-BENCHMARK_SIZE = 5374865887
+BENCHMARK_SHA256 = "9115ed8096e951e82d07809224320c191a00470e10a5cf3f8d3366203b96fb5b"
+BENCHMARK_SIZE = 5374751768
 MDC_API_URL = "https://mozilladatacollective.com/api"
 COMMONVOICE_RELEASE = re.compile(r"^Common Voice Scripted Speech (\d+)\.(\d+) - ")
 
