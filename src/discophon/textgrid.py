@@ -147,7 +147,7 @@ def _read_textgrids(paths: list[Path]) -> list[TextGrid]:
     return grids
 
 
-def read_textgrid(path: str | Path) -> dict[str, pl.DataFrame]:
+def read_textgrid(path: str | Path, *, empty_label: str = "SIL", fill_gaps: bool = False) -> dict[str, pl.DataFrame]:
     """Read a TextGrid file, or every TextGrid file in a directory and its subdirectories.
 
     The TextGrids must be in the long or short text format of Praat, encoded in UTF-8 or UTF-16. The file ids are
@@ -155,10 +155,15 @@ def read_textgrid(path: str | Path) -> dict[str, pl.DataFrame]:
 
     Arguments:
         path: Path to a TextGrid file or to a directory
+        empty_label: Label that replaces the empty labels of intervals and points. Pass `""` to keep them empty,
+            as in Praat
+        fill_gaps: Whether to fill the gaps of interval tiers with empty intervals, from the start to the end of
+            the TextGrid, as Praat does when writing.
 
     Returns:
         Mapping between tier names and DataFrames sorted by file id. Interval tiers have columns `text`, `start`,
-            `end`, and `fileid`, and point tiers `text`, `pos`, and `fileid`. Empty labels are replaced by `SIL`.
+            `end`, and `fileid`, and point tiers `text`, `pos`, and `fileid`. Empty labels are replaced by
+            `empty_label`.
 
     """
     path = Path(path)
@@ -174,7 +179,15 @@ def read_textgrid(path: str | Path) -> dict[str, pl.DataFrame]:
         raise ValueError(f"Path is neither a TextGrid file nor a directory: {path}")
     tiers: dict[str, Tier] = {}
     for p, grid in zip(paths, _read_textgrids(paths), strict=True):
-        for name, tier in grid.tiers.items():
+        for name, original in grid.tiers.items():
+            tier = original
+            if fill_gaps and tier.kind == INTERVAL_TIER:
+                try:
+                    filled = _fill_gaps(tier, grid.xmin, grid.xmax)
+                except ValueError as error:
+                    raise ValueError(f"Cannot fill the gaps of tier {name!r} of {p}, {error}.") from None
+                start, end, text = map(list, zip(*filled, strict=True)) if filled else ([], [], [])
+                tier = Tier(INTERVAL_TIER, {"text": text, "start": start, "end": end})
             merged = tiers.setdefault(name, Tier(tier.kind, {column: [] for column in [*tier.columns, "fileid"]}))
             if merged.kind != tier.kind:
                 raise ValueError(f"Tier {name!r} is an interval tier in some TextGrids and a point tier in others.")
@@ -183,7 +196,7 @@ def read_textgrid(path: str | Path) -> dict[str, pl.DataFrame]:
             merged.columns["fileid"].extend(itertools.repeat(p.stem, len(tier.columns["text"])))
     return {
         name: pl.DataFrame(columns, schema=SCHEMAS[kind] | {"fileid": pl.String}).with_columns(
-            pl.col("text").replace("", "SIL")
+            pl.col("text").replace("", empty_label)
         )
         for name, (kind, columns) in tiers.items()
     }

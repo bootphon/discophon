@@ -262,6 +262,65 @@ def test_read_textgrid_written_by_praat_textgrids(tmp_path: Path) -> None:
     assert 'class = "TextTier"' in (tmp_path / "f.TextGrid").read_text(encoding="utf-8")
 
 
+def test_read_textgrid_replaces_empty_labels_with_empty_label(tmp_path: Path) -> None:
+    (tmp_path / "f.TextGrid").write_text(PRAAT_TEXTGRID, encoding="utf-8")
+    default = read_textgrid(tmp_path / "f.TextGrid")
+    assert any("SIL" in tier["text"] for tier in default.values())
+    for empty_label in ["SIL", "", "<sil>"]:
+        tiers = read_textgrid(tmp_path / "f.TextGrid", empty_label=empty_label)
+        assert tiers.keys() == default.keys()
+        for name, tier in tiers.items():
+            expected = default[name].with_columns(pl.col("text").replace("SIL", empty_label))
+            assert tier.equals(expected)
+
+
+def test_read_textgrid_fills_gaps_as_praat_writes_them(tmp_path: Path) -> None:
+    (tmp_path / "f.TextGrid").write_text(PRAAT_TEXTGRIDS_TEXTGRID, encoding="utf-8")
+    tiers = read_textgrid(tmp_path / "f.TextGrid", fill_gaps=True, empty_label="")
+    assert tiers["speech"].rows() == [
+        ("", 0.0, 0.5, "f"),
+        ("a", 0.5, 1.0, "f"),
+        ("", 1.0, 1.5, "f"),
+        ("b", 1.5, 1.9889999999999999, "f"),
+        ("", 1.9889999999999999, 2.0, "f"),
+    ]
+    assert tiers["events"].rows() == [("x", 1.25, "f")]  # point tiers have no gaps
+    assert tiers["speech"].schema == {"text": pl.String, "start": pl.Float64, "end": pl.Float64, "fileid": pl.String}
+    write_textgrids({"f": [1]}, tmp_path, tier_name="units", step_in_ms=20)  # rewritten as Praat would
+    rewritten = read_textgrid(tmp_path / "f.TextGrid")
+    assert read_textgrid(tmp_path / "f.TextGrid", fill_gaps=True)["speech"].equals(rewritten["speech"])
+    assert rewritten["speech"].equals(tiers["speech"].with_columns(pl.col("text").replace("", "SIL")))
+
+
+def test_read_textgrid_fills_gaps_of_files_without_gaps_or_intervals(tmp_path: Path) -> None:
+    (tmp_path / "f.TextGrid").write_text(PRAAT_TEXTGRID, encoding="utf-8")
+    original = read_textgrid(tmp_path / "f.TextGrid")
+    filled = read_textgrid(tmp_path / "f.TextGrid", fill_gaps=True)
+    assert filled.keys() == original.keys()
+    assert all(filled[name].equals(original[name]) for name in original)
+    empty = PRAAT_TEXTGRIDS_TEXTGRID.replace("intervals: size = 2", "intervals: size = 0")
+    empty = empty[: empty.index("            intervals [1]")] + empty[empty.index("    item [2]") :]
+    (tmp_path / "f.TextGrid").write_text(empty, encoding="utf-8")
+    assert read_textgrid(tmp_path / "f.TextGrid", fill_gaps=True)["speech"].rows() == [("SIL", 0.0, 2.0, "f")]
+
+
+@pytest.mark.parametrize(
+    ("intervals", "match"),
+    [
+        ('0.5 1.0 "a" 0.8 1.2 "b"', "must not overlap"),
+        ('1.0 1.5 "a" 0.2 0.5 "b"', "must not overlap"),
+        ('0.5 0.5 "a" 1.0 1.5 "b"', "more than 0 s"),
+        ('-1.0 0.5 "a" 1.0 1.5 "b"', "not start before"),
+    ],
+)
+def test_read_textgrid_rejects_gaps_that_cannot_be_filled(tmp_path: Path, intervals: str, match: str) -> None:
+    content = f'"ooTextFile" "TextGrid" 0 2 <exists> 1 "IntervalTier" "speech" 0 2 2 {intervals}\n'
+    (tmp_path / "f.TextGrid").write_text(content, encoding="utf-8")
+    read_textgrid(tmp_path / "f.TextGrid")  # Read as written without filling the gaps
+    with pytest.raises(ValueError, match=f"Cannot fill the gaps of tier 'speech' of .*f.TextGrid, .*{match}"):
+        read_textgrid(tmp_path / "f.TextGrid", fill_gaps=True)
+
+
 def test_read_textgrid_directory_recursively_sorted_by_file_id(tmp_path: Path) -> None:
     (tmp_path / "z" / "chapter").mkdir(parents=True)
     (tmp_path / "z" / "chapter" / "a.TextGrid").write_text(MFA_TEXTGRID, encoding="utf-8")
